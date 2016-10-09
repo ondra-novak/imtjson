@@ -1,0 +1,101 @@
+#pragma once
+
+#include "stringref.h"
+#include "refcnt.h"
+namespace json {
+
+	///Type of JSON value
+	enum ValueType {
+
+		///number, which can be floating or integer type (this is transparent)
+		number,
+		///string - currently only ascii and utf-8 is supported 
+		string,
+		///boolean - true or false
+		boolean,
+		///array
+		array,
+		///object
+		object,
+		///null value - JSON's null value is also value as others
+		null,
+		///special type used everytime when value is not defined (it is also default for Value() )
+		undefined
+
+	};
+
+
+	///Various flags tied with JSON's type
+	typedef uintptr_t ValueTypeFlags;
+
+	///User defined value
+	/** It is possible to inherit any class from the json namespace and 
+	    use it to introduce a new type of value. However it has to 
+		always specify one of basic types excluding "undefined". Ever
+		such type should also emit flag userDefined to allow to other
+		parts of the library easily detect such a type and carry the
+		value more generaly way */		
+
+	const ValueTypeFlags userDefined = 1;
+	/// For number type, this states, that number is stored as integer
+	const ValueTypeFlags numberInteger = 2;
+	/// For number type, this states, that number is stored as unsigned integer
+	const ValueTypeFlags numberUnsignedInteger = 4;
+	/// States that object is only proxy to other object.
+	/** Proxy objects are used to carry a key with the value in the objects. Proxies
+		are transparent, but can be detected when dynamic_cast to expected type
+		fails. To resolve proxy, you have to use getMemberValue() function.
+		
+		While enumerating through the object, returned values are proxies that
+		each of them carries both the key and the value
+		*/
+	const ValueTypeFlags proxy = 8;
+
+	class IValue;
+	typedef RefCntPtr<const IValue> PValue;
+
+	class IEnumFn;
+
+	///Interface access internal value of JSON Value
+	class IValue: public RefCntObj {
+	public:
+		virtual ~IValue() {}
+
+		virtual ValueType type() const = 0;
+		virtual ValueTypeFlags flags() const = 0;
+		
+		virtual std::uintptr_t getUInt() const = 0;
+		virtual std::intptr_t getInt() const = 0;
+		virtual double getNumber() const = 0;
+		virtual bool getBool() const = 0;
+		virtual StringRef<char> getString() const = 0;
+		virtual std::size_t size() const = 0;
+		virtual const IValue *itemAtIndex(std::size_t index) const = 0;
+		virtual const IValue *member(const StringRef<char> &name) const = 0;
+		virtual bool enumItems(const IEnumFn &) const = 0;
+		
+		///some values are proxies with member name - this retrieves name
+		virtual StringRef<char> getMemberName() const = 0;
+		///some values are proxies with member name - this retrieve directly the internal value
+		virtual const IValue *getMemberValue() const = 0;
+
+	};
+
+	class IEnumFn {
+	public:
+		virtual ~IEnumFn() {}
+		virtual bool operator()(const IValue *v) const = 0;
+	};
+
+	template<typename Fn>
+	class EnumFn : public IEnumFn {
+	public:
+		EnumFn(const Fn &fn) :fn(fn) {}
+		virtual bool operator()(const IValue *v) const {
+			return fn(v);
+		}
+	protected:
+		mutable Fn fn;
+	};
+
+}
