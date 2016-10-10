@@ -69,6 +69,7 @@ namespace json {
 	template<typename T>
 	std::ostream &operator<<(std::ostream &out, const StringRef<T> &ref) {
 		out.write(ref.data, ref.length);
+		return out;
 	}
 
 

@@ -5,9 +5,14 @@
 
 namespace json {
 
+	extern uintptr_t maxPrecisionDigits;
+
+
 	template<typename Fn>
 	class Serializer {
 	public:
+
+
 
 		Serializer(const Fn &target) :target(target) {}
 
@@ -189,7 +194,6 @@ namespace json {
 		}
 	}
 
-	extern const double maxMantisaMult;
 
 	template<typename Fn>
 	inline void Serializer<Fn>::writeDouble(double value)
@@ -217,8 +221,10 @@ namespace json {
 		if (frac != 0.0) {
 			//put dot
 			target('.');
+
+			double fractMultiply = pow(10, maxPrecisionDigits);
 			//multiply fraction by maximum fit to integer
-			std::uintptr_t m = (std::uintptr_t)floor(frac * maxMantisaMult+0.5);
+			std::uintptr_t m = (std::uintptr_t)floor(frac * fractMultiply +0.5);
 			//remove any rightmost zeroes
 			while (m && (m % 10) == 0) m = m / 10;
 			//write final number

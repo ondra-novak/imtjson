@@ -75,7 +75,7 @@ namespace json {
 
 
 	static StaticBool<false> boolFalse;
-	static StaticBool<false> boolTrue;
+	static StaticBool<true> boolTrue;
 
 
 	const IValue * BoolValue::getBool(bool v)

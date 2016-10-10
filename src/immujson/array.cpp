@@ -109,10 +109,8 @@ namespace json {
 		for (std::size_t x = 0; x < changes.offset; ++x) {
 			result.push_back(base[x].v);
 		}
-		for (std::size_t x = 0; x < changes.size(); ++x) {
-			if (changes[x]->type() != undefined) {
-				result.push_back(changes[x]);
-			}
+		for (auto &&x : changes) {
+			if (x->type() != undefined) result.push_back(x);
 		}
 		return new ArrayValue(std::move(result));
 

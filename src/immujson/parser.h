@@ -145,10 +145,6 @@ namespace json {
 		///Stores unicode character as UTF-8 into the tmpstr
 		void storeUnicode(uintptr_t uchar);
 
-		///Temporary object - to keep allocated memory
-		Object tmpobj;
-		///Temporary array - to keep allocated memory
-		Array tmparr;
 		///Temporary string - to keep allocated memory
 		std::string tmpstr;
 	};
@@ -211,7 +207,7 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parseObject()
 	{
-		tmpobj.clear();
+		Object tmpobj;
 		char c = rd.nextWs();
 		if (c == '}') {
 			rd.commit();
@@ -258,7 +254,7 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parseArray()
 	{
-		tmparr.clear();
+		Array tmparr;
 		char c = rd.nextWs();
 		if (c == ']') {
 			rd.commit();
@@ -435,7 +431,7 @@ namespace json {
 			//if so, converting to signed triggers overflow
 			if (intpart & (std::uintptr_t(1) << (sizeof(intpart) * 8 - 1))) {
 				//convert number to float
-				double v = intpart;
+				double v = (double)intpart;
 				//return negative value
 				return Value(-v);
 			}
@@ -543,7 +539,7 @@ namespace json {
 	inline double Parser<Fn>::parseLargeUnsigned(uintptr_t intPart)
 	{
 		//starts with given integer part - convert to double
-		double res(intPart);
+		double res = (double)intPart;
 		//read while there are digits
 		while (isdigit(rd.next())) {
 			//prepare next unsigned integer

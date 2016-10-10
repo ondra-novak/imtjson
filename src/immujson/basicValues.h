@@ -16,7 +16,7 @@ namespace json {
 	class BoolValue : public AbstractValue {
 	public:
 		virtual ValueType type() const override { return boolean; }
-		virtual bool getBool() const override  = 0;
+		virtual bool getBool() const override  = 0;		
 
 		static const IValue *getBool(bool v);
 

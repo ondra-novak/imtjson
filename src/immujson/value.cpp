@@ -43,6 +43,20 @@ namespace json {
 	{
 	}
 
+	std::string Value::toDebugString()
+	{
+		switch (type()) {
+		case null:
+		case boolean:
+		case number: return toString();
+		case undefined: return "<undefined>";
+		case object: return "{...}";
+		case array: return "[...]";
+		case string: return getString();
+		default: return "<unknown>";		
+		}
+	}
+
 	Value Value::fromString(const StringRef<char>& string)
 	{
 		std::size_t pos = 0;
@@ -60,7 +74,9 @@ namespace json {
 
 	Value Value::fromFile(FILE * f)
 	{
-		return Value();
+		return parse([&] {
+			return (char)fgetc(f);
+		});
 	}
 
 	std::string Value::toString() const
@@ -74,18 +90,21 @@ namespace json {
 
 	void Value::toStream(std::ostream & output) const
 	{
+		serialize([&](char c) {
+			output.put(c);
+		});
 	}
 
 	template<typename T>
 	PValue allocUnsigned(T x) {
 		if (sizeof(T) <= sizeof(uintptr_t)) return new UnsignedIntegerValue(uintptr_t(x));
-		else return new NumberValue(x);
+		else return new NumberValue((double)x);
 	}
 
 	template<typename T>
 	PValue allocSigned(T x) {
 		if (sizeof(T) <= sizeof(intptr_t)) return new IntegerValue(intptr_t(x));
-		else return new NumberValue(x);
+		else return new NumberValue((double)x);
 	}
 
 	Value::Value(signed short x):v(allocSigned(x)) {
@@ -114,6 +133,9 @@ namespace json {
 
 	void Value::toFile(FILE * f) const
 	{
+		serialize([&](char c) {
+			fputc(c, f);
+		});
 	}
 
 	std::vector<PValue> Value::prepareValues(const std::initializer_list<Value>& data) {
@@ -172,5 +194,6 @@ namespace json {
 	{
 	}
 
-	const double maxMantisaMult = pow(10.0, floor(log10(std::uintptr_t(-1))));
+	uintptr_t maxPrecisionDigits = sizeof(uintptr_t) < 4 ? 4 : (sizeof(uintptr_t) < 8 ? 9 : 12);
+	///const double maxMantisaMult = pow(10.0, floor(log10(std::uintptr_t(-1))));
 }

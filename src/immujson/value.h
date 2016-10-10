@@ -46,6 +46,10 @@ namespace json {
 		bool empty() const { return v->size() == 0; }
 		Value operator[](uintptr_t index) const { return v->itemAtIndex(index); }
 		Value operator[](const StringRef<char> &name) const { return v->member(name); }
+		StringRef<char> getKey() const { return v->getMemberName(); }
+
+		std::string toDebugString();
+
 
 		template<typename Fn>
 		bool forEach(const Fn &fn) {

@@ -50,7 +50,7 @@ template<typename Fn>
 inline void TestSimple::runTest(const Fn& fn, const std::string &name, const std::string &expected_result ) {
 
 	std::cout<<"Running test: " << name;
-	for (int len = 50-name.length(); len; len--) std::cout << '.';
+	for (std::size_t len = 50-name.length(); len; len--) std::cout << '.';
 	std::cout.flush();
 	try {
 		std::ostringstream stream;
