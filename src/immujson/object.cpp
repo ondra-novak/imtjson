@@ -24,7 +24,7 @@ namespace json {
 		virtual const IValue *member(const StringRef<char> &name) const override { return value->member(name); }
 		virtual bool enumItems(const IEnumFn &fn) const override { return value->enumItems(fn); }
 		virtual StringRef<char> getMemberName() const override { return name; }
-		virtual const IValue *getMemberValue() const override { return value; }
+		virtual const IValue *unproxy() const override { return value->unproxy(); }
 
 	protected:
 		std::string name;
@@ -51,15 +51,20 @@ namespace json {
 
 	Object & Object::set(const StringRef<char>& name, const Value & value)
 	{
-		StringRef<char> curName = value.v->getMemberName();
-		if (curName == name) {
-			changes[curName] = value.v;
-		}
-		else {
-			PValue v = new ObjectProxy(name, value.v->getMemberValue());
+		PValue v = value.getHandle();
+		if (v->flags() & proxy ) {
 			StringRef<char> curName = v->getMemberName();
-			changes[curName] = v;
+			if (curName == name) {
+				changes[curName] = v;
+				return *this;
+			} else {
+				v = v->unproxy();
+			}
+
 		}
+		v = new ObjectProxy(name, v);
+		StringRef<char> curName = v->getMemberName();
+		changes[curName] = v;
 		return *this;
 	}
 

@@ -24,7 +24,7 @@ namespace json {
 		///some values are proxies with member name - this retrieves name
 		virtual StringRef<char> getMemberName() const override { return StringRef<char>(); }
 		///some values are proxies with member name - this retrieve directly the internal value
-		virtual const IValue *getMemberValue() const override { return this; }
+		virtual const IValue *unproxy() const override { return this; }
 
 
 		static const IValue *getUndefined();

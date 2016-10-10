@@ -44,12 +44,21 @@ namespace json {
 	/// States that object is only proxy to other object.
 	/** Proxy objects are used to carry a key with the value in the objects. Proxies
 		are transparent, but can be detected when dynamic_cast to expected type
-		fails. To resolve proxy, you have to use getMemberValue() function.
+		fails. To resolve proxy, you have to use unproxy() function.
 		
 		While enumerating through the object, returned values are proxies that
 		each of them carries both the key and the value
 		*/
 	const ValueTypeFlags proxy = 8;
+
+	///Special object which breaks immutability of json-structure
+	/** The library allows under some circumstances to break the immutability of the
+	 * json structure. For more details, see description of the MutableLink class. This
+	 * flag is set when the current object is MutableLink. Note that MutableLinks can
+	 * create cycles. This flag helps to detect mutable links and skip them if the possibility
+	 * of
+	 */
+	const ValueTypeFlags mutableLink = 16;
 
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;
@@ -76,8 +85,8 @@ namespace json {
 		
 		///some values are proxies with member name - this retrieves name
 		virtual StringRef<char> getMemberName() const = 0;
-		///some values are proxies with member name - this retrieve directly the internal value
-		virtual const IValue *getMemberValue() const = 0;
+		///Returns pointer to first no-proxy object
+		virtual const IValue *unproxy() const = 0;
 
 	};
 

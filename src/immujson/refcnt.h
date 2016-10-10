@@ -55,11 +55,11 @@ namespace json {
 
 		template<typename X>
 		static RefCntPtr<T> dynamicCast(const RefCntPtr<X> &other) noexcept {
-			return RefCntPtr<T>(dynamic_cast<T *>(other.ptr));
+			return RefCntPtr<T>(dynamic_cast<T *>((X *)other));
 		}
 		template<typename X>
 		static RefCntPtr<T> staticCast(const RefCntPtr<X> &other) noexcept {
-			return RefCntPtr<T>(static_cast<T *>(other.ptr));
+			return RefCntPtr<T>(static_cast<T *>((X *)other));
 		}
 
 		bool operator==(std::nullptr_t) const noexcept { return ptr == 0; }

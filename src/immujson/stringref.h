@@ -3,6 +3,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <iostream>
 
 
 
@@ -62,8 +63,13 @@ namespace json {
 			while (*p) ++p;
 			return p - str;
 		}
+		bool empty() const {return length == 0;}
 	};
 
+	template<typename T>
+	std::ostream &operator<<(std::ostream &out, const StringRef<T> &ref) {
+		out.write(ref.data, ref.length);
+	}
 
 
 }

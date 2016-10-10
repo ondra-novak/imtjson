@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "value.h"
 
 namespace json {
@@ -12,6 +13,7 @@ namespace json {
 
 		void serialize(const Value &obj);
 		void serialize(const IValue *ptr);
+		void serialize2(const IValue *ptr);
 
 		void serializeObject(const IValue *ptr);
 		void serializeArray(const IValue *ptr);
@@ -32,6 +34,10 @@ namespace json {
 		void writeDouble(double value);
 		void writeUnicode(unsigned int uchar);
 		void writeString(const StringRef<char> &text);
+
+		std::vector<const IValue *> linkRegister;
+
+		bool findLink(const IValue *link) const;
 	};
 
 	class SerializerError :public std::runtime_error {
@@ -52,10 +58,26 @@ namespace json {
 	inline void Serializer<Fn>::serialize(const Value & obj)
 	{
 		serialize((const IValue *)(obj.getHandle()));
+		linkRegister.clear();
 	}
 
 	template<typename Fn>
 	inline void Serializer<Fn>::serialize(const IValue * ptr)
+	{
+		if (ptr->flags() & mutableLink) {
+			if (findLink(ptr)) {
+				serialize2(NullValue::getNull());
+			} else {
+				linkRegister.push_back(ptr);
+				serialize2(ptr->unproxy());
+				linkRegister.pop_back();
+			}
+		} else {
+			serialize2(ptr);
+		}
+	}
+	template<typename Fn>
+	inline void Serializer<Fn>::serialize2(const IValue * ptr)
 	{
 		switch (ptr->type()) {
 		case object: serializeObject(ptr); break;
@@ -287,4 +309,12 @@ namespace json {
 		target('"');
 	}
 
+	template<typename Fn>
+	inline bool Serializer<Fn>::findLink(const IValue* link) const {
+		for (auto &&x: linkRegister)
+			if (x == link) return true;
+		return false;
+	}
+
 }
+

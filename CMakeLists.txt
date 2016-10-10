@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.5)
+project (immujson_tests)
+add_subdirectory (src/immujson)
+add_subdirectory (src/tests)
+add_compile_options(-std=c++11)

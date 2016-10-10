@@ -31,15 +31,15 @@ namespace json {
 	{
 	}
 
-	Value::Value(const char * value):v(new StringValue(value))
+	Value::Value(const char * value):v(value && *value?new StringValue(value):AbstractStringValue::getEmptyString())
 	{
 	}
 
-	Value::Value(const std::string & value):v(new StringValue(value))
+	Value::Value(const std::string & value):v(value.empty()?AbstractStringValue::getEmptyString():new StringValue(value))
 	{
 	}
 
-	Value::Value(const StringRef<char>& value):v(new StringValue(value))
+	Value::Value(const StringRef<char>& value):v(value.empty()?AbstractStringValue::getEmptyString():new StringValue(value))
 	{
 	}
 
@@ -76,6 +76,42 @@ namespace json {
 	{
 	}
 
+	template<typename T>
+	PValue allocUnsigned(T x) {
+		if (sizeof(T) <= sizeof(uintptr_t)) return new UnsignedIntegerValue(uintptr_t(x));
+		else return new NumberValue(x);
+	}
+
+	template<typename T>
+	PValue allocSigned(T x) {
+		if (sizeof(T) <= sizeof(intptr_t)) return new IntegerValue(intptr_t(x));
+		else return new NumberValue(x);
+	}
+
+	Value::Value(signed short x):v(allocSigned(x)) {
+	}
+
+	Value::Value(unsigned short x):v(allocUnsigned(x)) {
+	}
+
+	Value::Value(signed int x):v(allocSigned(x)) {
+	}
+
+	Value::Value(unsigned int x):v(allocUnsigned(x)) {
+	}
+
+	Value::Value(signed long x):v(allocSigned(x)) {
+	}
+
+	Value::Value(unsigned long x):v(allocUnsigned(x)) {
+	}
+
+	Value::Value(signed long long x):v(allocSigned(x)) {
+	}
+
+	Value::Value(unsigned long long x):v(allocUnsigned(x)) {
+	}
+
 	void Value::toFile(FILE * f) const
 	{
 	}
@@ -95,14 +131,14 @@ namespace json {
 
 	}
 
-	Value::Value(std::uintptr_t value):v(new UnsignedIntegerValue(value))
+/*	Value::Value(std::uintptr_t value):v(new UnsignedIntegerValue(value))
 	{
 	}
 
 	Value::Value(std::intptr_t value):v(new IntegerValue(value))
 	{
 	}
-
+*/
 	Value::Value(double value):v(new NumberValue(value))
 	{
 	}

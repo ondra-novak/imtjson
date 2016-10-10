@@ -18,20 +18,20 @@ namespace json {
 	}
 	Array & Array::add(const Value & v)
 	{
-		changes.push_back(v.v->getMemberValue());
+		changes.push_back(v.v->unproxy());
 		return *this;
 	}
 	Array & Array::addSet(const StringRef<Value>& v)
 	{
 		changes.reserve(changes.size() + v.length);
 		for (std::size_t i = 0; i < v.length; i++)
-			changes.push_back(v.data[i].v->getMemberValue());
+			changes.push_back(v.data[i].v->unproxy());
 		return *this;
 	}
 	Array & Array::insert(std::size_t pos, const Value & v)
 	{
 		extendChanges(pos);
-		changes.insert(changes.begin()+(pos - changes.offset), v.v->getMemberValue());
+		changes.insert(changes.begin()+(pos - changes.offset), v.v->unproxy());
 		return *this;
 	}
 	Array & Array::insertSet(std::size_t pos, const StringRef<Value>& v)
@@ -39,7 +39,7 @@ namespace json {
 		extendChanges(pos);
 		changes.insert(changes.begin() + (pos - changes.offset), v.length, PValue());
 		for (std::size_t i = 0; i < v.length; i++) {
-			changes[pos + changes.offset + i] = v.data[i].v->getMemberValue();
+			changes[pos + changes.offset + i] = v.data[i].v->unproxy();
 		}
 		return *this;
 	}

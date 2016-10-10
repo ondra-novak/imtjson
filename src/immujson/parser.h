@@ -158,7 +158,7 @@ namespace json {
 	public:
 		ParseError(std::string msg) :msg(msg) {}
 
-		virtual char const* what() const {
+		virtual char const* what() const throw() {
 			if (whatmsg.empty()) {
 				whatmsg = "Parse eror: '" + msg + "' at ";
 				std::size_t pos = callstack.size();
@@ -342,11 +342,11 @@ namespace json {
 		uintptr_t uchar = 0;
 		for (int i = 0; i < 4; i++) {
 			char c = rd.nextCommit();
-			uchar *= 10;
+			uchar *= 16;
 			if (isdigit(c)) uchar += (c - '0');
 			else if (c >= 'A' && c <= 'F') uchar += (c - 'A' + 10);
 			else if (c >= 'a' && c <= 'f') uchar += (c - 'a' + 10);
-			else ParseError("Expected '0'...'9' or 'A'...'F' after the escape sequence \\u");
+			else ParseError("Expected '0'...'9' or 'A'...'F' after the escape sequence \\u: ("+tmpstr+")");
 		}
 		storeUnicode(uchar);
 	}
@@ -355,7 +355,7 @@ namespace json {
 	inline char Parser<Fn>::readNextUtf8() {
 		char z = rd.nextCommit();
 		if (z & 0x80) return z;
-		else throw ParseError("Invalid UTF-8 sequence - expected byte in range 0x80...0xFF");
+		else throw ParseError("Invalid UTF-8 sequence - expected byte in range 0x80...0xFF ("+tmpstr+")");
 	}
 
 	template<typename Fn>
@@ -380,7 +380,7 @@ namespace json {
 			uchar |= (readNextUtf8() & 0x3F) << 6;
 			uchar |= (readNextUtf8() & 0x3F);
 		} else {		
-			throw ParseError("Invalid UTF-8 sequence - unsupported initial byte of the sequence");
+			throw ParseError("Invalid UTF-8 sequence - unsupported initial byte of the sequence ("+tmpstr+")");
 		}
 		storeUnicode(uchar);
 
@@ -425,7 +425,7 @@ namespace json {
 		//function returns false, if overflow detected
 		bool complete = parseUnsigned(intpart,counter);
 		//in case of overflow or dot follows, continue to read as floating number
-		if (!complete || rd.next() == '.') {
+		if (!complete || rd.next() == '.' || toupper(rd.next()) == 'E') {
 			//parse floating number (give it already parsed informations)
 			return parseDouble(intpart, isneg);
 		}
@@ -433,7 +433,7 @@ namespace json {
 		if (isneg) {
 			//tests, whether highest bit of unsigned integer is set
 			//if so, converting to signed triggers overflow
-			if (intpart & (1 << (sizeof(intpart) * 8 - 1))) {
+			if (intpart & (std::uintptr_t(1) << (sizeof(intpart) * 8 - 1))) {
 				//convert number to float
 				double v = intpart;
 				//return negative value
@@ -490,8 +490,8 @@ namespace json {
 				//put character to the result
 				tmpstr.push_back(c);
 				//read next
-				c = rd.nextCommit();
 			}
+			c = rd.nextCommit();
 
 	
 		}

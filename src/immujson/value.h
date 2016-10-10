@@ -16,8 +16,14 @@ namespace json {
 		Value(const char *value);
 		Value(const std::string &value);
 		Value(const StringRef<char> &value);
-		Value(std::uintptr_t value);
-		Value(std::intptr_t value);
+		Value(signed short x);
+		Value(unsigned short x);
+		Value(signed int x);
+		Value(unsigned int x);
+		Value(signed long x);
+		Value(unsigned long x);
+		Value(signed long long x);
+		Value(unsigned long long x);
 		Value(double value);
 		Value(float value);
 		Value(std::nullptr_t);
