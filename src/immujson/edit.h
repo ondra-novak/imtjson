@@ -7,7 +7,7 @@ namespace json {
 
 	class Object2Object: public Object {
 	public:
-		Object2Object(Value oldVal, Object &parent, const StringRef<char> &name)
+		Object2Object(Value oldVal, Object &parent, const StringView<char> &name)
 			:Object(oldVal), parent(parent), name(name) {}
 		~Object2Object() noexcept(false) {
 			if (dirty()) {
@@ -17,7 +17,7 @@ namespace json {
 		}
 	protected:
 		Object &parent;
-		const StringRef<char> &name;
+		const StringView<char> &name;
 	};
 
 	class Object2Array : public Object {
@@ -37,7 +37,7 @@ namespace json {
 
 	class Array2Object : public Array {
 	public:
-		Array2Object(Value oldVal, Object &parent, const StringRef<char> &name)
+		Array2Object(Value oldVal, Object &parent, const StringView<char> &name)
 			:Array(oldVal), parent(parent), name(name) {}
 		~Array2Object() noexcept(false) {
 			if (dirty()) {
@@ -47,7 +47,7 @@ namespace json {
 		}
 	protected:
 		Object &parent;
-		const StringRef<char> &name;
+		const StringView<char> &name;
 	};
 
 	class Array2Array : public Array {

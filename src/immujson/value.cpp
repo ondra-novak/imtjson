@@ -39,16 +39,16 @@ namespace json {
 	{
 	}
 
-	Value::Value(const StringRef<char>& value):v(value.empty()?AbstractStringValue::getEmptyString():new StringValue(value))
+	Value::Value(const StringView<char>& value):v(value.empty()?AbstractStringValue::getEmptyString():new StringValue(value))
 	{
 	}
 
-	std::string Value::toDebugString()
+	std::string Value::toString()
 	{
 		switch (type()) {
 		case null:
 		case boolean:
-		case number: return toString();
+		case number: return stringify();
 		case undefined: return "<undefined>";
 		case object: return "{...}";
 		case array: return "[...]";
@@ -57,7 +57,7 @@ namespace json {
 		}
 	}
 
-	Value Value::fromString(const StringRef<char>& string)
+	Value Value::fromString(const StringView<char>& string)
 	{
 		std::size_t pos = 0;
 		return parse([&pos,string]()  {
@@ -79,7 +79,7 @@ namespace json {
 		});
 	}
 
-	std::string Value::toString() const
+	std::string Value::stringify() const
 	{
 		std::string buff;
 		serialize([&](char c) {
@@ -196,4 +196,15 @@ namespace json {
 
 	uintptr_t maxPrecisionDigits = sizeof(uintptr_t) < 4 ? 4 : (sizeof(uintptr_t) < 8 ? 9 : 12);
 	///const double maxMantisaMult = pow(10.0, floor(log10(std::uintptr_t(-1))));
+
+	bool Value::operator ==(const Value& other) const {
+		if (other.v == v) return true;
+		else return other.v->equal(v);
+	}
+
+	bool Value::operator !=(const Value& other) const {
+		if (other.v == v) return false;
+		else return other.v->equal(v);
+	}
+
 }

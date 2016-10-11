@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <vector>
 #include "value.h"
 
@@ -18,7 +19,6 @@ namespace json {
 
 		void serialize(const Value &obj);
 		void serialize(const IValue *ptr);
-		void serialize2(const IValue *ptr);
 
 		void serializeObject(const IValue *ptr);
 		void serializeArray(const IValue *ptr);
@@ -32,17 +32,14 @@ namespace json {
 	protected:
 		Fn target;
 
-		void write(const StringRef<char> &text);
+		void write(const StringView<char> &text);
 		void writeUnsigned(std::uintptr_t value);
 		void writeUnsignedRec(std::uintptr_t value);
 		void writeSigned(std::intptr_t value);
 		void writeDouble(double value);
 		void writeUnicode(unsigned int uchar);
-		void writeString(const StringRef<char> &text);
+		void writeString(const StringView<char> &text);
 
-		std::vector<const IValue *> linkRegister;
-
-		bool findLink(const IValue *link) const;
 	};
 
 	class SerializerError :public std::runtime_error {
@@ -63,26 +60,10 @@ namespace json {
 	inline void Serializer<Fn>::serialize(const Value & obj)
 	{
 		serialize((const IValue *)(obj.getHandle()));
-		linkRegister.clear();
 	}
 
 	template<typename Fn>
 	inline void Serializer<Fn>::serialize(const IValue * ptr)
-	{
-		if (ptr->flags() & mutableLink) {
-			if (findLink(ptr)) {
-				serialize2(NullValue::getNull());
-			} else {
-				linkRegister.push_back(ptr);
-				serialize2(ptr->unproxy());
-				linkRegister.pop_back();
-			}
-		} else {
-			serialize2(ptr);
-		}
-	}
-	template<typename Fn>
-	inline void Serializer<Fn>::serialize2(const IValue * ptr)
 	{
 		switch (ptr->type()) {
 		case object: serializeObject(ptr); break;
@@ -98,7 +79,7 @@ namespace json {
 
 	template<typename Fn>
 	inline void Serializer<Fn>::serializeKeyValue(const IValue * ptr) {
-		StringRef<char> name = ptr->getMemberName();
+		StringView<char> name = ptr->getMemberName();
 		writeString(name);
 		target(':');
 		serialize(ptr);
@@ -145,7 +126,7 @@ namespace json {
 	template<typename Fn>
 	inline void Serializer<Fn>::serializeString(const IValue * ptr)
 	{
-		StringRef<char> str = ptr->getString();
+		StringView<char> str = ptr->getString();
 		writeString(str);
 	}
 
@@ -162,7 +143,7 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::write(const StringRef<char>& text)
+	inline void Serializer<Fn>::write(const StringView<char>& text)
 	{
 		for (auto &&x : text) target(x);
 	}
@@ -214,7 +195,7 @@ namespace json {
 		}		
 		double fint;
 		//separate number to integer and fraction
-		double frac = abs(modf(value, &fint));
+		double frac = std::abs(modf(value, &fint));
 		//integer will fit to intptr, so convert it directly
 		writeSigned(std::intptr_t(fint));
 		//if frac is not zero (exactly)
@@ -233,7 +214,8 @@ namespace json {
 		//if exponent is set
 		if (iexp) {
 			//put E
-			target('E');
+			target('e');
+			if (iexp > 0) target('+');
 			//write signed exponent
 			writeSigned(iexp);
 		}
@@ -257,7 +239,7 @@ namespace json {
 
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writeString(const StringRef<char>& text)
+	inline void Serializer<Fn>::writeString(const StringView<char>& text)
 	{
 		target('"');
 		unsigned int uchar = 0;
@@ -313,13 +295,6 @@ namespace json {
 			notValidUTF8(text);
 		}
 		target('"');
-	}
-
-	template<typename Fn>
-	inline bool Serializer<Fn>::findLink(const IValue* link) const {
-		for (auto &&x: linkRegister)
-			if (x == link) return true;
-		return false;
 	}
 
 }

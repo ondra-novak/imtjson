@@ -1,7 +1,7 @@
 #pragma once
 
-#include "stringref.h"
 #include "refcnt.h"
+#include "stringview.h"
 namespace json {
 
 	///Type of JSON value
@@ -26,6 +26,9 @@ namespace json {
 
 
 	///Various flags tied with JSON's type
+	/**@see userDefined, numberInteger, numberUnsignedInteger, proxy
+	 *
+	 */
 	typedef uintptr_t ValueTypeFlags;
 
 	///User defined value
@@ -51,14 +54,6 @@ namespace json {
 		*/
 	const ValueTypeFlags proxy = 8;
 
-	///Special object which breaks immutability of json-structure
-	/** The library allows under some circumstances to break the immutability of the
-	 * json structure. For more details, see description of the MutableLink class. This
-	 * flag is set when the current object is MutableLink. Note that MutableLinks can
-	 * create cycles. This flag helps to detect mutable links and skip them if the possibility
-	 * of
-	 */
-	const ValueTypeFlags mutableLink = 16;
 
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;
@@ -77,17 +72,18 @@ namespace json {
 		virtual std::intptr_t getInt() const = 0;
 		virtual double getNumber() const = 0;
 		virtual bool getBool() const = 0;
-		virtual StringRef<char> getString() const = 0;
+		virtual StringView<char> getString() const = 0;
 		virtual std::size_t size() const = 0;
 		virtual const IValue *itemAtIndex(std::size_t index) const = 0;
-		virtual const IValue *member(const StringRef<char> &name) const = 0;
+		virtual const IValue *member(const StringView<char> &name) const = 0;
 		virtual bool enumItems(const IEnumFn &) const = 0;
 		
 		///some values are proxies with member name - this retrieves name
-		virtual StringRef<char> getMemberName() const = 0;
+		virtual StringView<char> getMemberName() const = 0;
 		///Returns pointer to first no-proxy object
 		virtual const IValue *unproxy() const = 0;
 
+		virtual bool equal(const IValue *other) const = 0;
 	};
 
 	class IEnumFn {

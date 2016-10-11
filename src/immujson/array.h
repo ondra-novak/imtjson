@@ -17,10 +17,10 @@ namespace json {
 
 		Array &push_back(const Value &v);
 		Array &add(const Value &v);
-		Array &addSet(const StringRef<Value> &v);
+		Array &addSet(const StringView<Value> &v);
 
 		Array &insert(std::size_t pos, const Value &v);
-		Array &insertSet(std::size_t pos, const StringRef<Value> &v);
+		Array &insertSet(std::size_t pos, const StringView<Value> &v);
 
 		Array &erase(std::size_t pos);
 		Array &eraseSet(std::size_t pos, std::size_t length);

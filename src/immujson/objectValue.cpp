@@ -29,7 +29,7 @@ namespace json {
 		return true;
 	}
 
-	const IValue * ObjectValue::member(const StringRef<char>& name) const
+	const IValue * ObjectValue::member(const StringView<char>& name) const
 	{
 		std::size_t l = 0;
 		std::size_t r = v.size();

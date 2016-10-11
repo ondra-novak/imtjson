@@ -10,6 +10,9 @@ namespace json {
 	public:
 		virtual ValueType type() const override { return null; }
 
+		virtual bool equal(const IValue *other) const override;
+
+
 		static const IValue *getNull();
 	};
 
@@ -19,6 +22,9 @@ namespace json {
 		virtual bool getBool() const override  = 0;		
 
 		static const IValue *getBool(bool v);
+
+		virtual bool equal(const IValue *other) const override;
+
 
 	};
 
@@ -30,14 +36,19 @@ namespace json {
 		virtual std::uintptr_t getUInt() const override = 0;
 
 		static const IValue *getZero();
+
+		virtual bool equal(const IValue *other) const override;
+
 	};
 
 	class AbstractStringValue : public AbstractValue {
 	public:
 		virtual ValueType type() const override { return string; }
-		virtual StringRef<char> getString() const override = 0;
+		virtual StringView<char> getString() const override = 0;
 
 		static const IValue *getEmptyString();
+		virtual bool equal(const IValue *other) const override;
+
 	};
 
 	class AbstractArrayValue : public AbstractValue {
@@ -48,6 +59,7 @@ namespace json {
 		virtual bool enumItems(const IEnumFn &) const override = 0;
 
 		static const IValue *getEmptyArray();
+		virtual bool equal(const IValue *other) const override;
 	};
 
 	class AbstractObjectValue : public AbstractValue {
@@ -55,8 +67,9 @@ namespace json {
 		virtual ValueType type() const override { return object; }
 		virtual std::size_t size() const override = 0;
 		virtual const IValue *itemAtIndex(std::size_t index) const override = 0;
-		virtual const IValue *member(const StringRef<char> &name) const override = 0;
+		virtual const IValue *member(const StringView<char> &name) const override = 0;
 		virtual bool enumItems(const IEnumFn &) const override = 0;
+		virtual bool equal(const IValue *other) const override;
 
 		static const IValue *getEmptyObject();
 	};
@@ -70,6 +83,15 @@ namespace json {
 		virtual std::intptr_t getInt() const override { return std::intptr_t(v); }
 		virtual std::uintptr_t getUInt() const override { return std::uintptr_t(v); }
 		virtual ValueTypeFlags flags() const override { return f; }
+		virtual bool equal(const IValue *other) const  override {
+			if (other->type() == number) {
+				const NumberValueT *k = dynamic_cast<const NumberValueT *>(other->unproxy());
+				if (k) return k->v == v;
+				else return  AbstractNumberValue::equal(other);
+			} else {
+				return false;
+			}
+		}
 
 
 	protected:
@@ -82,9 +104,9 @@ namespace json {
 
 	class StringValue : public AbstractStringValue {
 	public:
-		StringValue(const StringRef<char> &str) :v(str) {}
+		StringValue(const StringView<char> &str) :v(str) {}
 
-		virtual StringRef<char> getString() const override {
+		virtual StringView<char> getString() const override {
 			return v;
 		}
 	protected:
@@ -92,3 +114,5 @@ namespace json {
 
 	};
 }
+
+

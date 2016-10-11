@@ -8,7 +8,7 @@ namespace json {
 	class ObjectProxy : public AbstractValue {
 	public:
 
-		ObjectProxy(const StringRef<char> &name, const PValue &value)
+		ObjectProxy(const StringView<char> &name, const PValue &value)
 			:name(name), value(value) {}
 		
 		virtual ValueType type() const override { return value->type(); }
@@ -18,13 +18,17 @@ namespace json {
 		virtual std::intptr_t getInt() const override { return value->getInt(); }
 		virtual double getNumber() const override { return value->getNumber(); }
 		virtual bool getBool() const override { return value->getBool(); }
-		virtual StringRef<char> getString() const override { return value->getString(); }
+		virtual StringView<char> getString() const override { return value->getString(); }
 		virtual std::size_t size() const override { return value->size(); }
 		virtual const IValue *itemAtIndex(std::size_t index) const override { return value->itemAtIndex(index); }
-		virtual const IValue *member(const StringRef<char> &name) const override { return value->member(name); }
+		virtual const IValue *member(const StringView<char> &name) const override { return value->member(name); }
 		virtual bool enumItems(const IEnumFn &fn) const override { return value->enumItems(fn); }
-		virtual StringRef<char> getMemberName() const override { return name; }
+		virtual StringView<char> getMemberName() const override { return name; }
 		virtual const IValue *unproxy() const override { return value->unproxy(); }
+		virtual bool equal(const IValue *other) const override {
+			if ((other->flags() & proxy) == 0 || other->getMemberName() != name) return false;
+			else return value->equal(other->unproxy());
+		}
 
 	protected:
 		std::string name;
@@ -40,7 +44,7 @@ namespace json {
 	{
 	}
 
-	Object::Object(const StringRef<char>& name, const Value & value): base(AbstractObjectValue::getEmptyObject())
+	Object::Object(const StringView<char>& name, const Value & value): base(AbstractObjectValue::getEmptyObject())
 	{
 		set(name, value);
 	}
@@ -49,11 +53,11 @@ namespace json {
 	{
 	}
 
-	Object & Object::set(const StringRef<char>& name, const Value & value)
+	Object & Object::set(const StringView<char>& name, const Value & value)
 	{
 		PValue v = value.getHandle();
 		if (v->flags() & proxy ) {
-			StringRef<char> curName = v->getMemberName();
+			StringView<char> curName = v->getMemberName();
 			if (curName == name) {
 				changes[curName] = v;
 				return *this;
@@ -63,24 +67,24 @@ namespace json {
 
 		}
 		v = new ObjectProxy(name, v);
-		StringRef<char> curName = v->getMemberName();
+		StringView<char> curName = v->getMemberName();
 		changes[curName] = v;
 		return *this;
 	}
 
 	Object & Object::set(const Value & value)
 	{
-		StringRef<char> curName = value.v->getMemberName();
+		StringView<char> curName = value.v->getMemberName();
 		changes[curName] = value.v;
 		return *this;
 	}
 
-	Object & Object::unset(const StringRef<char>& name)
+	Object & Object::unset(const StringView<char>& name)
 	{
 		return set(name, AbstractValue::getUndefined());
 	}
 
-	Value Object::operator[](const StringRef<char> &name) const {
+	Value Object::operator[](const StringView<char> &name) const {
 		Changes::const_iterator it = changes.find(name);
 		if (it == changes.end()) {
 			return base[name];
@@ -90,7 +94,7 @@ namespace json {
 		}
 	}
 
-	Object &Object::operator()(const StringRef<char> &name, const Value &value) {
+	Object &Object::operator()(const StringView<char> &name, const Value &value) {
 		return set(name, value);		
 	}
 
@@ -116,8 +120,8 @@ namespace json {
 		while (oldit != baseCnt && newit != newCnt) {
 			const PValue &olditem = base[oldit].v;
 			const PValue &newitem = newit->second;
-			StringRef<char> baseName = olditem->getMemberName();
-			StringRef<char> newName = newitem->getMemberName();
+			StringView<char> baseName = olditem->getMemberName();
+			StringView<char> newName = newitem->getMemberName();
 			int cmp = baseName.compare(newName);
 			if (cmp < 0) {
 				append(merged, olditem);
@@ -143,11 +147,11 @@ namespace json {
 		}
 		return new ObjectValue(merged);
 	}
-	Object2Object Object::object(const StringRef<char>& name)
+	Object2Object Object::object(const StringView<char>& name)
 	{
 		return Object2Object((*this)[name],*this,name);
 	}
-	Array2Object Object::array(const StringRef<char>& name)
+	Array2Object Object::array(const StringView<char>& name)
 	{
 		return Array2Object((*this)[name], *this, name);
 	}

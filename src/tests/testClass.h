@@ -36,7 +36,7 @@ public:
 		return ChargedTest(*this,name,expected_result);
 	}
 
-	bool getResult() const {return failed;}
+	bool didFail() const {return failed;}
 
 protected:
 	bool failed;

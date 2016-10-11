@@ -15,22 +15,22 @@ namespace json {
 	public:
 		Object(Value value);
 		Object();
-		Object(const StringRef<char> &name, const Value &value);
+		Object(const StringView<char> &name, const Value &value);
 		~Object();
 
 
-		Object &set(const StringRef<char> &name, const Value &value);
+		Object &set(const StringView<char> &name, const Value &value);
 		Object &set(const Value &value);
-		Value operator[](const StringRef<char> &name) const;
-		Object &unset(const StringRef<char> &name);
+		Value operator[](const StringView<char> &name) const;
+		Object &unset(const StringView<char> &name);
 
 
-		Object &operator()(const StringRef<char> &name, const Value &value);
+		Object &operator()(const StringView<char> &name, const Value &value);
 
 		PValue commit() const;
 
-		Object2Object object(const StringRef<char> &name);
-		Array2Object array(const StringRef<char> &name);
+		Object2Object object(const StringView<char> &name);
+		Array2Object array(const StringView<char> &name);
 
 		void clear();
 
@@ -40,7 +40,7 @@ namespace json {
 
 	protected:
 		Value base;
-		typedef std::map<StringRef<char>, PValue> Changes;
+		typedef std::map<StringView<char>, PValue> Changes;
 		
 		Changes changes;
 

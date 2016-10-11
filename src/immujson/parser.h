@@ -21,7 +21,7 @@ namespace json {
 		Value parseString();
 
 		std::string readString();
-		void checkString(const StringRef<char> &str);
+		void checkString(const StringView<char> &str);
 
 	
 
@@ -156,13 +156,15 @@ namespace json {
 
 		virtual char const* what() const throw() {
 			if (whatmsg.empty()) {
-				whatmsg = "Parse eror: '" + msg + "' at ";
+				whatmsg = "Parse error: '" + msg + "' at ";
 				std::size_t pos = callstack.size();
 				while (pos) {
 					--pos;
-					whatmsg = whatmsg + callstack[pos];
-					if (pos) whatmsg = whatmsg + "/";
+					whatmsg.append(callstack[pos]);
+					whatmsg.append("/");
 				}
+				whatmsg.append("<root>");
+
 			}
 			return whatmsg.c_str();
 		}
@@ -495,7 +497,7 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Parser<Fn>::checkString(const StringRef<char>& str)
+	inline void Parser<Fn>::checkString(const StringView<char>& str)
 	{
 		for (std::size_t i = 0; i < str.length; ++i) {
 			char c = rd.next();
@@ -551,6 +553,8 @@ namespace json {
 			//now res = res * 10^cnt + part 
 			//this should reduce rounding errors because count of multiplies will be minimal
 			res = res * pow(10.0, cnt) + double(part);
+
+			if (std::isinf(res)) throw ParseError("Too long number");
 		}
 		//return the result
 		return res;

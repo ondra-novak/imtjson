@@ -6,6 +6,9 @@
  */
 
 #include "../immujson/edit.h"
+#include "../immujson/parser.h"
+#include "../immujson/serializer.h"
+#include "../immujson/basicValues.h"
 #include "testClass.h"
 #include <memory>
 
@@ -14,6 +17,9 @@ using namespace json;
 
 int main(int , char **) {
 	TestSimple tst;
+
+	//Normalize test across platforms
+	json::maxPrecisionDigits = 4;
 
 	tst.test("Parse.string","testing") >> [](std::ostream &out) {
 		out << Value::fromString("\"testing\"").getString();
@@ -54,6 +60,28 @@ int main(int , char **) {
 	tst.test("Parse.numberDoubleLargeE","-1.024e+203") >> [](std::ostream &out) {
 		out << Value::fromString("-1024e200").getNumber();
 	};
+	tst.test("Parse.numberLong","Parse error: 'Too long number' at <root>") >> [](std::ostream &out) {
+		int counter = 0;
+		try {
+			out << Value::parse([&](){
+				if (counter < 1000) return (((++counter)*7) % 10) + '0';
+				return 0;
+			}).getNumber();
+		} catch (ParseError &e) {
+			out << e.what();
+		}
+	};
+	tst.test("Parse.numberLong2","7.41853e+299") >> [](std::ostream &out) {
+		int counter = 0;
+		try {
+			out << Value::parse([&](){
+				if (counter < 300) return (((++counter)*7) % 10) + '0';
+				return 0;
+			}).getNumber();
+		} catch (ParseError &e) {
+			out << e.what();
+		}
+	};
 	tst.test("Parse.numberSigned","-1258767987") >> [](std::ostream &out) {
 		out << Value::fromString("-1258767987").getInt();
 	};
@@ -74,16 +102,16 @@ int main(int , char **) {
 	tst.test("Parse.objects", "=null aaa=123 bbb=xyz ccc=true neco=12.2578 ") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"aaa\":123,\"bbb\":\"xyz\", \"ccc\":true, \"\":null, \"neco\":12.2578}");
 		v.forEach([&](Value v) {
-			out << v.getKey() << "=" << v.toDebugString() << " "; return true;
+			out << v.getKey() << "=" << v.toString() << " "; return true;
 		});
 	};
 	tst.test("Parse.objectFindValue", "12.2578") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"aaa\":123,\"bbb\":\"xyz\", \"ccc\":true, \"\":null, \"neco\":12.2578}");
-		out << v["neco"].toDebugString();
+		out << v["neco"].toString();
 	};
 	tst.test("Parse.objectValueNotFound", "<undefined>") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"aaa\":123,\"bbb\":\"xyz\", \"ccc\":true, \"\":null, \"neco\":12.2578}");
-		out << v["caa"].toDebugString();
+		out << v["caa"].toString();
 	};
 	tst.test("Parse.objectInObject", "2 3 2 1") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
@@ -143,6 +171,88 @@ int main(int , char **) {
 		v = o;
 		v.toStream(out);
 	};
+	tst.test("Array.create","[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]") >> [](std::ostream &out){
+		Array a;
+		a.add("hi").add("hola");
+		a.addSet({1,2,3,5,8,13,21});
+		a.add(7557941563989796531369787923.2568971236);
+		Value v = a;
+		v.toStream(out);
+	};
+	tst.test("Array.editInsert","[\"hi\",\"hola\",{\"inserted\":\"here\"},1,2,3,5,8,13,21,7.5579e+27]") >> [](std::ostream &out){
+		Value v = Value::fromString("[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]");
+		Array a(v);
+		a.insert(2,Object("inserted","here"));
+		v = a;
+		v.toStream(out);
+	};
+	tst.test("Array.editDelete","[\"hi\",\"hola\",5,8,13,21,7.5579e+27]") >> [](std::ostream &out){
+		Value v = Value::fromString("[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]");
+		Array a(v);
+		a.eraseSet(2,3);
+		v = a;
+		v.toStream(out);
+	};
+	tst.test("Array.editTrunc","[\"hi\",\"hola\",1]") >> [](std::ostream &out){
+		Value v = Value::fromString("[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]");
+		Array a(v);
+		a.trunc(3);
+		v = a;
+		v.toStream(out);
+	};
+	tst.test("Array.editInsertTrunc","[\"hi\",true,\"hola\"]") >> [](std::ostream &out){
+		Value v = Value::fromString("[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]");
+		Array a(v);
+		a.insert(1,true);
+		a.trunc(3);
+		v = a;
+		v.toStream(out);
+	};
+	tst.test("Array.editTruncInsert","[\"hi\",true,\"hola\",1]") >> [](std::ostream &out){
+		Value v = Value::fromString("[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]");
+		Array a(v);
+		a.trunc(3);
+		a.insert(1,true);
+		v = a;
+		v.toStream(out);
+	};
+	tst.test("Sharing","{\"shared1\":[10,20,30],\"shared2\":{\"a\":1,\"n\":[10,20,30],\"z\":5},\"shared3\":{\"k\":[10,20,30],\"l\":{\"a\":1,\"n\":[10,20,30],\"z\":5}}}") >> [](std::ostream &out){
+		Value v1 = {10,20,30};
+		Value v2(Object("a",1)("z",5)("n",v1));
+		Value v3(Object("k",v1)("l",v2));
+		Value v4(Object("shared1",v1)("shared2",v2)("shared3",v3));
+		v4.toStream(out);
 
-	return tst.getResult()?1:0;
+	};
+	tst.test("StackProtection","Attempt to work with already destroyed object") >> [](std::ostream &out){
+		try {
+			Object o;
+			{
+				auto x = o.object("aa").object("bb").object("cc"); //forbidden usage
+				x("a",10);
+			}
+			Value(o).toStream(out);
+		} catch (std::exception &e) {
+			out << e.what();
+		}
+	};
+	tst.test("refcnt","destroyed") >> [](std::ostream &out) {
+		class MyAbstractValue: public NumberValue {
+		public:
+			MyAbstractValue(std::ostream &out):NumberValue(0),out(out) {}
+			~MyAbstractValue() {out << "destroyed";}
+
+			std::ostream &out;
+
+		};
+		Value v = new MyAbstractValue(out);
+		Value v2 = v;
+		Value v3 (Object("x",v));
+		Value v4 = {v3,v2};
+		v.stringify();
+	};
+
+
+
+	return tst.didFail()?1:0;
 }

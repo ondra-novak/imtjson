@@ -33,7 +33,7 @@ namespace json {
 
 	class StaticEmptyStringValue : public AbstractStringValue {
 	public:
-		virtual StringRef<char> getString() const override { return StringRef<char>(); }
+		virtual StringView<char> getString() const override { return StringView<char>(); }
 
 		StaticEmptyStringValue() {
 			addRef();
@@ -56,7 +56,7 @@ namespace json {
 	public:
 		virtual std::size_t size() const override { return 0; }
 		virtual const IValue *itemAtIndex(std::size_t index) const override { return getUndefined(); }
-		virtual const IValue *member(const StringRef<char> &name) const override { return getUndefined(); }
+		virtual const IValue *member(const StringView<char> &name) const override { return getUndefined(); }
 		virtual bool enumItems(const IEnumFn &) const override { return true; }
 		StaticEmptyObjectValue() {
 			addRef();
@@ -107,6 +107,7 @@ namespace json {
 
 	static StaticEmptyObjectValue emptyObject;
 
+
 	const IValue * AbstractObjectValue::getEmptyObject()
 	{
 		return &emptyObject;
@@ -116,4 +117,49 @@ namespace json {
 	template class NumberValueT<std::intptr_t, numberInteger>;
 	template class NumberValueT<double,0>;
 
+	bool NullValue::equal(const IValue* other) const {
+		return other->type() == null;
 	}
+
+
+	bool BoolValue::equal(const IValue* other) const {
+		return other->type() == boolean && getBool() == other->getBool();
+	}
+
+	bool AbstractNumberValue::equal(const IValue* other) const {
+		return other->type() == number && getNumber() == other->getNumber();
+	}
+
+	bool AbstractStringValue::equal(const IValue* other) const {
+		return other->type() == string && getString() == other->getString();
+	}
+
+	bool AbstractArrayValue::equal(const IValue* other) const {
+		if (other->type() == array && other->size() == size()) {
+			std::size_t cnt = size();
+			for (std::size_t i = 0; i < cnt; i++) {
+				const IValue *a = itemAtIndex(i);
+				const IValue *b = other->itemAtIndex(i);
+				if (a != b && !a->equal(b)) return false;
+			}
+			return true;
+		}
+		return false;
+	}
+	bool AbstractObjectValue::equal(const IValue *other) const {
+		if (other->type() == object && other->size() == size()) {
+			std::size_t cnt = size();
+			for (std::size_t i = 0; i < cnt; i++) {
+				const IValue *a = itemAtIndex(i);
+				const IValue *b = other->itemAtIndex(i);
+				if (a != b && !a->equal(b)) return false;
+			}
+			return true;
+		}
+		return false;
+	}
+
+
+
+}
+

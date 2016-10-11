@@ -21,7 +21,7 @@ namespace json {
 		changes.push_back(v.v->unproxy());
 		return *this;
 	}
-	Array & Array::addSet(const StringRef<Value>& v)
+	Array & Array::addSet(const StringView<Value>& v)
 	{
 		changes.reserve(changes.size() + v.length);
 		for (std::size_t i = 0; i < v.length; i++)
@@ -34,7 +34,7 @@ namespace json {
 		changes.insert(changes.begin()+(pos - changes.offset), v.v->unproxy());
 		return *this;
 	}
-	Array & Array::insertSet(std::size_t pos, const StringRef<Value>& v)
+	Array & Array::insertSet(std::size_t pos, const StringView<Value>& v)
 	{
 		extendChanges(pos);
 		changes.insert(changes.begin() + (pos - changes.offset), v.length, PValue());
@@ -52,8 +52,9 @@ namespace json {
 	Array & Array::eraseSet(std::size_t pos, std::size_t length)
 	{
 		extendChanges(pos);
-		changes.erase(changes.begin() + (pos - changes.offset),
-			changes.begin() + (pos - changes.offset) + length);
+		auto b = changes.begin() + (pos - changes.offset);
+		auto e = b + length ;
+		changes.erase(b,e);
 		return *this;
 	}
 	Array & Array::trunc(std::size_t pos)
