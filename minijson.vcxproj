@@ -146,16 +146,17 @@
     <ClInclude Include="src\immujson\array.h" />
     <ClInclude Include="src\immujson\arrayValue.h" />
     <ClInclude Include="src\immujson\basicValues.h" />
+    <ClInclude Include="src\immujson\compress.h" />
     <ClInclude Include="src\immujson\edit.h" />
     <ClInclude Include="src\immujson\ivalue.h" />
-    <ClInclude Include="src\immujson\mutableLink.h" />
+    <ClInclude Include="src\immujson\json.h" />
     <ClInclude Include="src\immujson\object.h" />
     <ClInclude Include="src\immujson\objectValue.h" />
     <ClInclude Include="src\immujson\parser.h" />
     <ClInclude Include="src\immujson\refcnt.h" />
     <ClInclude Include="src\immujson\serializer.h" />
     <ClInclude Include="src\immujson\stackProtection.h" />
-    <ClInclude Include="src\immujson\stringref.h" />
+    <ClInclude Include="src\immujson\stringview.h" />
     <ClInclude Include="src\immujson\value.h" />
     <ClInclude Include="src\tests\testClass.h" />
   </ItemGroup>
@@ -165,12 +166,14 @@
     <ClCompile Include="src\immujson\arrayValue.cpp" />
     <ClCompile Include="src\immujson\basicValues.cpp" />
     <ClCompile Include="src\immujson\edit.cpp" />
-    <ClCompile Include="src\immujson\mutableLink.cpp" />
     <ClCompile Include="src\immujson\object.cpp" />
     <ClCompile Include="src\immujson\objectValue.cpp" />
     <ClCompile Include="src\immujson\stackProtection.cpp" />
     <ClCompile Include="src\immujson\value.cpp" />
     <ClCompile Include="src\tests\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\immujson\compress.tcc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

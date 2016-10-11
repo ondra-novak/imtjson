@@ -11,6 +11,8 @@
 #include "../immujson/basicValues.h"
 #include "testClass.h"
 #include <memory>
+#include <fstream>
+#include "../immujson/compress.tcc"
 
 using namespace json;
 
@@ -251,7 +253,35 @@ int main(int , char **) {
 		Value v4 = {v3,v2};
 		v.stringify();
 	};
+	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
+		std::string buff;
+		std::ifstream testfile("src/tests/test.json");
+		if (!testfile) throw std::runtime_error("test file not found");
+		Value v1 = Value::fromStream(testfile);
+		std::string s = v1.stringify();
+		std::string cs;
+		{
+			auto cmp = compress([&cs](char c) {
+				cs.push_back(c);
+			});
 
+			for (auto &&x : s) { cmp(x); }
+		}
+
+		std::string ds;
+		std::string::const_iterator csiter = cs.begin();
+		{
+			auto decmp = decompress([&csiter]() {
+				char c = *csiter;
+				++csiter;
+				return c; });
+
+			char z;
+			while ((z = decmp()) != -1) ds.push_back(z);
+		}
+
+		if (ds == s) out << "ok";
+	};
 
 
 	return tst.didFail()?1:0;

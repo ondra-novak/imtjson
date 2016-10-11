@@ -416,7 +416,8 @@ namespace json {
 		//test next character
 		char c = rd.next();
 		//it should be digit or dot (because .3 is valid number)
-		if (!isdigit(c) && c != '.') throw ParseError("Expected '0'...'9', '.', '+' or '-'");
+		if (!isdigit(c) && c != '.') 
+			throw ParseError("Expected '0'...'9', '.', '+' or '-'");
 		//declared dummy var (we don't need counter here)
 		int counter;
 		//parse sequence of numbers as unsigned integer
