@@ -18,6 +18,7 @@ namespace json {
 		virtual const IValue *member(const StringView<char> &name) const override;
 
 		const std::vector<PValue> &getItems() const { return v; }
+		virtual bool getBool() const override {return true;}
 
 	protected:
 		std::vector<PValue> v;

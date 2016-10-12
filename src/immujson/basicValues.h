@@ -37,6 +37,7 @@ namespace json {
 
 		static const IValue *getZero();
 
+
 		virtual bool equal(const IValue *other) const override;
 
 	};
@@ -92,6 +93,7 @@ namespace json {
 				return false;
 			}
 		}
+		virtual bool getBool() const override {return true;}
 
 
 	protected:
@@ -109,6 +111,12 @@ namespace json {
 		virtual StringView<char> getString() const override {
 			return v;
 		}
+		virtual bool getBool() const override {return true;}
+
+		virtual std::intptr_t getInt() const override;
+		virtual std::uintptr_t getUInt() const override;
+		virtual double getNumber() const override;
+
 	protected:
 		std::string v;
 

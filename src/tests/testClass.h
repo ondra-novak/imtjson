@@ -74,4 +74,5 @@ inline void TestSimple::runTest(const Fn& fn, const std::string &name, const std
 
 
 
+
 #endif /* SRC_TESTS_TESTCLASS_H_ */

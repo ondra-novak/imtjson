@@ -31,7 +31,7 @@ void Compress<Fn>::operator ()(char c) {
 
 	//non-ascii characters are rejected with exception
 	if (c & 0x80)
-		throw std::runtime_error("Unsupported character - only 7-bit ascii are supported");
+		throw std::runtime_error("Unsupported character - only 7-bit ascii is supported");
 	//for very first character...
 	if (lastSeq == initialChainCode) {
 		//initialize lastSeq
@@ -50,12 +50,16 @@ void Compress<Fn>::operator ()(char c) {
 			++nextCode;
 			//store lastSeq as c - we starting accumulate next sequence
 			lastSeq = c;
-			//however, if we reached end-code, we need to strip some unused codes
-			if (nextCode == maxCode) {
-				optimizeDB();
-			}
-		}
-		else {
+		} else if (iter->second.nextCode >= maxCode) {
+
+			write(lastSeq);
+
+			write(optimizeCode);
+
+			optimizeDB();
+
+			lastSeq = c;
+		} else {
 			//in case that pair has been found
 			//mark the pair used
 			iter->second.used = true;
@@ -74,7 +78,7 @@ inline void Compress<Fn>::write(ChainCode code) {
 		output((unsigned char)code);
 	} else {
 		//first 0xC0 codes are written above
-		code -= 0x3F;
+		code -= 0x40;
 		//numbers equal and above 0xC0 are written in two bytes
 		//11xxxxxx xxxxxxxx - 14 bits (max 0x3FFF)
 		output((unsigned char)(code >> 8) | 0xC0);
@@ -96,7 +100,7 @@ void Compress<Fn>::optimizeDB()
 	ChainCode newNextCode = firstCode;
 	for (auto &&x : seqdb) {
 		//only used codes
-		if (x.second.used) {
+		if (x.second.used && x.second.nextCode < maxCodeForOptimize) {
 			//insert to new database - translated key + reference to newly created code
 			newdb.insert(std::make_pair(
 				Sequence(translateTable[x.first.first], x.first.second),
@@ -139,7 +143,12 @@ char Decompress<Fn>::operator()()
 			reset();
 			return -1;
 		}
-		//for very first code
+		if (cc == optimizeCode) {
+			optimizeDB();
+			prevCode = initialChainCode;
+			return operator()();
+		}
+/*		//for very first code
 		if (prevCode == initialChainCode) {
 			//store it as prevCode
 			prevCode = cc;
@@ -147,7 +156,7 @@ char Decompress<Fn>::operator()()
 			firstChar = (char)cc;
 			//returns this character
 			return firstChar;
-		}
+		}*/
 		//p is walk-pointer
 		ChainCode p = cc;
 		//calculate next code from size of database
@@ -185,14 +194,10 @@ char Decompress<Fn>::operator()()
 		//remaining code is firstChar
 		firstChar = (char)p;
 		//register new code which is pair of prevCode and firstChar of current code
-		seqdb.push_back(DecInfo(prevCode, firstChar, used));
+		if (prevCode != initialChainCode)
+			seqdb.push_back(DecInfo(prevCode, firstChar, used));
 		//make current code as prev code
 		prevCode = cc;
-		//database is full
-		if (nextCode + 1 == maxCode) {
-			//optimise database
-			optimizeDB();
-		}
 		//first char is returned as result
 		return firstChar;
 	}
@@ -220,7 +225,7 @@ void Decompress<Fn>::optimizeDB()
 	SeqDB tmpdb;
 	for (unsigned int i = 0; i < firstCode; i++) translateTable[i] = i;
 	for (auto &&x : seqdb) {
-		if (x.used) {
+		if (x.used && oldcc < maxCodeForOptimize) {
 			tmpdb.insert(std::make_pair(Sequence(x.prevCode, x.outchar), SeqInfo(oldcc)));
 		}
 		oldcc++;
@@ -242,7 +247,97 @@ CompressDecompresBase::ChainCode Decompress<Fn>::read()
 	if ((b & 0xC0) != 0xC0) return cc;
 	b = input();
 	cc = (cc & ~0xC0) << 8 | b;		
-	return cc+0x3F;
+	return cc+0x40;
+}
+
+template<typename Fn>
+inline void CompressAdjUtf8<Fn>::operator ()(char c) {
+	if (c > 2) {
+		fn(c);
+	} else {
+		if ((c & 0xC0) == 0x80) {
+			if (remain == 0)
+				throw std::runtime_error("Invalid UTF-8 character");
+			uchar = (uchar << 6) | ( (unsigned char)c & ~0x80);
+			remain--;
+			if (remain == 0) {
+				if (uchar < 0x80) {
+					fn(0x0);
+					fn((char)uchar);
+				} else if (uchar < 0x400) {
+					fn(0x1);
+					fn((char)(uchar >> 7));
+					fn((char)(uchar & 0x7F));
+				} else {
+					fn(0x2);
+					fn((char)(uchar >> 14));
+					fn((char)((uchar >> 7) & 0x7F));
+					fn((char)(uchar & 0x7F));
+				}
+			}
+		}else {
+			if (remain != 0)
+				throw std::runtime_error("Invalid UTF-8 character");
+			if ((c & 0xE0) == 0xC0) {
+				uchar = ((unsigned char)c & ~0xE0);
+				remain=1;
+			} else 	if (((unsigned char)c & 0xF0) == 0xE0) {
+				uchar = ((unsigned char)c & ~0xF0);
+				remain=2;
+			} else 	if (((unsigned char)c & 0xF8) == 0xF0) {
+				uchar = ((unsigned char)c & ~0xF8);
+				remain=3;
+			} else {
+				throw std::runtime_error("Invalid UTF-8 character");
+			}
+		}
+	}
+}
+
+template<typename Fn>
+inline char DecompressAdjUtf8<Fn>::operator ()() {
+	if (!outbytes.empty()) {
+		char o = outbytes.top();
+		outbytes.pop();
+		return o;
+	}
+	char c = fn();
+	std::uintptr_t uchar;
+	switch (c) {
+	case 0:
+		return fn();
+	case 1:
+		uchar = (unsigned char)fn();
+		uchar = (uchar << 7) | (unsigned char)fn();
+		return output(uchar);
+	case 2:
+		uchar = fn();
+		uchar = (uchar << 7) | (unsigned char)fn();
+		uchar = (uchar << 7) | (unsigned char)fn();
+		return output(uchar);
+
+	default: return c;
+	}
+}
+
+template<typename Fn>
+inline char DecompressAdjUtf8<Fn>::output(std::uintptr_t uchar) {
+	if (uchar >= 0x80 && uchar <= 0x7FF) {
+		outbytes.push((char)(0x80 | (uchar & 0x3F)));
+		return (char)(0xC0 | (uchar >> 6));
+	}
+	else if (uchar >= 0x800 && uchar <= 0xFFFF) {
+		outbytes.push((char)(0x80 | (uchar & 0x3F)));
+		outbytes.push((char)(0x80 | ((uchar >> 6) & 0x3F)));
+		return (char)(0xE0 | (uchar >> 12));
+	}
+	else {
+		outbytes.push((char)(0x80 | (uchar & 0x3F)));
+		outbytes.push((char)(0x80 | ((uchar >> 6) & 0x3F)));
+		outbytes.push((char)(0x80 | ((uchar >> 12) & 0x3F)));
+		return ((char)(0xF0 | (uchar >> 18)));
+	}
+
 }
 
 

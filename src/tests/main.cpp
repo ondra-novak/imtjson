@@ -16,6 +16,36 @@
 
 using namespace json;
 
+void compressDemo(std::string file) {
+	std::ifstream infile(file);
+	{
+		std::ofstream outfile(file+".cmp",std::ofstream::out|std::ostream::trunc);
+		{
+			auto compressor = compressUtf8([&outfile](unsigned char b){
+				outfile.put(b);
+			});
+			int z;
+			while ((z = infile.get()) != -1) {
+				compressor((char)z);
+			}
+		}
+	}
+	{
+		std::ifstream infile(file+".cmp");
+		std::ofstream outfile(file+".decmp",std::ofstream::out|std::ostream::trunc);
+		{
+			auto decompressor = decompressUtf8([&infile](){
+				return infile.get();
+			});
+			int z;
+			while ((z = decompressor()) != -1) {
+				outfile.put((char)z);
+			}
+		}
+	}
+
+}
+
 
 int main(int , char **) {
 	TestSimple tst;
@@ -253,6 +283,205 @@ int main(int , char **) {
 		Value v4 = {v3,v2};
 		v.stringify();
 	};
+
+
+	tst.test("parse.corruptedFile.string","Parse error: 'Unexpected end of file' at <root>") >> [](std::ostream &out) {
+		try {
+			Value v = Value::fromString("\"qweqweq");
+		} catch (std::exception &e) {
+			out << e.what();
+		}
+	};
+	tst.test("parse.corruptedFile.token","Parse error: 'Unknown keyword' at <root>") >> [](std::ostream &out) {
+		try {
+			Value v = Value::fromString("tru");
+		} catch (std::exception &e) {
+			out << e.what();
+		}
+	};
+	tst.test("parse.corruptedFile.array","Parse error: 'Expected ',' or ']'' at <root>/[4]") >> [](std::ostream &out) {
+		try {
+			Value v = Value::fromString("[10,20,[30,40],30");
+		} catch (std::exception &e) {
+			out << e.what();
+		}
+	};
+	tst.test("parse.corruptedFile.object","Parse error: 'Expected ':'' at <root>/xyz") >> [](std::ostream &out) {
+		try {
+			Value v = Value::fromString("{\"abc\":123,\"xyz\"");
+		} catch (std::exception &e) {
+			out << e.what();
+		}
+	};
+
+	tst.test("compare.strings","falsefalsetruetrue") >> [](std::ostream &out) {
+		Value a("ahoj");
+		Value b("nazdar");
+		Value c("ahoj");
+
+		Value r1(a == b);
+		Value r2(b == c);
+		Value r3(a == c);
+		Value r4(a == a);
+
+		out << r1 << r2 << r3 << r4;
+
+	};
+	tst.test("compare.numbers","falsefalsetruetruetruefalse") >> [](std::ostream &out) {
+		Value a(10);
+		Value b(25);
+		Value c(10.0);
+		Value d((1L<<63)+1);
+		Value e((double)(1L<<63));
+
+		Value r1(a == b);
+		Value r2(b == c);
+		Value r3(a == c);
+		Value r4(a == a);
+		Value r5(d == e);
+		Value r6(e == c);
+
+		out << r1 << r2 << r3 << r4 << r5 << r6;
+
+	};
+	tst.test("compare.arrays","falsefalsefalsetruetrue") >> [](std::ostream &out) {
+		Value a({1,2,3,"xxx"});
+		Value b({1,2,3,"aaa"});
+		Value c({1,2,3});
+		Value d({1,2,3,"xxx"});
+
+		Value r1(a == b);
+		Value r2(b == c);
+		Value r3(a == c);
+		Value r4(a == a);
+		Value r5(d == a);
+
+		out << r1 << r2 << r3 << r4 << r5;
+
+	};
+
+	tst.test("compare.objects","falsefalsefalsetruetruetruetrue") >> [](std::ostream &out) {
+		Value a(Object("a",1)("b",20));
+		Value b(Object("a",1)("b",20)("c",32));
+		Value c(Object("x",1)("y",20));
+		Value d(Object("a",1)("b",20));
+
+		Value r1(a == b);
+		Value r2(b == c);
+		Value r3(a == c);
+		Value r4(a == a);
+		Value r5(d == a);
+		Value r6(Value(1) == a["a"]);
+		Value r7(c["x"] == a["a"]);
+
+		out << r1 << r2 << r3 << r4 << r5 << r6 << r7;
+
+	};
+	tst.test("compare.booleans","falsetruetruetrue") >> [](std::ostream &out) {
+		Value a(true);
+		Value b(false);
+		Value c(false);
+
+		Value r1(a == b);
+		Value r2(a == a);
+		Value r3(b == b);
+		Value r4(c == b);
+
+		out << r1 << r2 << r3 << r4;
+
+	};
+	tst.test("compare.null","truetruetrue") >> [](std::ostream &out) {
+		Value a(null);
+		Value b(null);
+
+		Value r1(a == b);
+		Value r2(a == a);
+		Value r3(b == b);
+
+		out << r1 << r2 << r3;
+	};
+
+	tst.test("compare.undefined","truetruetrue") >> [](std::ostream &out) {
+		Value a;
+		Value b;
+
+		Value r1(a == b);
+		Value r2(a == a);
+		Value r3(b == b);
+
+		out << r1 << r2 << r3;
+	};
+
+	tst.test("compare.various","falsetruefalsefalsefalsefalsefalsefalsefalsefalsefalsefalsefalsefalsefalse") >> [](std::ostream &out) {
+		Value a(1);
+		Value b("1");
+		Value c(1.0);
+		Value d(true);
+		Value e((Array()));
+		Value f((Object()));
+
+		Value r1(a == b);
+		Value r2(a == c);
+		Value r3(a == d);
+		Value r4(a == e);
+		Value r5(a == f);
+		Value r6(b == c);
+		Value r7(b == d);
+		Value r8(b == e);
+		Value r9(b == f);
+		Value r10(c == d);
+		Value r11(c == e);
+		Value r12(c == f);
+		Value r13(d == e);
+		Value r14(d == f);
+		Value r15(e == f);
+
+		out << r1 << r2 << r3 << r4 << r5 << r6 << r7 << r8 << r9 << r10 << r11 << r12 << r13 << r14 << r15;
+	};
+	tst.test("conversions.bools","truefalsefalsefalsetruetruetruefalsetruefalsefalsefalsetruefalse") >> [](std::ostream &out) {
+		out << Value(Value(true).getBool())
+			<< Value(Value(false).getBool())
+			<< Value(Value("").getBool())
+			<< Value(Value(0).getBool())
+			<< Value(Value("x").getBool())
+			<< Value(Value(1).getBool())
+			<< Value(Value(Object("a",1)).getBool())
+			<< Value(Value(Object()).getBool())
+			<< Value(Value({1,2}).getBool())
+			<< Value(Value({}).getBool())
+			<< Value(Value(null).getBool())
+			<< Value(Value().getBool())
+			<< Value(Value(1.0).getBool())
+			<< Value(Value(0.0).getBool());
+
+	};
+	tst.test("conversions.numbers","123.45,123,123,-123.45,-123,65413") >> [](std::ostream &out) {
+		Value t1("123.45");
+		Value t2("-123.45");
+		out << t1.getNumber() << ","
+			<< t1.getInt() << ","
+			<< t1.getUInt() << ","
+			<< t2.getNumber() << ","
+			<< t2.getInt() << ","
+			<< (t2.getUInt() & 0xFFFF);
+	};
+	tst.test("enumKeys","aaa,karel,lkus,macho,zucha,") >> [](std::ostream &out) {
+		Value v(
+			Object
+				("aaa",10)
+				("karel",20)
+				("zucha",true)
+				("macho",21)
+				("lkus",11)
+		);
+		v.forEach([&out](Value v) {
+			out << v.getKey() << ",";
+			return true;
+		});
+	};
+
+
+
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
 		std::string buff;
 		std::ifstream testfile("src/tests/test.json");
@@ -282,6 +511,11 @@ int main(int , char **) {
 
 		if (ds == s) out << "ok";
 	};
+	tst.test("compress.demo1","ok") >> [](std::ostream &out) {
+		compressDemo("src/tests/test.json");
+		out<<"ok";
+	};
+
 
 
 	return tst.didFail()?1:0;

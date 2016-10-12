@@ -156,14 +156,13 @@ namespace json {
 
 		virtual char const* what() const throw() {
 			if (whatmsg.empty()) {
-				whatmsg = "Parse error: '" + msg + "' at ";
+				whatmsg = "Parse error: '" + msg + "' at <root>";
 				std::size_t pos = callstack.size();
 				while (pos) {
 					--pos;
-					whatmsg.append(callstack[pos]);
 					whatmsg.append("/");
+					whatmsg.append(callstack[pos]);
 				}
-				whatmsg.append("<root>");
 
 			}
 			return whatmsg.c_str();
@@ -465,6 +464,8 @@ namespace json {
 		tmpstr.clear();
 		char c = rd.nextCommit();
 		while (c != '"') {
+			if (c == -1)
+				throw ParseError("Unexpected end of file");
 			if (c & 0x80) {
 				//check and normalize UTF-8
 				parseUtf8(c);

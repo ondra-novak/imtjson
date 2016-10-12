@@ -26,8 +26,7 @@ namespace json {
 		virtual StringView<char> getMemberName() const override { return name; }
 		virtual const IValue *unproxy() const override { return value->unproxy(); }
 		virtual bool equal(const IValue *other) const override {
-			if ((other->flags() & proxy) == 0 || other->getMemberName() != name) return false;
-			else return value->equal(other->unproxy());
+				return value->equal(other->unproxy());
 		}
 
 	protected:

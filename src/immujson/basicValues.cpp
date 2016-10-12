@@ -1,4 +1,6 @@
 #include "basicValues.h"
+
+#include "value.h"
 namespace json {
 
 	class StaticNullValue: public NullValue {
@@ -152,13 +154,25 @@ namespace json {
 			for (std::size_t i = 0; i < cnt; i++) {
 				const IValue *a = itemAtIndex(i);
 				const IValue *b = other->itemAtIndex(i);
-				if (a != b && !a->equal(b)) return false;
+				if (a != b && (a->getMemberName() != b->getMemberName() || !a->equal(b))) return false;
 			}
 			return true;
 		}
 		return false;
 	}
 
+
+	std::intptr_t StringValue::getInt() const {
+		return Value::fromString(v).getInt();
+	}
+
+	std::uintptr_t StringValue::getUInt() const {
+		return Value::fromString(v).getUInt();
+	}
+
+	double StringValue::getNumber() const {
+		return Value::fromString(v).getNumber();
+	}
 
 
 }

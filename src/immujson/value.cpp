@@ -60,8 +60,11 @@ namespace json {
 	Value Value::fromString(const StringView<char>& string)
 	{
 		std::size_t pos = 0;
-		return parse([&pos,string]()  {
-			return string.data[pos++];
+		return parse([&pos,&string]() -> char {
+			if (pos == string.length)
+				return -1;
+			else
+				return string.data[pos++];
 		});
 	}
 
@@ -97,12 +100,14 @@ namespace json {
 
 	template<typename T>
 	PValue allocUnsigned(T x) {
+		if (x == (T)0) return AbstractNumberValue::getZero();
 		if (sizeof(T) <= sizeof(uintptr_t)) return new UnsignedIntegerValue(uintptr_t(x));
 		else return new NumberValue((double)x);
 	}
 
 	template<typename T>
 	PValue allocSigned(T x) {
+		if (x == (T)0) return AbstractNumberValue::getZero();
 		if (sizeof(T) <= sizeof(intptr_t)) return new IntegerValue(intptr_t(x));
 		else return new NumberValue((double)x);
 	}
@@ -161,11 +166,17 @@ namespace json {
 	{
 	}
 */
-	Value::Value(double value):v(new NumberValue(value))
+	Value::Value(double value):v(
+			value == 0?AbstractNumberValue::getZero()
+			:new NumberValue(value)
+	)
 	{
 	}
 
-	Value::Value(float value):v(new NumberValue(value))
+	Value::Value(float value):v(
+			value == 0?AbstractNumberValue::getZero()
+			:new NumberValue(value)
+	)
 	{
 	}
 
