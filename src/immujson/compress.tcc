@@ -78,7 +78,7 @@ inline void Compress<Fn>::write(ChainCode code) {
 		output((unsigned char)code);
 	} else {
 		//first 0xC0 codes are written above
-		code -= 0x40;
+		code -= 0xC0;
 		//numbers equal and above 0xC0 are written in two bytes
 		//11xxxxxx xxxxxxxx - 14 bits (max 0x3FFF)
 		output((unsigned char)(code >> 8) | 0xC0);
@@ -247,7 +247,7 @@ CompressDecompresBase::ChainCode Decompress<Fn>::read()
 	if ((b & 0xC0) != 0xC0) return cc;
 	b = input();
 	cc = (cc & ~0xC0) << 8 | b;		
-	return cc+0x40;
+	return cc+0xC0;
 }
 
 template<typename Fn>

@@ -19,9 +19,9 @@ using namespace json;
 void compressDemo(std::string file) {
 	std::ifstream infile(file);
 	{
-		std::ofstream outfile(file+".cmp",std::ofstream::out|std::ostream::trunc);
+		std::ofstream outfile(file+".cmp",std::ofstream::out|std::ostream::trunc| std::ofstream::binary);
 		{
-			auto compressor = compressUtf8([&outfile](unsigned char b){
+			auto compressor = compress([&outfile](unsigned char b){
 				outfile.put(b);
 			});
 			int z;
@@ -31,10 +31,10 @@ void compressDemo(std::string file) {
 		}
 	}
 	{
-		std::ifstream infile(file+".cmp");
-		std::ofstream outfile(file+".decmp",std::ofstream::out|std::ostream::trunc);
+		std::ifstream infile(file+".cmp",std::ifstream::binary);
+		std::ofstream outfile(file+".decmp",std::ofstream::out|std::ostream::trunc|std::ofstream::binary);
 		{
-			auto decompressor = decompressUtf8([&infile](){
+			auto decompressor = decompress([&infile](){
 				return infile.get();
 			});
 			int z;
@@ -114,6 +114,18 @@ int main(int , char **) {
 			out << e.what();
 		}
 	};
+	
+		if (sizeof(uintptr_t) == 8) {
+			tst.test("Parse.numberMaxUINT", "18446744073709551615") >> [](std::ostream &out) {
+				out << Value::fromString("18446744073709551615").getUInt();
+			};
+		}
+		else {
+			tst.test("Parse.numberMaxUINT", "4294967295") >> [](std::ostream &out) {
+				out << Value::fromString("4294967295").getUInt();
+			};
+
+		}
 	tst.test("Parse.numberSigned","-1258767987") >> [](std::ostream &out) {
 		out << Value::fromString("-1258767987").getInt();
 	};
@@ -327,21 +339,17 @@ int main(int , char **) {
 		out << r1 << r2 << r3 << r4;
 
 	};
-	tst.test("compare.numbers","falsefalsetruetruetruefalse") >> [](std::ostream &out) {
+	tst.test("compare.numbers","falsefalsetruetrue") >> [](std::ostream &out) {
 		Value a(10);
 		Value b(25);
 		Value c(10.0);
-		Value d((1L<<63)+1);
-		Value e((double)(1L<<63));
 
 		Value r1(a == b);
 		Value r2(b == c);
 		Value r3(a == c);
 		Value r4(a == a);
-		Value r5(d == e);
-		Value r6(e == c);
 
-		out << r1 << r2 << r3 << r4 << r5 << r6;
+		out << r1 << r2 << r3 << r4;
 
 	};
 	tst.test("compare.arrays","falsefalsefalsetruetrue") >> [](std::ostream &out) {
@@ -484,7 +492,7 @@ int main(int , char **) {
 
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
 		std::string buff;
-		std::ifstream testfile("src/tests/test.json");
+		std::ifstream testfile("src/tests/test.json",std::ifstream::binary);
 		if (!testfile) throw std::runtime_error("test file not found");
 		Value v1 = Value::fromStream(testfile);
 		std::string s = v1.stringify();

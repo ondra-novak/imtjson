@@ -508,9 +508,12 @@ namespace json {
 		}
 	}
 
+
+
 	template<typename Fn>
 	inline bool Parser<Fn>::parseUnsigned(uintptr_t & res, int &counter)
 	{
+		const uintptr_t overflowDetection = ((uintptr_t)-1) / 10; //429496729
 		//start at zero
 		res = 0;
 		//count read charactes
@@ -519,6 +522,9 @@ namespace json {
 		char c = rd.next();
 		//repeat while it is digit
 		while (isdigit(c)) {
+			if (res > overflowDetection) {
+				return false;
+			}
 			//calculate next val
 			uintptr_t nextVal = res * 10 + (c - '0');
 			//detect overflow

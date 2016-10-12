@@ -10,7 +10,7 @@ public:
 	typedef unsigned int ChainCode;
 	static const ChainCode initialChainCode = -1;
 	static const ChainCode firstCode = 128;
-	static const ChainCode maxCodeToEncode = 0x3FFF+0x40;
+	static const ChainCode maxCodeToEncode = 0x3FFF+0xC0;
 	static const ChainCode flushCode = maxCodeToEncode;
 	static const ChainCode optimizeCode = maxCodeToEncode-1;
 	static const ChainCode maxCode = maxCodeToEncode - 2;
