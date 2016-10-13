@@ -1,4 +1,3 @@
-Debug/
 minijson.vcxproj.filters
 # Compiled Object files
 *.slo
@@ -29,5 +28,11 @@ minijson.vcxproj.filters
 *.exe
 *.out
 *.app
->>>>>>> github/master
+Debug/
 Release/
+Debug-Test/
+doc/
+Release-Test/
+src/tests/test.json.cmp
+src/tests/test.json.decmp
+src/tests/test.json.raw

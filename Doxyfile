@@ -1,4 +1,4 @@
-# Doxyfile 1.8.11
+# Doxyfile 1.8.12
 
 # This file describes the settings to be used by the documentation system
 # doxygen (www.doxygen.org) for a project.
@@ -302,6 +302,15 @@ EXTENSION_MAPPING      =
 # The default value is: YES.
 
 MARKDOWN_SUPPORT       = YES
+
+# When the TOC_INCLUDE_HEADINGS tag is set to a non-zero value, all headings up
+# to that level are automatically included in the table of contents, even if
+# they do not have an id attribute.
+# Note: This feature currently applies only to Markdown headings.
+# Minimum value: 0, maximum value: 99, default value: 0.
+# This tag requires that the tag MARKDOWN_SUPPORT is set to YES.
+
+TOC_INCLUDE_HEADINGS   = 0
 
 # When enabled doxygen tries to link words that correspond to documented
 # classes, or namespaces to their corresponding documentation. Such a link can
@@ -803,8 +812,8 @@ INPUT_ENCODING         = UTF-8
 # If left blank the following patterns are tested:*.c, *.cc, *.cxx, *.cpp,
 # *.c++, *.java, *.ii, *.ixx, *.ipp, *.i++, *.inl, *.idl, *.ddl, *.odl, *.h,
 # *.hh, *.hxx, *.hpp, *.h++, *.cs, *.d, *.php, *.php4, *.php5, *.phtml, *.inc,
-# *.m, *.markdown, *.md, *.mm, *.dox, *.py, *.pyw, *.f90, *.f, *.for, *.tcl,
-# *.vhd, *.vhdl, *.ucf, *.qsf, *.as and *.js.
+# *.m, *.markdown, *.md, *.mm, *.dox, *.py, *.pyw, *.f90, *.f95, *.f03, *.f08,
+# *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf and *.qsf.
 
 FILE_PATTERNS          = *.c \
                          *.cc \
@@ -2196,16 +2205,16 @@ DIA_PATH               =
 # and usage relations if the target is undocumented or is not a class.
 # The default value is: YES.
 
-HIDE_UNDOC_RELATIONS   = YES
+HIDE_UNDOC_RELATIONS   = NO
 
 # If you set the HAVE_DOT tag to YES then doxygen will assume the dot tool is
 # available from the path. This tool is part of Graphviz (see:
 # http://www.graphviz.org/), a graph visualization toolkit from AT&T and Lucent
 # Bell Labs. The other options in this section have no effect if this option is
 # set to NO
-# The default value is: YES.
+# The default value is: NO.
 
-HAVE_DOT               = YES
+HAVE_DOT               = NO
 
 # The DOT_NUM_THREADS specifies the number of dot invocations doxygen is allowed
 # to run in parallel. When set to 0 doxygen will base this on the number of
@@ -2359,9 +2368,7 @@ DIRECTORY_GRAPH        = YES
 # Note: If you choose svg you need to set HTML_FILE_EXTENSION to xhtml in order
 # to make the SVG files visible in IE 9+ (other browsers do not have this
 # requirement).
-# Possible values are: png, png:cairo, png:cairo:cairo, png:cairo:gd, png:gd,
-# png:gd:gd, jpg, jpg:cairo, jpg:cairo:gd, jpg:gd, jpg:gd:gd, gif, gif:cairo,
-# gif:cairo:gd, gif:gd, gif:gd:gd, svg, png:gd, png:gd:gd, png:cairo,
+# Possible values are: png, jpg, gif, svg, png:gd, png:gd:gd, png:cairo,
 # png:cairo:gd, png:cairo:cairo, png:cairo:gdiplus, png:gdiplus and
 # png:gdiplus:gdiplus.
 # The default value is: png.

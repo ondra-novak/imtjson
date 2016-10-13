@@ -4,8 +4,12 @@
 
 namespace json {
 
-
-
+#ifdef _WIN32
+	//windows optimization is unable to see why the destructor must be called.
+	//so the destructor is removed (value tested beyond lifetime of the object)
+	//that why need to disable optimizations here
+#pragma optimize("", off)
+#endif
 
 	StackProtected::StackProtected():cookie(cookieValue)
 	{

@@ -5,6 +5,12 @@
  *      Author: ondra
  */
 
+#ifdef _WIN32
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif
+
 #include "../immujson/edit.h"
 #include "../immujson/parser.h"
 #include "../immujson/serializer.h"
@@ -586,8 +592,17 @@ int main(int , char **) {
 		compressDemo("src/tests/test.json");
 		out<<"ok";
 	};
+	
+	tst.test("MemoryLeaks", "") >> [](std::ostream &out) {
+#ifdef _WIN32
+		if (_CrtDumpMemoryLeaks()) {
+			out << "Detected memory leaks!";
+		}
+#else
+		std::cout << "(NOIMPL)";
+#endif
 
-
+	};
 
 	return tst.didFail()?1:0;
 }

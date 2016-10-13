@@ -100,6 +100,7 @@ namespace json {
 		*/
 		PValue commit() const;
 
+		//@{
 		///Allows to create subobject or subobject of subobject inline or pass it to a function
 		/**
 			The function creates special object which inherits Object and which is
@@ -167,11 +168,30 @@ namespace json {
 		*/
 		Object2Object object(const StringView<char> &name);
 		Array2Object array(const StringView<char> &name);
+		//@}
 
+		///clears the object
 		void clear();
 
+		///revert all changes
+		void revert();
+
+		///determines dirty status (modified)
+		/**
+		@retval true some modifications has been recorded
+		@retval false no modifications recorded.
+		*/
 		bool dirty() const;
 
+		///Merges two objects
+		/** Function inserts items from the object specified by parameter to this object
+		which can replace existing items or add some new ones. The result is merge
+		of two objects 
+		
+		@param object second object, which replaces all existing keys in current object
+		@return reference to this to create chains
+
+		*/
 		Object &merge(Value object);
 
 	protected:
