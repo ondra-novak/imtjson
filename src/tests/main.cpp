@@ -46,6 +46,11 @@ void compressDemo(std::string file) {
 
 }
 
+void subobject(Object &&obj) {
+	obj("outbreak", 19)
+		("outgrow", 21);
+}
+
 
 int main(int , char **) {
 	TestSimple tst;
@@ -200,6 +205,20 @@ int main(int , char **) {
 		o.object("sub")
 			("kiki", -32.431)
 			("kuku", false);
+		v = o;
+		v.toStream(out);
+	};
+	tst.test("Object.addSubobjectFunction", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\",\"sub\":{\"outbreak\":19,\"outgrow\":21}}") >> [](std::ostream &out) {
+		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
+		Object o(v);
+		subobject(o.object("sub"));
+		v = o;
+		v.toStream(out);
+	};
+	tst.test("Object.addSubobjectFunction2", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\",\"sub\":{\"sub2\":{\"outbreak\":19,\"outgrow\":21}}}") >> [](std::ostream &out) {
+		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
+		Object o(v);
+		subobject(o.object("sub").object("sub2"));
 		v = o;
 		v.toStream(out);
 	};
