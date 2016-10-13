@@ -47,7 +47,7 @@ namespace json {
 		}
 
 		operator T *() const noexcept { return ptr; }
-		T &operator *() const noexcept { return ptr; }
+		T &operator *() const noexcept { return *ptr; }
 		T *operator->() const noexcept { return ptr; }
 
 		template<typename X>

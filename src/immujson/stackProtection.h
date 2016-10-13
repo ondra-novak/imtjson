@@ -11,9 +11,10 @@ namespace json {
 		~StackProtected();
 		void checkInstance() const;
 
-	protected:
+
+		static const std::uintptr_t cookieValue;
+protected:
 		std::uintptr_t cookie;
-		static std::uintptr_t cookieValue;
 
 
 	};

@@ -13,6 +13,7 @@
 #include <memory>
 #include <fstream>
 #include "../immujson/compress.tcc"
+#include "../immujson/path.h"
 
 using namespace json;
 
@@ -507,6 +508,49 @@ int main(int , char **) {
 		});
 	};
 
+	tst.test("Path.access1","2,\"super\"") >> [](std::ostream &out) {
+		Value v1(Object
+				("abc",1)
+				("bcd",Object
+						("z",Object
+								("x",{12,23,Object("u",2)})
+								("krk",true)))
+				("blb","trp"));
+
+		Value v2(Object
+				("xyz","kure")
+				("bcd",Object
+						("z",Object
+								("x",{52,23,Object("u","super")})
+								("krk",true))
+						("amine","slepice"))
+				("bkabla",{1,2,3}));
+
+		PPath path = (Path::root/"bcd"/"z"/"x"/2/"u").copy();
+		Value r1 = v1[path];
+		Value r2 = v2[path];
+		out << r1 << "," << r2;
+
+	};
+
+	tst.test("Path.invalidAccess","Attempt to work with already destroyed object") >> [](std::ostream &out) {
+		try {
+			Path p = Path::root /"aaa"/"bbb";
+			Value v;
+			out << v[p];
+		} catch (std::exception &e) {
+			out << e.what();
+		}
+	};
+	tst.test("Path.toValue","[\"bcd\",\"z\",\"x\",2,\"u\"]") >> [](std::ostream &out) {
+		Value v = (Path::root/"bcd"/"z"/"x"/2/"u").toValue();
+		out << v;
+	};
+	tst.test("Path.fromValue","0") >> [](std::ostream &out) {
+		Value v = Value::fromString("[\"bcd\",\"z\",\"x\",2,\"u\"]");
+		PPath p = PPath::fromValue(v);
+		out << p.compare(Path::root/"bcd"/"z"/"x"/2/"u");
+	};
 
 
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {

@@ -60,8 +60,13 @@ namespace json {
 
 		static std::size_t calcLength(const T *str) {
 			const T *p = str;
-			while (*p) ++p;
-			return p - str;
+			if (p) {
+				while (*p) ++p;
+				return p - str;
+			} else {
+				return 0;
+			}
+
 		}
 		bool empty() const {return length == 0;}
 	};

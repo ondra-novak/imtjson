@@ -7,6 +7,8 @@ namespace json {
 
 	class Array;
 	class Object;
+	class Path;
+	class PPath;
 
 	///Stores one JSON value
 	/** The instance of the class Value can store one value of any JSON type:
@@ -230,6 +232,13 @@ namespace json {
 		 * @return If the object has such an item, it is returned. Otherwise, undefined is returned
 		 */
 		Value operator[](const StringView<char> &key) const { return v->member(key); }
+		///Access to an item in a container identified using the Path object
+		/**
+		 * @param path Instance o Path which should refer a desired item
+		 * @return Item or undefined
+		 */
+		Value operator[](const Path &path) const;
+
 		///Retrieve key of the value if the value is part of an object
 		/**
 		 * Items in the object are kept as pair which contains the key and the value. Every time

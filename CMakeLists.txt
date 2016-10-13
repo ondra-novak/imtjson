@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project (immujson_tests)
+project (immujson)
 add_subdirectory (src/immujson)
 add_subdirectory (src/tests)
   # The 'test' target runs all but the future tests
@@ -10,3 +10,4 @@ add_subdirectory (src/tests)
 add_compile_options(-std=c++11)
 add_custom_target( test src/tests/immujson_test DEPENDS src/tests/immujson_test)
 cmake_policy(POP) 
+

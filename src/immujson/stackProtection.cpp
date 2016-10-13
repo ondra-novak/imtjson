@@ -22,5 +22,5 @@ namespace json {
 			throw std::runtime_error("Attempt to work with already destroyed object");
 	}
 
-	std::uintptr_t StackProtected::cookieValue = (std::uintptr_t)time(0);
+	const std::uintptr_t StackProtected::cookieValue = (std::uintptr_t)time(0);
 }
