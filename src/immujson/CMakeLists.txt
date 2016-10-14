@@ -10,4 +10,4 @@ install(TARGETS immujson
         ) 
 INSTALL(FILES ${immujson_HDR}
         DESTINATION "include/immujson"
-        )
+        ) 

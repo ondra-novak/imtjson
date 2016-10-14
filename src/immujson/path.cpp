@@ -95,7 +95,9 @@ T *Path::copyRecurse(T * trg, char  *strBuff) const {
 		//pick first unused byte in string buffer
 		char *c = strBuff;
 		//copy name to buffer
-		memcpy(strBuff, keyName.data,keyName.length);
+		std::copy(keyName.data,keyName.data+keyName.length, strBuff);
+/*		//copy name to buffer
+		memcpy(strBuff, keyName.data,keyName.length);*/
 		//advance pointer in buffer
 		strBuff+=keyName.length;
 		//write terminating zero for compatibility issues

@@ -23,11 +23,11 @@ namespace json {
 
 		operator std::basic_string<T>() const { return std::basic_string<T>(data, length); }
 
-		StringView substr(std::size_t index) {
+		StringView substr(std::size_t index) const {
 			std::size_t indexadj = std::min(index, length);
 			return StringView(data + indexadj, length - indexadj);
 		}
-		StringView substr(std::size_t index, std::size_t len) {
+		StringView substr(std::size_t index, std::size_t len) const {
 			std::size_t indexadj = std::min(index, length);
 			return StringView(data + indexadj, std::min(length-indexadj, len));
 		}
@@ -69,6 +69,16 @@ namespace json {
 
 		}
 		bool empty() const {return length == 0;}
+
+		std::size_t indexOf(const StringView sub, std::size_t pos) const {
+			if (sub.length > length) return -1;
+			std::size_t eflen = length - sub.length;
+			while (pos < eflen) {
+				if (substr(pos,sub.length) == sub) return pos;
+				pos++;
+			}
+			return -1;
+		}
 	};
 
 	template<typename T>

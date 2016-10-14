@@ -170,9 +170,11 @@ namespace json {
 		return Value::fromString(v).getUInt();
 	}
 
+
 	double StringValue::getNumber() const {
 		return Value::fromString(v).getNumber();
 	}
+
 
 
 }

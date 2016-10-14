@@ -31,7 +31,7 @@ namespace json {
 	{
 	}
 
-	Value::Value(const char * value):v(value && *value?new StringValue(value):AbstractStringValue::getEmptyString())
+	Value::Value(const char * value):v(value && *value?new StringValue(StringView<char>(value)):AbstractStringValue::getEmptyString())
 	{
 	}
 

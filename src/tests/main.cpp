@@ -20,6 +20,7 @@
 #include <fstream>
 #include "../immujson/compress.tcc"
 #include "../immujson/path.h"
+#include "../immujson/string.h"
 
 using namespace json;
 
@@ -557,6 +558,67 @@ int main(int , char **) {
 		PPath p = PPath::fromValue(v);
 		out << p.compare(Path::root/"bcd"/"z"/"x"/2/"u");
 	};
+	tst.test("String.substr (offset)","world!") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s.substr(6) << s.substr(24);
+	};
+	tst.test("String.substr (offset, limit)","llo wo!") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s.substr(2,6) << s.substr(11,2000) << s.substr(123,321);
+	};
+	tst.test("String.left","Hello") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s.left(5) << s.left(0);
+	};
+	tst.test("String.right","ld!") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s.right(3) << s.right(0);
+	};
+	tst.test("String.right2","Hello world!") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s.right(300);
+	};
+	tst.test("String.length","12") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s.length();
+	};
+	tst.test("String.charAt","lw") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s[2] << s[6];
+	};
+	tst.test("String.concat","Hello world!") >> [](std::ostream &out) {
+		String s("Hello ");
+		String t("world!");
+		out << String(s+t);
+	};
+	tst.test("String.insert","Hello big world!") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s.insert(6,"big ");
+	};
+	tst.test("String.replace","Hello whole planet!") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s.replace(6,5, "whole planet");
+	};
+	tst.test("String.split","[\"one\",\"two\",\"three\"]") >> [](std::ostream &out) {
+		String s("one::two::three");
+		Value v = s.split("::");
+		v.toStream(out);
+	};
+	tst.test("String.split.limit","[\"one\",\"two::three\"]") >> [](std::ostream &out) {
+		String s("one::two::three");
+		Value v = s.split("::",1);
+		v.toStream(out);
+	};
+	tst.test("String.append","Hello world!") >> [](std::ostream &out) {
+		String s("Hello ");
+		s+="world!";
+		out << s;
+	};
+	tst.test("String.indexOf","6") >> [](std::ostream &out) {
+		String s("Hello world!");
+		out << s.indexOf("w");
+	};
+
 
 
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {

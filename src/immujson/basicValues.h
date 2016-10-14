@@ -107,6 +107,7 @@ namespace json {
 	class StringValue : public AbstractStringValue {
 	public:
 		StringValue(const StringView<char> &str) :v(str) {}
+		StringValue(std::string &&str) :v(std::move(str)) {}
 
 		virtual StringView<char> getString() const override {
 			return v;
