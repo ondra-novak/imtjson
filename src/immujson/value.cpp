@@ -50,8 +50,8 @@ namespace json {
 		case boolean:
 		case number: return stringify();
 		case undefined: return "<undefined>";
-		case object: return "{...}";
-		case array: return "[...]";
+		case object: return stringify();
+		case array: return stringify();
 		case string: return getString();
 		default: return "<unknown>";		
 		}
@@ -217,5 +217,9 @@ namespace json {
 		if (other.v == v) return false;
 		else return other.v->equal(v);
 	}
+
+
+	ValueIterator Value::begin() const  {return ValueIterator(*this,0);}
+	ValueIterator Value::end() const  {return ValueIterator(*this,size());}
 
 }

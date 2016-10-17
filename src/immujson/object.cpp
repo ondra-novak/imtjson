@@ -3,6 +3,8 @@
 #include "edit.h"
 #include <time.h>
 
+#include "path.h"
+
 namespace json {
 
 	class ObjectProxy : public AbstractValue {
@@ -33,6 +35,12 @@ namespace json {
 		std::string name;
 		PValue value;
 
+	};
+
+	class ObjectDiff: public ObjectValue {
+	public:
+		ObjectDiff(const std::vector<PValue> &value):ObjectValue(value) {}
+		virtual ValueTypeFlags flags() const override { return objectDiff;}
 	};
 
 	Object::Object(Value value):base(value)
@@ -102,49 +110,49 @@ namespace json {
 	}
 	
 
-	PValue Object::commit() const
-	{
+	PValue Object::commit() const {
 		if (base.empty() && changes.empty()) {
 			return AbstractObjectValue::getEmptyObject();
 		}
 		if (changes.empty()) {
 			return base.v;
 		}
+		std::vector<PValue> merged = commitToVector();
+		return new ObjectValue(std::move(merged));
+	}
+
+	class Object::NameValueIter: public Changes::const_iterator {
+	public:
+		NameValueIter(const Changes::const_iterator &iter):Changes::const_iterator(iter) {}
+
+		struct FakeValue:public std::pair<StringView<char>, Value> {
+			FakeValue(const std::pair<StringView<char>, Value> &p)
+					:std::pair<StringView<char>, Value>(p) {}
+			const StringView<char> getKey() const {return first;}
+			ValueType type() const {return second.type();}
+			ValueTypeFlags flags() const {return second.flags();}
+			operator const Value &() const {return second;}
+		};
+
+		FakeValue operator *() const {
+			return FakeValue(Changes::const_iterator::operator *());
+		}
+	};
+
+	std::vector<PValue> Object::commitToVector() const {
 
 		std::vector<PValue> merged;
-		std::size_t baseCnt = base.size();
-		std::size_t oldit = 0;
-		Changes::const_iterator newCnt = changes.cend();
-		Changes::const_iterator newit = changes.cbegin();
-		while (oldit != baseCnt && newit != newCnt) {
-			const PValue &olditem = base[oldit].v;
-			const PValue &newitem = newit->second;
-			StringView<char> baseName = olditem->getMemberName();
-			StringView<char> newName = newitem->getMemberName();
-			int cmp = baseName.compare(newName);
-			if (cmp < 0) {
-				append(merged, olditem);
-				++oldit;
-			}
-			else if (cmp > 0) {
-				append(merged, newitem);
-				++newit;
-			}
-			else {
-				append(merged, newitem);
-				++oldit;
-				++newit;
-			}
-		}
-		while (oldit != baseCnt) {
-			append(merged, base[oldit].v);
-			++oldit;
-		}
-		while (newit != newCnt) {
-			append(merged, newit->second);
-			++newit;
-		}
-		return new ObjectValue(merged);
+		merged.reserve(base.size()+changes.size());
+		NameValueIter chbeg(changes.begin());
+		NameValueIter chend(changes.end());
+		mergeDiffsImpl(base.begin(), base.end(), chbeg, chend,
+				[](const Path &, const Value &left, const Value &right) {
+						return right;
+				},Path::root,[&merged](const StringView<char> &, const Value &v) {
+					append(merged, v.getHandle());
+				});
+
+		return std::move(merged);
 	}
 	Object2Object Object::object(const StringView<char>& name)
 	{
@@ -171,4 +179,195 @@ namespace json {
 		return *this;
 	}
 
+
+	void Object::revert() {
+		changes.clear();
+	}
+
+	ObjectIterator Object::begin() const {
+		return ObjectIterator(std::move(commitToVector()));
+	}
+
+	ObjectIterator Object::end() const {
+		return ObjectIterator(std::vector<PValue>());
+	}
+
+
+
+void Object::createDiff(const Value newObject) {
+	createDiff(base, newObject);
 }
+
+void Object::createDiff(const Value oldObject, Value newObject, unsigned int recursive) {
+
+	auto oldIt = oldObject.begin();
+	auto newIt = newObject.begin();
+	auto oldEnd = oldObject.end();
+	auto newEnd = newObject.end();
+	while (oldIt != oldEnd && newIt != newEnd) {
+
+		Value oldV = *oldIt;
+		Value newV = *newIt;
+
+
+		StringView<char> oldName = oldV.getKey();
+		StringView<char> newName = newV.getKey();
+		int cmp = oldName.compare(newName);
+
+		if (cmp < 0) {
+			unset(oldName);
+			++oldIt;
+		} else if (cmp > 0) {
+			set(newName, newV);
+			++newIt;
+		} else {
+			if (oldV != newV) {
+				if (recursive && oldV.type() == ::json::object && newV.type() == ::json::object) {
+					Object tmp;
+					tmp.createDiff(oldV,newV,recursive-1);
+					set(newName, tmp.commitAsDiff());
+				} else {
+					set(newV);
+				}
+			}
+			++oldIt;
+			++newIt;
+		}
+	}
+	while (oldIt != oldEnd) {
+		unset((*oldIt).getKey());
+		++oldIt;
+	}
+	while (newIt != newEnd) {
+		set(*newIt);
+		++oldIt;
+	}
+
+}
+
+Value Object::commitAsDiff() const {
+	std::vector<PValue> chvect;
+	chvect.reserve(changes.size());
+	for(auto &&item: changes) chvect.push_back(item.second.getHandle());
+	return new ObjectDiff(std::move(chvect));
+}
+
+Value json::Object::applyDiff(const Value& baseObject, const Value& diffObject) {
+	auto oldIt = baseObject.begin();
+	auto newIt = diffObject.begin();
+	auto oldEnd = baseObject.end();
+	auto newEnd = diffObject.end();
+	std::vector<PValue> merged;
+	merged.reserve(baseObject.size()+diffObject.size());
+
+	while (oldIt != oldEnd && newIt != newEnd) {
+
+		Value oldV = *oldIt;
+		Value newV = *newIt;
+
+		StringView<char> oldName = oldV.getKey();
+		StringView<char> newName = newV.getKey();
+		const PValue &olditem = oldV.getHandle();
+		const PValue &newitem = newV.getHandle();
+
+		int cmp = oldName.compare(newName);
+
+		if (cmp < 0) {
+			append(merged,olditem);
+			++oldIt;
+		} else if (cmp > 0) {
+			append(merged,newitem);
+			++newIt;
+		} else {
+			if (newitem->flags() & objectDiff) {
+				append(merged, applyDiff(olditem,newitem).getHandle());
+			} else {
+				append(merged, newitem);
+			}
+			++oldIt;
+			++newIt;
+		}
+	}
+	while (oldIt != oldEnd) {
+		append(merged,(*oldIt).getHandle());
+		++oldIt;
+	}
+	while (newIt != newEnd) {
+		append(merged,(*newIt).getHandle());
+		++newIt;
+	}
+
+}
+
+template<typename It, typename It2, typename Fn>
+void Object::mergeDiffsImpl(It lit, It lend, It2 rit, It2 rend, const ConflictResolver &resolver,const Path &path, const Fn &setFn) {
+	while (lit != lend && rit != rend) {
+		auto &&lv = *lit;
+		auto &&rv = *rit;
+		int cmp = lv.getKey().compare(rv.getKey());
+		if (cmp < 0) {
+			setFn(lv.getKey(),lv);++lit;
+		} else if (cmp>0) {
+			setFn(rv.getKey(),rv);++rit;
+		} else {
+			StringView<char> name = lv.getKey();
+			if (lv.type() == ::json::object && rv.type() == ::json::object) {
+				if (lv.flags() & objectDiff) {
+					if (rv.flags() & objectDiff) {
+						setFn(name, mergeDiffsObjs(lv,rv,resolver,path));
+					} else {
+						setFn(name ,applyDiff(rv,lv));
+					}
+				} else {
+					setFn(name ,applyDiff(lv,rv));
+				}
+
+			} else {
+				setFn(name , resolver(Path(path,name), lv, rv));
+			}
+			++lit;
+			++rit;
+		}
+	}
+	while (lit != lend) {
+		auto &&lv = *lit;
+		const StringView<char> name = lv.getKey();
+		setFn(name,lv);
+		++lit;
+	}
+	while (rit != rend) {
+		auto &&rv = *rit;
+		const StringView<char> name = rv.getKey();
+		setFn(name, rv);
+		++rit;
+	}
+}
+
+
+void Object::mergeDiffs(const Object& left, const Object& right, const ConflictResolver& resolver) {
+	mergeDiffs(left,right,resolver,Path::root);
+}
+
+void Object::mergeDiffs(const Object& left, const Object& right, const ConflictResolver& resolver, const Path &path) {
+	mergeDiffsImpl(left.begin(),left.end(),right.begin(),right.end(),resolver,path,
+			[&](const StringView<char> &name, const Value &v) {
+		this->set(name,v);
+	});
+}
+
+Value Object::mergeDiffsObjs(const Value& lv, const Value& rv,
+		const ConflictResolver& resolver, const Path& path) {
+	std::vector<PValue> out;
+	out.reserve(lv.size()+rv.size());
+	const StringView<char> name = lv.getKey();
+	mergeDiffsImpl(lv.begin(),lv.end(),rv.begin(),rv.end(),resolver,Path(path,name),
+			[&out](const StringView<char> &name, const Value &v){
+		if (v.getKey() == name) out.push_back(v.getHandle());
+		else out.push_back(new ObjectProxy(name,v.getHandle()->unproxy()));
+	});
+	Value v (new ObjectValue(std::move(out)));
+}
+
+
+}
+

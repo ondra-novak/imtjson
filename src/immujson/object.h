@@ -1,14 +1,16 @@
 #pragma once
 
+#include <map>
+#include <functional>
 #include "value.h"
 #include "stackProtection.h"
-#include <map>
 
 namespace json {
 
 
 	class Object2Object;
 	class Array2Object;
+	class ObjectIterator;
 
 	///The class helps to build JSON object
 	/** To build or modify JSON object, construct this class. Then you can add, remove
@@ -194,13 +196,140 @@ namespace json {
 		*/
 		Object &merge(Value object);
 
+		///Creates iterator to walk through all changes
+		/**@note Iterator walks through changed object. Note that processing changes for iteration
+		 * can reduce performance in compare to iteration through the base object (using Value::begin() and
+		 * Value::end()) even if there are no changes made yet. The iterator must explore the changes
+		 * and apply all of them to make iteration-able set
+		 *
+		 */
+		ObjectIterator begin() const;
+		ObjectIterator end() const;
+
+		///Allows to change the base object
+		/** This helps to modify multiple objects using the same change-set. Just create
+		 * change-set on single object and then change the base object to apply changes on them
+		 * and you can repeat this for multiple objects.
+		 * @param object
+		 */
+		void setBaseObject(Value object) {
+			base = object;
+		}
+
+		///Inserts changes which are need to change current base object to the newObject
+		/**
+		 * @param newObject target object
+		 *
+		 * @note this function is experimental and untested yet!
+		 */
+		void createDiff(const Value newObject);
+
+		///Inserts changes which are need to change from oldObject to the newObject
+		/**
+		 * @param oldObject source object
+		 * @param newObject target object
+		 * @param recursive if set to true, the function also creates diffs for inner objects.
+		 *   These diffs are stored as objects, however, they are currently
+		 *   undocumented and should not be used elsewhere. They just only
+		 *   allows to apply changes to sub-objects as well. The argument specifies depth
+		 *   of recursion (use -1 to maximum recursion). Default value is zero = no recursion
+		 *
+		 * @note this function is experimental and untested yet!
+		 */
+		void createDiff(const Value oldObject, Value newObject, unsigned int recursive = 0);
+
+		///Function called to resolve conflicts
+		/** @return function returns resolved value.
+		 * @param 1 Path contains relative path to in the JSON structure (valid for both values)
+		 * @param 2 left value. It can be undefined in case that value is going to be erased
+		 * @param 3 right value. It can be undefined in case that value is going to be erased
+		 *
+		 * Function can return any value to put to the final diff, or undefined to remove the value
+		 */
+		typedef std::function<Value(Path, Value, Value)> ConflictResolver;
+
+		//@{
+		///Picks two diffs and merges them into single diff
+		/** Function can be used to perform three-way merge. First you have to create diff
+		 * between current revision and common (base) revision. Do this for both sides of the conflict.
+		 * Then call this function and supply some conflict resolver, which is called when
+		 * both values have the same key
+		 *
+		 * @param left diff for first value (will appear at left)
+		 * @param right diff for second value (will appear at right)
+		 * @param resolver function called to resolve conflict
+		 * @param path specifies base path for the resolver (you can adjust if you need to add prefix to the path)
+		 *
+		 * @note depend on type of values can happen
+		 *   - two values of different type -> resolver called
+		 *   - two non-object values -> resolver called
+		 *   - two objects -> resolver called
+		 *   - two diff-objects -> diffs are merged recursively
+		 *   - one non-diff-object an one diff-object -> diff is applied
+		 *   - diff-object and non-object -> resolver called, however you should only choose who wins
+		 */
+		void mergeDiffs(const Object &left, const Object &right, const ConflictResolver &resolver);
+		void mergeDiffs(const Object &left, const Object &right, const ConflictResolver &resolver,const Path &path);
+		//@}
+
 	protected:
 		Value base;
-		typedef std::map<StringView<char>, PValue> Changes;
+		typedef std::map<StringView<char>, Value> Changes;
 		
 		Changes changes;
+		friend class ObjectIterator;
 
+		///Creates vector of PValues containing set of items after applying the changes
+		/** function is used to create iterator */
+		std::vector<PValue> commitToVector() const;
+
+		///Creates special object which is used to store a difference between two objects
+		/**
+		 * @return Retuned object is standard object however it can contain "undefined"
+		 * fields. These fields are exists and they have name, but undefined value. They
+		 * will appear while iteration, so this is the reason, why this method is protected.
+		 *
+		 * You can determine, whether the object is a diff using the function isObjectDiff()
+		 */
+		Value commitAsDiff() const;
+		///Applies the diff-object to some other object and returns object with applied diff
+		/**
+		 *
+		 * @param baseObject source object
+		 * @param diffObject diff-object create using commitAsDiff. However, the function
+		 * will work with an ordinary object, only without ability to remove keys (because
+		 * there is no standard way how to write "remove action" into standard object
+		 * @return new object with applied changes
+		 *
+		 */
+		static Value applyDiff(const Value &baseObject, const Value &diffObject);
+
+
+		template<typename It,typename It2, typename Fn>
+		static void mergeDiffsImpl(It lbeg, It lend, It2 rbeg, It2 rend, const ConflictResolver &resolver,const Path &path, const Fn &setFn);
+
+		static Value mergeDiffsObjs(const Value &lv,const Value &rv, const ConflictResolver& resolver, const Path &path);
+
+		class NameValueIter;
 	};
 
+
+	class ObjectIterator {
+	public:
+		std::vector<PValue> dataToIterate;
+		std::uintptr_t index;
+
+		ObjectIterator(std::vector<PValue> &&dataToIterate, std::uintptr_t index = 0):dataToIterate(std::move(dataToIterate)),index(index) {}
+		ObjectIterator(const std::vector<PValue> &dataToIterate, std::uintptr_t index = 0):dataToIterate(std::move(dataToIterate)),index(index) {}
+		Value operator *() const {return Value(dataToIterate[index]);}
+		ObjectIterator &operator++() {++index;return *this;}
+		ObjectIterator operator++(int) {++index;return ObjectIterator(dataToIterate,index-1);}
+		bool operator==(const ObjectIterator &other) const {
+			return dataToIterate.size()-index == other.dataToIterate.size()-other.index;
+		}
+		bool operator!=(const ObjectIterator &other) const {
+			return !operator==(other);
+		}
+	};
 
 }

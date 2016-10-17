@@ -46,6 +46,12 @@ protected:
 
 };
 
+class TestNotImplemented: public std::exception {
+public:
+
+	const char *what() const throw() {return "not implemented";}
+};
+
 template<typename Fn>
 inline void TestSimple::runTest(const Fn& fn, const std::string &name, const std::string &expected_result ) {
 
@@ -64,6 +70,8 @@ inline void TestSimple::runTest(const Fn& fn, const std::string &name, const std
 			std::cout<<"\tProduced:" << produced << std::endl;
 			failed = true;
 		}
+	} catch (TestNotImplemented) {
+		std::cout<<"Not Impl."<< std::endl;
 	} catch (std::exception &e) {
 		std::cout<<"FAILED"<< std::endl;
 		std::cout<<"\tCrashed by exception: " << e.what() << std::endl;

@@ -44,15 +44,23 @@ namespace json {
 	const ValueTypeFlags numberInteger = 2;
 	/// For number type, this states, that number is stored as unsigned integer
 	const ValueTypeFlags numberUnsignedInteger = 4;
-	/// States that object is only proxy to other object.
+	/// States that object is only proxy to an other object.
 	/** Proxy objects are used to carry a key with the value in the objects. Proxies
-		are transparent, but can be detected when dynamic_cast to expected type
-		fails. To resolve proxy, you have to use unproxy() function.
+		are transparent, but can be interfere with dynamic_cast.
+		To resolve proxy, you have to use unproxy() function.
 		
 		While enumerating through the object, returned values are proxies that
 		each of them carries both the key and the value
 		*/
 	const ValueTypeFlags proxy = 8;
+
+	/// States that object is diff-object
+	/** Diff-object contains difference between two object which can be applied to a third
+	 *  object. Diff-objects are used internally and should not appear outside of the
+	 *  library. however this flag has been introduced to easily determine whether the object
+	 *  contains differences
+	 */
+	const ValueTypeFlags objectDiff = 16;
 
 
 	class IValue;

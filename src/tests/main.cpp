@@ -207,6 +207,16 @@ int main(int , char **) {
 				("age",19)
 		).toStream(out);
 	};
+	tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:Azaxe,") >> [](std::ostream &out) {
+		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
+		Object obj(v);
+		obj("kabrt", 289)
+			("arte", undefined)
+			("age",19);
+		for(auto&& item: obj) {
+			out << item.getKey()<<":"<<item.toString() << ",";
+		}
+	};
 	tst.test("Object.addSubobject", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\",\"sub\":{\"kiki\":-32.431,\"kuku\":false}}") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
 		Object o(v);
@@ -256,6 +266,14 @@ int main(int , char **) {
 		a.insert(2,Object("inserted","here"));
 		v = a;
 		v.toStream(out);
+	};
+	tst.test("Array.enumItems","hi,hola,{\"inserted\":\"here\"},1,2,3,5,8,13,21,7.5579e+27,") >> [](std::ostream &out){
+		Value v = Value::fromString("[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]");
+		Array a(v);
+		a.insert(2,Object("inserted","here"));
+		for(auto &&item: a) {
+			out << item.toString() << ",";
+		}
 	};
 	tst.test("Array.editDelete","[\"hi\",\"hola\",5,8,13,21,7.5579e+27]") >> [](std::ostream &out){
 		Value v = Value::fromString("[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]");
@@ -514,6 +532,19 @@ int main(int , char **) {
 			return true;
 		});
 	};
+	tst.test("enumKeys.iterator","aaa,karel,lkus,macho,zucha,") >> [](std::ostream &out) {
+		Value v(
+			Object
+				("aaa",10)
+				("karel",20)
+				("zucha",true)
+				("macho",21)
+				("lkus",11)
+		);
+		for(auto &&item:v) {
+			out << item.getKey() << ",";
+		}
+	};
 
 	tst.test("Path.access1","2,\"super\"") >> [](std::ostream &out) {
 		Value v1(Object
@@ -661,7 +692,7 @@ int main(int , char **) {
 			out << "Detected memory leaks!";
 		}
 #else
-		std::cout << "(NOIMPL)";
+		throw TestNotImplemented();
 #endif
 
 	};

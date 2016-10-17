@@ -33,6 +33,9 @@ namespace json {
 		}
 
 		int compare(const StringView &other) const {
+			//equal strings by pointer and length
+			if (other.data == data && other.length == length) return 0;
+			//compare char by char
 			std::size_t cnt = std::min(length, other.length);
 			for (std::size_t i = 0; i < cnt; ++i) {
 				if (data[i] < other.data[i]) return -1;

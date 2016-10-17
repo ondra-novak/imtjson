@@ -7,6 +7,7 @@ namespace json {
 
 	class Object2Array;
 	class Array2Array;
+	class ArrayIterator;
 
 
 	class Array: public StackProtected {
@@ -43,6 +44,17 @@ namespace json {
 
 		bool dirty() const;
 
+		///Creates iterator which points at first item
+		/**
+		 * @note you should not change the content of the object during iteration.
+		 */
+		ArrayIterator begin() const;
+		///Creates iterator which points at the end
+		/**
+		 * @note you should not change the content of the object during iteration.
+		 */
+		ArrayIterator end() const;
+
 
 	protected:
 		Value base;
@@ -58,9 +70,24 @@ namespace json {
 
 		void extendChanges(size_t pos);
 
-
-
 	};
 
+
+	class ArrayIterator {
+	public:
+		const Array *v;
+		std::uintptr_t index;
+
+		ArrayIterator(const Array *v,std::uintptr_t index):v(v),index(index) {}
+		Value operator *() const {return (*v)[index];}
+		ArrayIterator &operator++() {++index;return *this;}
+		ArrayIterator operator++(int) {++index;return ArrayIterator(v,index-1);}
+		bool operator==(const ArrayIterator &other) const {
+			return index == other.index && v == other.v;
+		}
+		bool operator!=(const ArrayIterator &other) const {
+			return !operator==(other);
+		}
+	};
 
 }

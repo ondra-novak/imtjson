@@ -147,4 +147,13 @@ namespace json {
 	}
 
 
+	ArrayIterator Array::begin() const {
+		return ArrayIterator(this,0);
+	}
+
+	ArrayIterator Array::end() const {
+		return ArrayIterator(this,size());
+	}
+
 }
+

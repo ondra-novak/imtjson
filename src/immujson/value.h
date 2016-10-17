@@ -9,6 +9,7 @@ namespace json {
 	class Object;
 	class Path;
 	class PPath;
+	class ValueIterator;
 
 	///Stores one JSON value
 	/** The instance of the class Value can store one value of any JSON type:
@@ -384,6 +385,15 @@ namespace json {
 		 */
 		bool operator!=(const Value &other) const;
 
+
+		///Returns iterator to the first item
+		/**@note You should be able to iterate through arrays and objects as well */
+		ValueIterator begin() const;
+		///Returns iterator to the first item
+		/**@note You should be able to iterate through arrays and objects as well */
+		ValueIterator end() const;
+
+
 	protected:
 
 		PValue v;
@@ -402,6 +412,33 @@ namespace json {
 		v.toStream(stream);
 		return stream;
 	}
+
+	///Simple iterator
+	/** Iterator can be slower then the forEach() function, because
+	 * it need to go through the virtual interface for each item.
+	 *
+	 * @code
+	 * for(Value item: v) { /... work with item .../ }
+	 * @endcode
+	 *
+	 *@note You should be able to iterate through arrays and objects as well
+	 */
+	class ValueIterator {
+	public:
+		Value v;
+		std::uintptr_t index;
+
+		ValueIterator(Value v,std::uintptr_t index):v(v),index(index) {}
+		Value operator *() const {return v[index];}
+		ValueIterator &operator++() {++index;return *this;}
+		ValueIterator operator++(int) {++index;return ValueIterator(v,index-1);}
+		bool operator==(const ValueIterator &other) const {
+			return index == other.index && v.getHandle() == other.v.getHandle();
+		}
+		bool operator!=(const ValueIterator &other) const {
+			return !operator==(other);
+		}
+	};
 
 
 
