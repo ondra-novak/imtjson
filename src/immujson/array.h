@@ -27,7 +27,10 @@ namespace json {
 		Array &eraseSet(std::size_t pos, std::size_t length);
 		
 		Array &trunc(std::size_t pos);
+		///Removes all items from the array
 		Array &clear();
+		///Removes all changes in the array (revert back to base value)
+		Array &revert();
 
 		Array &set(std::size_t pos, const Value &v);
 

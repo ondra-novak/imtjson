@@ -11,7 +11,7 @@ namespace json {
 
 		Parser(const Fn &source) :rd(source) {}
 
-		Value parse();
+		virtual Value parse();
 		Value parseObject();
 		Value parseArray();
 		Value parseTrue();

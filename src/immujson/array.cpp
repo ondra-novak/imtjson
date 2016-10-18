@@ -75,6 +75,12 @@ namespace json {
 		return *this;
 	}
 
+	Array &Array::revert() {
+		changes.offset = base.size();
+		changes.clear();
+		return *this;
+	}
+
 	Array & Array::set(std::size_t pos, const Value & v)
 	{
 		extendChanges(pos);

@@ -18,14 +18,14 @@ namespace json {
 		Serializer(const Fn &target) :target(target) {}
 
 		void serialize(const Value &obj);
-		void serialize(const IValue *ptr);
+		virtual void serialize(const IValue *ptr);
 
 		void serializeObject(const IValue *ptr);
 		void serializeArray(const IValue *ptr);
 		void serializeNumber(const IValue *ptr);
 		void serializeString(const IValue *ptr);
 		void serializeBoolean(const IValue *ptr);
-		void serializeNull();
+		void serializeNull(const IValue *ptr);
 
 		void serializeKeyValue(const IValue *ptr);
 
@@ -71,7 +71,7 @@ namespace json {
 		case number: serializeNumber(ptr); break;
 		case string: serializeString(ptr); break;
 		case boolean: serializeBoolean(ptr); break;
-		case null: serializeNull(); break;
+		case null: serializeNull(ptr); break;
 		}
 
 
@@ -137,7 +137,7 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::serializeNull()
+	inline void Serializer<Fn>::serializeNull(const IValue *)
 	{
 		write("null");
 	}

@@ -262,7 +262,7 @@ namespace json {
 		 *
 		 * @return string representation of the value
 		 */
-		std::string toString();
+		std::string toString() const ;
 
 
 		///Performs iteration through all items in the container
@@ -278,7 +278,7 @@ namespace json {
 		 * @endcode
 		 */
 		template<typename Fn>
-		bool forEach(const Fn &fn) {
+		bool forEach(const Fn &fn) const  {
 			return v->enumItems(EnumFn<Fn>(fn));
 		}
 
@@ -393,6 +393,12 @@ namespace json {
 		/**@note You should be able to iterate through arrays and objects as well */
 		ValueIterator end() const;
 
+		///Retrieves true, whether value is defined
+		/**
+		 * @retval true value is defined
+		 * @retval false value is undefined
+		 */
+		bool defined() const {return type() != undefined;}
 
 	protected:
 
@@ -441,5 +447,14 @@ namespace json {
 	};
 
 
-
+	///Just for fun
+	/**
+	 * @code
+	 * void foo(json::var x) {
+	 * 	json::var y = x["bar"];
+	 * 	//...
+	 * }
+	 * @endcode
+	 */
+	typedef Value var;
 }

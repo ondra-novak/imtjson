@@ -43,7 +43,7 @@ namespace json {
 	{
 	}
 
-	std::string Value::toString()
+	std::string Value::toString() const
 	{
 		switch (type()) {
 		case null:
