@@ -179,5 +179,14 @@ std::ostream &operator<<(std::ostream &out, const String &x) {
 	return out;
 }
 
+String::String(const StringView<char>& str):impl(Value(str).getHandle()) {
+
 }
 
+String::String(const char* str):impl(Value(str).getHandle()) {
+}
+
+String::String(const std::string& str):impl(Value(str).getHandle()) {
+}
+
+}

@@ -21,6 +21,9 @@ public:
 
 	String();
 	String(Value v);
+	String(const StringView<char> &str);
+	String(const char *str);
+	String(const std::string &str);
 
 	StringView<char> substr(std::size_t pos, std::size_t length) const;
 	StringView<char> substr(std::size_t pos) const;

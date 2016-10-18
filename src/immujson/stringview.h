@@ -18,7 +18,7 @@ namespace json {
 		StringView(const T *str) : data(str), length(calcLength(str)) {}
 		StringView(const T *str, std::size_t length): data(str),length(length) {}
 		StringView(const std::basic_string<T> &string) : data(string.data()), length(string.length()) {}
-		StringView(const std::vector<T> &string) : data(string.data()), length(string.length()) {}
+		StringView(const std::vector<T> &string) : data(string.data()), length(string.size()) {}
 		StringView(const std::initializer_list<T> &list) :data(list.begin()), length(list.size()) {}
 
 		operator std::basic_string<T>() const { return std::basic_string<T>(data, length); }
@@ -58,8 +58,8 @@ namespace json {
 
 		char operator[](std::size_t pos) const { return data[pos]; }
 		
-		const char *begin() const { return data; }
-		const char *end() const { return data + length; }
+		const T *begin() const { return data; }
+		const T *end() const { return data + length; }
 
 		static std::size_t calcLength(const T *str) {
 			const T *p = str;
