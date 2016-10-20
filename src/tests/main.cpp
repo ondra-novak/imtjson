@@ -657,14 +657,14 @@ int main(int , char **) {
 		std::ifstream testfile("src/tests/test.json",std::ifstream::binary);
 		if (!testfile) throw std::runtime_error("test file not found");
 		Value v1 = Value::fromStream(testfile);
-		std::string s = v1.stringify();
+		String s = v1.stringify();
 		std::string cs;
 		{
 			auto cmp = compress([&cs](char c) {
 				cs.push_back(c);
 			});
 
-			for (auto &&x : s) { cmp(x); }
+			for (auto &&x : (StringView<char>)s) { cmp(x); }
 		}
 
 		std::string ds;
@@ -679,7 +679,7 @@ int main(int , char **) {
 			while ((z = decmp()) != -1) ds.push_back(z);
 		}
 
-		if (ds == s) out << "ok";
+		if (StringView<char>(ds) == s) out << "ok";
 	};
 	tst.test("compress.demo1","ok") >> [](std::ostream &out) {
 		compressDemo("src/tests/test.json");

@@ -10,6 +10,7 @@ namespace json {
 	class Path;
 	class PPath;
 	class ValueIterator;
+	class String;
 
 	///Stores one JSON value
 	/** The instance of the class Value can store one value of any JSON type:
@@ -133,6 +134,14 @@ namespace json {
 		 * @param value modified object
 		 */
 		Value(const Object &value);
+
+		///Initailize the variable directly from the String
+		/**
+		 * @param value a string value
+		 */
+		Value(const String &value);
+
+
 		///Initialize the variable as array of values
 		/**
 		 * @param value refernce to a string view containing values
@@ -262,7 +271,7 @@ namespace json {
 		 *
 		 * @return string representation of the value
 		 */
-		std::string toString() const ;
+		String toString() const ;
 
 
 		///Performs iteration through all items in the container
@@ -341,7 +350,7 @@ namespace json {
 		/**
 		 * @return string contains valid JSON
 		 */
-		std::string stringify() const;
+		String stringify() const;
 
 		///Sends the value as JSON string to output stream
 		/**

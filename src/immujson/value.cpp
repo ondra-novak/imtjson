@@ -6,6 +6,7 @@
 #include "object.h"
 #include "parser.h"
 #include "serializer.h"
+#include "string.h"
 
 namespace json {
 
@@ -43,17 +44,17 @@ namespace json {
 	{
 	}
 
-	std::string Value::toString() const
+	String Value::toString() const
 	{
 		switch (type()) {
 		case null:
 		case boolean:
 		case number: return stringify();
-		case undefined: return "<undefined>";
+		case undefined: return String("<undefined>");
 		case object: return stringify();
 		case array: return stringify();
-		case string: return getString();
-		default: return "<unknown>";		
+		case string: return String(*this);
+		default: return String("<unknown>");
 		}
 	}
 
@@ -82,13 +83,13 @@ namespace json {
 		});
 	}
 
-	std::string Value::stringify() const
+	String Value::stringify() const
 	{
 		std::string buff;
 		serialize([&](char c) {
 			buff.push_back(c);
 		});
-		return buff;
+		return String(buff);
 	}
 
 	void Value::toStream(std::ostream & output) const
@@ -222,4 +223,8 @@ namespace json {
 	ValueIterator Value::begin() const  {return ValueIterator(*this,0);}
 	ValueIterator Value::end() const  {return ValueIterator(*this,size());}
 
+	Value::Value(const String& value):v(value.getHandle()) {
+	}
+
 }
+

@@ -80,13 +80,10 @@ String::operator StringView<char>() const {
 	return impl->getString();
 }
 
-String::operator const char*() const {
+const char* String::c_str() const {
 	return impl->getString().data;
 }
 
-String::operator Value() const {
-	return Value(impl);
-}
 
 String String::insert(std::size_t pos, const StringView<char>& what) {
 	if (what.empty()) return *this;

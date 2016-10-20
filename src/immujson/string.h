@@ -38,14 +38,20 @@ public:
 	String operator+(const String &other) const;
 
 	operator StringView<char>() const;
-	operator const char *() const;
-	operator Value() const;
+	const char *c_str() const;
 	String insert(std::size_t pos, const StringView<char> &what);
 	String replace(std::size_t pos, std::size_t size, const StringView<char> &what);
 	Value split(const StringView<char> separator, std::size_t maxCount = -1) const;
 	String &operator += (const StringView<char> other);
 	std::size_t indexOf(const StringView<char> other, std::size_t start = 0) const;
 	Value substrValue(std::size_t pos, std::size_t length) const;
+
+	bool operator==(const String &other) const {return StringView<char>(*this) == StringView<char>(other);}
+	bool operator!=(const String &other) const {return StringView<char>(*this) != StringView<char>(other);}
+	bool operator>=(const String &other) const {return StringView<char>(*this) >= StringView<char>(other);}
+	bool operator<=(const String &other) const {return StringView<char>(*this) <= StringView<char>(other);}
+	bool operator>(const String &other) const  {return StringView<char>(*this) > StringView<char>(other);}
+	bool operator<(const String &other) const  {return StringView<char>(*this) < StringView<char>(other);}
 
 
 	PValue getHandle() const;
