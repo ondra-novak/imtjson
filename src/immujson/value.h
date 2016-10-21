@@ -452,40 +452,8 @@ namespace json {
 		 * Value reduceFn(const Value &total, const Value &currentValue)
 		 * @endcode
 		 */
-		template<typename Fn>
-		Value reduce(const Fn &reduceFn, const Value &initalValue)  const;
-
-		///Performs reduce operaton on the container
-		/**
-		 * @param reduceFn function to call on every item
-		 * @param initalValue initial value stored as Object. This allows to
-		 *  accumulate items in the object which is carried through the every
-		 *  iteration
-		 * @return reduced result created finally from the object
-		 *
-		 * The function has following prototype
-		 * @code
-		 * void reduceFn(Object &total, const Value &currentValue)
-		 * @endcode
-		 */
-		template<typename Fn>
-		Value reduce(const Fn &reduceFn, Object &&initalValue) const;
-
-		///Performs reduce operaton on the container
-		/**
-		 * @param reduceFn function to call on every item
-		 * @param initalValue initial value stored as Array. This allows to
-		 *  accumulate items in the array which is carried through the every
-		 *  iteration
-		 * @return reduced result created finally from the array
-		 *
-		 * The function has following prototype
-		 * @code
-		 * void reduceFn(Array &total, const Value &currentValue)
-		 * @endcode
-		 */
-		template<typename Fn>
-		Value reduce(const Fn &reduceFn, Array &&initalValue)  const;
+		template<typename Fn, typename Total>
+		Total reduce(const Fn &reduceFn, Total initalValue)  const;
 
 		///Sort object or array
 		/** Result of the operation sort is always array (because objects
@@ -507,7 +475,99 @@ namespace json {
 
 		///Reverses container
 		Value reverse() const;
-	protected:
+
+
+		///Merges two containers. Result is put to an array
+		/**
+		 * @param other other container
+		 * @param mergeFn function which controls merge
+		 * @param toObject result is stored into an object. Note that merge function must ensure that
+		 * each returned result has unique key (otherwise it they will replace each other)
+		 *
+		 * @return merged container
+		 *
+		 * The mergeFn has following prototype
+		 * @code
+		 * MergeChoose mergeFn(const Value &l, const Value &r);
+		 * @endcode
+		 * The function accepts two items for the left (this) and for the right (other) side. Function
+		 * iterates through both containers. The iteration is controlled by the MergeResult object.
+		 * The iteration stops when both containers are processed complete. If one of container reaches
+		 * the end, its appropriate argument of the function is set to the undefined. The function won't be
+		 * called with both arguments set to the undefined.
+		 *
+		 * The class MergeResult can be created directly by returning Value (which is automatically converted to
+		 * MergeResult) or through functions chooseLeft() or chooseRight(). Depend on chosen side the function
+		 * moves appropriate iterator.
+		 *
+		 * The following function removes strings from the left array that are exist on the right array,
+		 *
+		 * @code
+		 * MergeChoose excludeStrings(const Value &l, const Value &r) {
+		 * 	 String sl(l);
+		 * 	 String sr(r);
+		 * 	 if (!r.defined() || sl < sr) return chooseLeft(sl); // return sl as result for the container on the left
+		 * 	 else if (!l.defned() || sl > sr) return chooseRight(undefined); //return undefined (skip) as  result for the container on the right
+		 * 	 else return undefined; //return undefined (skip) for both containers
+		 * }
+		 *
+		 */
+		template<typename Fn>
+		Value merge(const Value &other, const Fn &mergeFn, bool toObject = false) const;
+
+		///Combination of merge + reduce in single cycle
+		/** This combination allows to perform some special action with merged result.
+		 * @param other other container
+		 * @param mergeFn merge function. See the function Value::merge()
+		 * @param reduceFn reduce function. See the function Value::reduce()
+		 * @param total initial value of object Total
+		 * @return reduced result Total
+		 *
+		 * @see Value::merge(), Value::reduce()
+		 */
+		template<typename Fn, typename ReduceFn, typename Total>
+		Total mergeReduce(const Value &other, const Fn &mergeFn, const ReduceFn &reduceFn, Total total) const;
+
+
+		///Removes duplicated values after sort
+		/** Function expects sorted result. It removes duplicated values */
+		template<typename Fn>
+		Value uniq(const Fn &sortFn) const;
+
+
+		///Splits container to an array of sets of values that are considered as equal according to sortfn
+		/**
+		 * - Example: [12,14,23,25,27,34,36,21,22,78]
+		 * - Result (split by tens) [[12,14],[23,25,26],[34,36],[21,22],[78]]
+		 *
+		 * @param sortFn the function which compares two values and returns zero if they are
+		 * equal and nonzero if not equal
+		 * @return split result
+		 */
+		template<typename Fn>
+		Value split(const Fn &sortFn) const;
+#if 0
+		//@{
+		///Create slice
+		/**The  slice() method returns the selected elements in an array, as a new array object.
+			The slice() method selects the elements starting at the given start argument,
+					and ends at, but does not include, the given end argument.
+
+		   @param start	An integer that specifies where to start the selection
+		   	   	       (The first element has an index of 0).
+		   	   	       Use negative numbers to select from the end of an array.
+		   @param end  Optional. An integer that specifies where to end the selection.
+		   	   	   	   If omitted, all elements from the start position and to the end of
+		   	   	   	   the array will be selected. Use negative numbers to select from
+		   	   	   	   the end of an array
+		   @return A new Array, containing the selected elements
+		*/
+		Value slice(std::intptr_t start) const;
+		Value slice(std::intptr_t start, std::intptr_t end) const;
+		//@}
+#endif
+
+protected:
 
 		PValue v;
 

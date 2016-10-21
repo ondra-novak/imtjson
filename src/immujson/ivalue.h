@@ -62,7 +62,6 @@ namespace json {
 	 */
 	const ValueTypeFlags objectDiff = 16;
 
-
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;
 

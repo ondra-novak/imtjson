@@ -650,7 +650,125 @@ int main(int , char **) {
 		String s("Hello world!");
 		out << s.indexOf("w");
 	};
+	tst.test("Operation.object_map","{\"aaa\":\"aaa10\",\"bbb\":\"bbbfoo\",\"ccc\":\"ccctrue\"}") >> [](std::ostream &out) {
+		Value v(
+				Object
+				("aaa",10)
+				("bbb","foo")
+				("ccc",true)
+			);
+		Value w = v.map([](const Value &v){
+			return String(v.getKey())+v.toString();
+		});
+		w.toStream(out);
+	};
 
+	tst.test("Operation.array_map","[166,327,120,1799,580]") >> [](std::ostream &out) {
+		Value v = Value({5,12,3,76,23}).map([](const Value &v){
+			return 23*v.getNumber()+51;
+		});
+		v.toStream(out);
+	};
+
+	tst.test("Operation.reduce_values","119") >> [](std::ostream &out) {
+		Value v = Value({5,12,3,76,23}).reduce([](const Value &total, const Value &v){
+			return total.getNumber()+v.getNumber();
+		},0);
+		v.toStream(out);
+	};
+
+	tst.test("Operation.merge_objects","{\"aaa\":42,\"bbb\":\"foo\",\"ccc\":true}") >> [](std::ostream &out) {
+		Object obj;
+		Value({Object("aaa",10),Object("bbb","foo"),Object("ccc",true),Object("aaa",32)})
+				.reduce([](Object *obj, const Value &v){
+			obj->merge(v,[](Value orig, Value newV) {
+				return orig.getNumber()+newV.getNumber();
+			});
+			return obj;
+		},&obj);
+		Value(obj).toStream(out);
+	};
+
+	tst.test("Operation.sort","[-33,3,8,11,11,21,43,87,90,97]") >> [](std::ostream &out) {
+		Value v = {21,87,11,-33,43,90,11,8,3,97};
+		Value w = v.sort([](const Value &a, const Value &b){
+			return a.getNumber()-b.getNumber();
+		});
+		w.toStream(out);
+	};
+	tst.test("Operation.mergeReduce","{\"added\":[10,17,55,99],\"removed\":[-33,8,11,21]}") >> [](std::ostream &out) {
+		Value oldSet = {21,87,11,-33,43,90,11,8,3,97};
+		Value newSet = {10,55,17,90,11,99,3,97,43,87};
+		Array added;
+		Array removed;
+		auto sortNumbers = [](const Value &a, const Value &b){
+			return a.getNumber()-b.getNumber();
+		};
+
+
+		oldSet.sort(sortNumbers).mergeReduce(
+			newSet.sort(sortNumbers),
+			[](const Value &left, const Value &right) -> MergeResult {
+				if (!right.defined()) return chooseLeft({false,left});
+				if (!left.defined()) return chooseRight({true,right});
+				double diff = left.getNumber() - right.getNumber();
+				if (diff<0) return chooseLeft({false,left});
+				if (diff>0) return chooseRight({true,right});
+				return chooseBoth(undefined);
+			},
+			[&added,&removed](std::nullptr_t, const Value &v) {
+				if (v[0].getBool()) added.add(v[1]);
+				else removed.add(v[1]);
+				return nullptr;
+			},
+			nullptr);
+		Value w = Object("added",added)("removed",removed);
+		w.toStream(out);
+	};
+	tst.test("Operation.mergeToArray","[3,11,43,87,90,97]") >> [](std::ostream &out) {
+		Value leftSet = {21,87,11,-33,43,90,11,8,3,97};
+		Value rightSet = {10,55,17,90,11,99,3,97,43,87};
+
+
+		auto cmp= [](const Value &a, const Value &b){
+			return a.getNumber()-b.getNumber();
+		};
+
+		Value w = leftSet.sort(cmp).merge(
+				 rightSet.sort(cmp),
+					[&cmp](const Value &left, const Value &right) {
+						if (!right.defined()) return chooseLeft(undefined);
+						if (!left.defined()) return chooseRight(undefined);
+						auto c = cmp(left,right);
+						if (c<0) return chooseLeft(undefined);
+						if (c>0) return chooseRight(undefined);
+						return chooseBoth(left);
+					});
+		w.toStream(out);
+	};
+
+
+	tst.test("Operation.uniq","[-33,3,8,11,21,43,87,90,97]") >> [](std::ostream &out) {
+		Value testset = {21,87,11,-33,43,90,11,8,3,97,3,11,87,90,3};
+
+		auto cmp= [](const Value &a, const Value &b){
+			return a.getNumber()-b.getNumber();
+		};
+
+		Value res= testset.sort(cmp).uniq(cmp);
+		res.toStream(out);
+	};
+
+	tst.test("Operation.split","[[12,14],[23,25,27],[34,36],[21,22],[78]]") >> [](std::ostream &out) {
+		Value testset = {12,14,23,25,27,34,36,21,22,78};
+
+		auto defSet= [](const Value &a, const Value &b){
+			return a.getUInt()/10 - b.getUInt()/10;
+		};
+
+		Value res= testset.split(defSet);
+		res.toStream(out);
+	};
 
 
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {

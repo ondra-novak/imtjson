@@ -102,75 +102,8 @@ namespace json {
 		*/
 		PValue commit() const;
 
-		//@{
-		///Allows to create subobject or subobject of subobject inline or pass it to a function
-		/**
-			The function creates special object which inherits Object and which is
-			programmed to perform commit operation during destruction. As result, this
-			allows you to define members in a subobject and commit changes to the parent
-			member automatically. There is only one condition:  destroy
-			this subobject before the parent object is commited
-
-			@param name name of the key of the member where the subobject will be stored. If 
-			the member already exists, it is used to initialize the Object as well as the constructor
-			of this class does, so you is able to modify the subobject.
-
-			Some examples
-
-			@code
-			Object x;
-			x.subobject("test")
-			    ("first":1)
-				("second":2);
-			@endcode
-			Above code will create {"test":{"first":1,"second":2}}
-
-			@code
-			Object x;
-			x.subobject("test").subobject("other")("third",{1,2});
-			@endcode
-			Above code will create {"test":{"other":{"third":[1,2]}}}
-
-			@code
-			Object x;
-			{  //don't forget section here
-			   auto sub(x.subobject("test"));
-			   x.set("first":1);
-			   x.set("second":2);
-			}
-			@endcode
-			Above code will create {"test":{"first":1,"second":2}}
-
-			@code
-			Object x;
-			makeSubobject(x.subobject("test").subobject("other"))
-			@endcode
-			Allows to delegate creation of subobject into a function. The
-			function can be declared as 			
-			@code
-			void makeSubobject(Object &&obj);
-			@encode
-
-			Following code is not allowed and will cause run_time exception
-			@code
-			Object x;
-			{  
-				auto sub(x.subobject("test").subobject("test2"); //<-- ERROR
-				x.set("first":1);
-				x.set("second":2);   
-			} <-- Exception
-			@endcode
-			Above code is errnous, because it creates temporary object which is immediately
-			destroyed - it is created for "test" member. Subobject "test2" then
-			refers already destroyed object. There is some kind of protection which
-			doesn't allow to commit changes to already destroyed object. To workaround
-			this limitation, you have to declare each subobject as standalone variable,
-			that should be destroyed in the reversed order
-
-		*/
 		Object2Object object(const StringView<char> &name);
 		Array2Object array(const StringView<char> &name);
-		//@}
 
 		///clears the object
 		void clear();
@@ -186,7 +119,7 @@ namespace json {
 		bool dirty() const;
 
 		///Merges two objects
-		/** Function inserts items from the object specified by parameter to this object
+		/** Function inserts items from the object specified by the argument to this object
 		which can replace existing items or add some new ones. The result is merge
 		of two objects 
 		
@@ -195,6 +128,31 @@ namespace json {
 
 		*/
 		Object &merge(Value object);
+
+
+		///Merges two objects
+		/** Function inserts items from the object specified by the first argument to this
+		 * object. Duplicated keys are resolved using conflictResolver specified as second argument
+		 *
+		 * @param object object to merge
+		 * @param conflictResolver function called for conflict.
+		 * @return reference to this
+		 *
+		 * The function has following prototype
+		 * @code
+		 * Value conflictResolver(const Value &origValue, const Value &newValue)
+		 * @endcode
+		 * 		 *
+		 * The function returns value which is then inserted to the object. Function may return "undefined"
+		 * which marks current field as removed.
+		 *
+		 * @note This function is slower in compare to function without conflictResolver, even if the
+		 * conflictResolver simply returns newValue, because the function must pick the original value for each
+		 * field to merge
+		 *
+		 */
+		template<typename Fn>
+		Object &merge(Value object, const Fn &conflictResolver);
 
 		///Creates iterator to walk through all changes
 		/**@note Iterator walks through changed object. Note that processing changes for iteration
@@ -216,13 +174,6 @@ namespace json {
 			base = object;
 		}
 
-		///Inserts changes which are need to change current base object to the newObject
-		/**
-		 * @param newObject target object
-		 *
-		 * @note this function is experimental and untested yet!
-		 */
-		void createDiff(const Value newObject);
 
 		///Inserts changes which are need to change from oldObject to the newObject
 		/**
@@ -332,4 +283,17 @@ namespace json {
 		}
 	};
 
+
+	template<typename Fn>
+	inline Object& json::Object::merge(Value object, const Fn& conflictResolver) {
+			object.forEach([&](Value v) {
+				Value origVal = operator [](v.getKey());
+				if (origVal.type() == undefined) set(v);
+				else set(v.getKey(),conflictResolver(origVal, v));
+				return true;
+			});
+			return *this;
+	}
+
 }
+

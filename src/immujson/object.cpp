@@ -194,9 +194,6 @@ namespace json {
 
 
 
-void Object::createDiff(const Value newObject) {
-	createDiff(base, newObject);
-}
 
 void Object::createDiff(const Value oldObject, Value newObject, unsigned int recursive) {
 
