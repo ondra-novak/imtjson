@@ -57,105 +57,80 @@ inline Value json::Value::sort(const Fn& sortFn) const {
 	return new ArrayValue(std::move(tmpvect));
 }
 
-class MergeResult {
-public:
 
-	enum Side {
-		left,
-		right,
-		both,
-		autodetect,
-	};
+template<typename Fn>
+void Value::merge(const Value &other, Fn mergeFn) const {
 
-	MergeResult(const Value &value, Side side):value(value),side(side) {}
-	MergeResult(const Value &value):value(value),side(autodetect) {}
-
-	void advIterators(ValueIterator &l, ValueIterator &r) {
-		switch (side) {
-		case left: ++l;break;
-		case right: ++r;break;
-		case both: ++l;++r;break;
-		case autodetect:
-			if ((*l).getHandle() == value.getHandle()) {
-				++l;
-				if ((*r).getHandle() == value.getHandle()) ++r;
-			}
-			else if ((*r).getHandle() == value.getHandle()) {
-				++r;
-			} else {
-				++l;++r;
-			}
-			break;
+	auto liter = this->begin();
+	auto riter = other.begin();
+	auto lend = this->end();
+	auto rend = other.end();
+	while (liter != lend && riter != rend) {
+		int res = mergeFn(*liter,*riter);
+		if (res<0) ++liter;
+		else if (res>0) ++riter;
+		else {
+			++liter;
+			++riter;
 		}
 	}
-	operator const Value &() const {return value;}
-
-protected:
-	Value value;
-	Side side;
-
-
-};
-
-///Inside of merge function (see Value::merge() ) the function states that it chose the left side with the result
-MergeResult chooseLeft(const Value &v) {
-	return MergeResult(v,MergeResult::left);
-}
-
-///Inside of merge function (see Value::merge() ) the function states that it chose the right side with the result
-MergeResult chooseRight(const Value &v) {
-	return MergeResult(v,MergeResult::right);
-}
-
-///Inside of merge function (see Value::merge() ) the function states that it chose both sides with the result
-MergeResult chooseBoth(const Value &v) {
-	return MergeResult(v,MergeResult::both);
-}
-
-template<typename Fn, typename StoreFn>
-inline void _runMerge(const Value& left, const Value& right, Fn mergeFn, StoreFn storeFn )  {
-
-	auto liter = left.begin();
-	auto riter = right.begin();
-	auto lend = left.end();
-	auto rend = right.end();
-	while (liter != lend && riter != rend) {
-		MergeResult mres (mergeFn(*liter,*riter));
-		mres.advIterators(liter,riter);
-		storeFn(mres);
-	}
 	while (liter != lend) {
-		Value res = mergeFn(*liter, Value(undefined));
-		liter++;
-		storeFn(res);
+		mergeFn(*liter,undefined);
+		++liter;
 	}
 	while (riter != rend) {
-		Value res = mergeFn(Value(undefined),*riter);
-		riter++;
-		storeFn(res);
+		mergeFn(undefined,*riter);
+		++riter;
 	}
-
 }
 
 template<typename Fn>
-inline Value Value::merge(const Value& other, const Fn& mergeFn, bool toObject) const {
-	if (toObject) {
-		Object obj;
-		_runMerge(*this, other, mergeFn, [&obj](const Value &r) {obj.set(r);});
-		return obj;
-	} else {
-		Array arr;
-		_runMerge(*this, other, mergeFn, [&arr](const Value &r) {arr.add(r);});
-		return arr;
-	}
+inline Value Value::mergeToArray(const Value& other, const Fn& mergeFn) const {
+	Array collector;
+	merge(other,[&collector,mergeFn](const Value &a, const Value &b) {
+		return mergeFn(a,b,collector);
+	});
+	return collector;
 }
 
-template<typename Fn, typename ReduceFn, typename Total>
-Total Value::mergeReduce(const Value &other, const Fn &mergeFn, const ReduceFn &reduceFn, Total total) const {
-	_runMerge(*this, other, mergeFn, [&total, reduceFn](const Value &r) {
-		total = reduceFn(total,r);
+template<typename Fn>
+inline Value Value::makeIntersection(const Value& other,const Fn& sortFn) const {
+	return mergeToArray(other,
+			[sortFn](const Value &left, const Value &right, Array &collect) -> decltype(sortFn(Value(),Value())) {
+		if (!left.defined() || !right.defined()) return 0;
+		auto cmp = sortFn(left,right);
+		if (cmp == 0) collect.add(right);
+		return cmp;
 	});
-	return total;
+}
+
+template<typename Fn>
+inline Value Value::makeUnion(const Value& other, const Fn& sortFn) const {
+	return mergeToArray(other,
+			[sortFn](const Value &left, const Value &right, Array &collect) -> decltype(sortFn(Value(),Value())) {
+		if (!left.defined()) {
+			collect.add(right);return 0;
+		} else if (!right.defined()) {
+			collect.add(left);return 0;
+		} else {
+			auto cmp = sortFn(left,right);
+			if (cmp < 0) {
+				collect.add(left);
+			} else {
+				collect.add(right);
+			}
+			return cmp;
+		}
+	});
+}
+
+template<typename Fn>
+inline Value Value::mergeToObject(const Value& other, const Fn& mergeFn) const {
+	Object collector;
+	merge(other,[&collector,mergeFn](const Value &a, const Value &b) {
+		return mergeFn(a,b,collector);
+	});
+	return collector;
 }
 
 

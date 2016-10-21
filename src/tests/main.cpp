@@ -696,36 +696,36 @@ int main(int , char **) {
 		});
 		w.toStream(out);
 	};
-	tst.test("Operation.mergeReduce","{\"added\":[10,17,55,99],\"removed\":[-33,8,11,21]}") >> [](std::ostream &out) {
+	tst.test("Operation.merge","{\"added\":[10,17,55,99],\"removed\":[-33,8,11,21]}") >> [](std::ostream &out) {
 		Value oldSet = {21,87,11,-33,43,90,11,8,3,97};
 		Value newSet = {10,55,17,90,11,99,3,97,43,87};
 		Array added;
 		Array removed;
-		auto sortNumbers = [](const Value &a, const Value &b){
+		auto cmp = [](const Value &a, const Value &b){
 			return a.getNumber()-b.getNumber();
 		};
 
+		oldSet.sort(cmp).merge(newSet.sort(cmp),
+				[&added,&removed,&cmp](const Value &left, const Value &right) -> decltype(cmp(undefined,undefined)) {
+			if (!left.defined()) {
+				added.add(right);return 0;
+			} else if (!right.defined()) {
+				removed.add(left);return 0;
+			} else {
+				auto c = cmp(left,right);
+				if (c > 0)
+					added.add(right);
+				else if (c < 0)
+					removed.add(left);
+				return c;
+			}
+		});
 
-		oldSet.sort(sortNumbers).mergeReduce(
-			newSet.sort(sortNumbers),
-			[](const Value &left, const Value &right) -> MergeResult {
-				if (!right.defined()) return chooseLeft({false,left});
-				if (!left.defined()) return chooseRight({true,right});
-				double diff = left.getNumber() - right.getNumber();
-				if (diff<0) return chooseLeft({false,left});
-				if (diff>0) return chooseRight({true,right});
-				return chooseBoth(undefined);
-			},
-			[&added,&removed](std::nullptr_t, const Value &v) {
-				if (v[0].getBool()) added.add(v[1]);
-				else removed.add(v[1]);
-				return nullptr;
-			},
-			nullptr);
+
 		Value w = Object("added",added)("removed",removed);
 		w.toStream(out);
 	};
-	tst.test("Operation.mergeToArray","[3,11,43,87,90,97]") >> [](std::ostream &out) {
+	tst.test("Operation.intersection","[3,11,43,87,90,97]") >> [](std::ostream &out) {
 		Value leftSet = {21,87,11,-33,43,90,11,8,3,97};
 		Value rightSet = {10,55,17,90,11,99,3,97,43,87};
 
@@ -734,16 +734,19 @@ int main(int , char **) {
 			return a.getNumber()-b.getNumber();
 		};
 
-		Value w = leftSet.sort(cmp).merge(
-				 rightSet.sort(cmp),
-					[&cmp](const Value &left, const Value &right) {
-						if (!right.defined()) return chooseLeft(undefined);
-						if (!left.defined()) return chooseRight(undefined);
-						auto c = cmp(left,right);
-						if (c<0) return chooseLeft(undefined);
-						if (c>0) return chooseRight(undefined);
-						return chooseBoth(left);
-					});
+		Value w = leftSet.sort(cmp).makeIntersection(rightSet.sort(cmp),cmp);
+		w.toStream(out);
+	};
+		tst.test("Operation.union","[-33,3,8,10,11,11,17,21,43,55,87,90,97,99]") >> [](std::ostream &out) {
+		Value leftSet = {21,87,11,-33,43,90,11,8,3,97};
+		Value rightSet = {10,55,17,90,11,99,3,97,43,87};
+
+
+		auto cmp= [](const Value &a, const Value &b){
+			return a.getNumber()-b.getNumber();
+		};
+
+		Value w = leftSet.sort(cmp).makeUnion(rightSet.sort(cmp),cmp);
 		w.toStream(out);
 	};
 

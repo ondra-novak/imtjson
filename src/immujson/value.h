@@ -477,56 +477,70 @@ namespace json {
 		Value reverse() const;
 
 
-		///Merges two containers. Result is put to an array
+		///Merges to array
 		/**
 		 * @param other other container
-		 * @param mergeFn function which controls merge
-		 * @param toObject result is stored into an object. Note that merge function must ensure that
-		 * each returned result has unique key (otherwise it they will replace each other)
+		 * @param mergeFn function which compares each items and performs merge item per item
 		 *
-		 * @return merged container
-		 *
-		 * The mergeFn has following prototype
+		 * The function mergeFn has following prototype
 		 * @code
-		 * MergeChoose mergeFn(const Value &l, const Value &r);
+		 * int mergeFn(const Value &left, const Value &right);
 		 * @endcode
-		 * The function accepts two items for the left (this) and for the right (other) side. Function
-		 * iterates through both containers. The iteration is controlled by the MergeResult object.
-		 * The iteration stops when both containers are processed complete. If one of container reaches
-		 * the end, its appropriate argument of the function is set to the undefined. The function won't be
-		 * called with both arguments set to the undefined.
 		 *
-		 * The class MergeResult can be created directly by returning Value (which is automatically converted to
-		 * MergeResult) or through functions chooseLeft() or chooseRight(). Depend on chosen side the function
-		 * moves appropriate iterator.
+		 * Where left and right are items to compare. Function need to pick one ot items and
+		 * perform some operation which is not part of the function itself. It can
+		 * for example store the item to the file
 		 *
-		 * The following function removes strings from the left array that are exist on the right array,
+		 * The function returns <0 to advance left iterator, >0 to advance right iterator or
+		 * =0 to advance both iterators
 		 *
-		 * @code
-		 * MergeChoose excludeStrings(const Value &l, const Value &r) {
-		 * 	 String sl(l);
-		 * 	 String sr(r);
-		 * 	 if (!r.defined() || sl < sr) return chooseLeft(sl); // return sl as result for the container on the left
-		 * 	 else if (!l.defned() || sl > sr) return chooseRight(undefined); //return undefined (skip) as  result for the container on the right
-		 * 	 else return undefined; //return undefined (skip) for both containers
-		 * }
-		 *
+		 * @note Both container should be sorted
 		 */
 		template<typename Fn>
-		Value merge(const Value &other, const Fn &mergeFn, bool toObject = false) const;
+		void merge(const Value &other, Fn mergeFn) const;
 
-		///Combination of merge + reduce in single cycle
-		/** This combination allows to perform some special action with merged result.
-		 * @param other other container
-		 * @param mergeFn merge function. See the function Value::merge()
-		 * @param reduceFn reduce function. See the function Value::reduce()
-		 * @param total initial value of object Total
-		 * @return reduced result Total
+		///Merges to array
+		/**
+		 * @param other other conatiner
+		 * @param mergeFn function which compares each items and performs merge item per item
+		 * @return merged array
 		 *
-		 * @see Value::merge(), Value::reduce()
+		 * The function mergeFn has following prototype
+		 * @code
+		 * int mergeFn(const Value &left, const Value &right, Array &collector);
+		 * @endcode
+		 *
+		 * Where left and right are items to compare, and collector is object where the
+		 * function has to put result of the merge operation
+		 *
+		 * The function returns <0 to advance left iterator, >0 to advance right iterator or
+		 * =0 to advance both iterators
+		 *
+		 * @note Both container should be sorted
 		 */
-		template<typename Fn, typename ReduceFn, typename Total>
-		Total mergeReduce(const Value &other, const Fn &mergeFn, const ReduceFn &reduceFn, Total total) const;
+		template<typename Fn>
+		Value mergeToArray(const Value &other, const Fn &mergeFn) const;
+
+		///Merges to object
+		/**
+		 * @param other other conatiner
+		 * @param mergeFn function which compares each items and performs merge item per item
+		 * @return merged object
+		 *
+		 * The function mergeFn has following prototype
+		 * @code
+		 * int mergeFn(const Value &left, const Value &right, Object &collector);
+		 * @endcode
+		 *
+		 * Where left and right are items to compare, and collector is object where the
+		 * function has to put result of the merge operation
+		 *
+		 * The function returns <0 to advance left iterator, >0 to advance right iterator or
+		 * =0 to advance both iterators
+		 */
+		template<typename Fn>
+		Value mergeToObject(const Value &other, const Fn &mergeFn) const;
+
 
 
 		///Removes duplicated values after sort
@@ -566,6 +580,31 @@ namespace json {
 		Value slice(std::intptr_t start, std::intptr_t end) const;
 		//@}
 #endif
+
+		///Makes intersection of two containers
+		/**
+		 * @param other second container
+		 * @param sortFn function which defines order of values.
+		 * @return array contains intersection of both containers
+		 *
+		 * @note both containers must be sorted. Use this function along with sort() if
+		 * necessary.
+		 */
+		template<typename Fn>
+		Value makeIntersection(const Value &other, const Fn &sortFn) const;
+
+		///Makes union of two containers
+		/**
+		 * @param other second container
+		 * @param sortFn function which defines order of values.
+		 * @return array contains union of both containers. Duplicate keys are stored
+		 *
+		 *
+		 * @note both containers must be sorted. Use this function along with sort() if
+		 * necessary.
+		 */
+		template<typename Fn>
+		Value makeUnion(const Value &other, const Fn &sortFn) const;
 
 protected:
 
