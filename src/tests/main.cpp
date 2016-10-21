@@ -21,6 +21,7 @@
 #include "../immujson/compress.tcc"
 #include "../immujson/path.h"
 #include "../immujson/string.h"
+#include "../immujson/operations.h"
 
 using namespace json;
 

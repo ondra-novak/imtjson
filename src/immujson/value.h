@@ -251,17 +251,33 @@ namespace json {
 
 		///Retrieve key of the value if the value is part of an object
 		/**
-		 * Items in the object are kept as pair which contains the key and the value. Every time
-		 * the item is retrieved, it also carries its original key until the key is changed by
-		 * putting the item into other object (to achieve immutability, the key is not actually
-		 * changed, but inserted item is paired with a new key, so it is possible to have
-		 * the item with many paired keys)
+		 * Items in the object are kept as pairs where each contains the key and the value.
+		 * Every time the item is retrieved, it also carries its original key-name until
+		 * the key is changed by putting the item into other object
+		 * (to achieve immutability, the key is not actually changed,
+		 * but inserted item is paired with a new key, so it is possible to have
+		 * an item with many keys paired with it)
 		 *
-		 * @return name of key. If the value is not paired with a key, return is empty string. To
-		 * determine whether value is paired see @proxy
+		 * @return name of key. If the value is not paired with a key,
+		 * return is empty string. To determine whether value is paired see proxy.
+		 *
+		 * @see proxy, setKey
 		 */
 		StringView<char> getKey() const { return v->getMemberName(); }
 
+
+		///Binds a key-name to the item
+		/** The function is used by objects, however you can use it to immitate
+		 * that the value is bound with some key-name.
+		 * @param key-name which is bind to the value
+		 * @return new value with bound key.
+		 *
+		 * @note due immutable nature of the  value, you cannot change or set
+		 * the key-name to the existing value. A new value is always created.
+		 *
+		 * @see getKey
+		 */
+		Value setKey(const StringView<char> &key) const;
 
 		///Converts the value to string
 		/**
@@ -409,6 +425,88 @@ namespace json {
 		 */
 		bool defined() const {return type() != undefined;}
 
+
+		///Perform operation map on every item of the array or the object
+		/** Function works on containers. Result depend on type of value.
+		 * If called on object, result is object and values are bound with
+		 * same keys.
+		 *
+		 * @param mapFn function called for every item. The function must return
+		 * new value. It can return undefined to remove the value from the
+		 * result (note that for arrays it means, that result will have less
+		 * items then source).
+		 *
+		 * @return
+		 */
+		template<typename Fn>
+		Value map(const Fn &mapFn)  const;
+
+		///Performs reduce operaton on the container
+		/**
+		 * @param reduceFn function to call on every item
+		 * @param initalValue initial value
+		 * @return reduced result
+		 *
+		 * The function has following prototype
+		 * @code
+		 * Value reduceFn(const Value &total, const Value &currentValue)
+		 * @endcode
+		 */
+		template<typename Fn>
+		Value reduce(const Fn &reduceFn, const Value &initalValue)  const;
+
+		///Performs reduce operaton on the container
+		/**
+		 * @param reduceFn function to call on every item
+		 * @param initalValue initial value stored as Object. This allows to
+		 *  accumulate items in the object which is carried through the every
+		 *  iteration
+		 * @return reduced result created finally from the object
+		 *
+		 * The function has following prototype
+		 * @code
+		 * void reduceFn(Object &total, const Value &currentValue)
+		 * @endcode
+		 */
+		template<typename Fn>
+		Value reduce(const Fn &reduceFn, Object &&initalValue) const;
+
+		///Performs reduce operaton on the container
+		/**
+		 * @param reduceFn function to call on every item
+		 * @param initalValue initial value stored as Array. This allows to
+		 *  accumulate items in the array which is carried through the every
+		 *  iteration
+		 * @return reduced result created finally from the array
+		 *
+		 * The function has following prototype
+		 * @code
+		 * void reduceFn(Array &total, const Value &currentValue)
+		 * @endcode
+		 */
+		template<typename Fn>
+		Value reduce(const Fn &reduceFn, Array &&initalValue)  const;
+
+		///Sort object or array
+		/** Result of the operation sort is always array (because objects
+		 * are sorted by the key)
+		 *
+		 * @param sortFn sort function
+		 * @return sorted array
+		 *
+		 * The function has following prototype
+		 * @code
+		 * int sortFn(const Value &v1, const Value &v2);
+		 * @endcode
+		 *
+		 * the function returns <0 if v1 < v2, >0 if v1 > v2 or 0 if v1 == v2
+		 *
+		 */
+		template<typename Fn>
+		Value sort(const Fn &sortFn)  const;
+
+		///Reverses container
+		Value reverse() const;
 	protected:
 
 		PValue v;
@@ -467,3 +565,4 @@ namespace json {
 	 */
 	typedef Value var;
 }
+

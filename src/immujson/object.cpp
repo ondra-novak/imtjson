@@ -368,6 +368,11 @@ Value Object::mergeDiffsObjs(const Value& lv, const Value& rv,
 	Value v (new ObjectValue(std::move(out)));
 }
 
+Value Value::setKey(const StringView<char> &key) const {
+	if (getKey() == key) return *this;
+	if (key.empty()) return Value(v->unproxy());
+	return Value(new ObjectProxy(key,v->unproxy()));
+}
 
 }
 

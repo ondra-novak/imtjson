@@ -226,5 +226,14 @@ namespace json {
 	Value::Value(const String& value):v(value.getHandle()) {
 	}
 
+	Value Value::reverse() const {
+		Array out;
+		for (std::uintptr_t i = size(); i > 0; i++) {
+			out.add(this->operator [](i-1));
+		}
+		return out;
+	}
+
+
 }
 
