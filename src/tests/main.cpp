@@ -11,19 +11,25 @@
 #include <crtdbg.h>
 #endif
 
-#include "../immujson/edit.h"
-#include "../immujson/parser.h"
-#include "../immujson/serializer.h"
-#include "../immujson/basicValues.h"
-#include "testClass.h"
 #include <memory>
 #include <fstream>
+#include "../immujson/json.h"
 #include "../immujson/compress.tcc"
-#include "../immujson/path.h"
-#include "../immujson/string.h"
-#include "../immujson/operations.h"
+#include "../immujson/basicValues.h"
+#include "testClass.h"
 
 using namespace json;
+
+static int leakCounter = 0;
+void *operator new(std::size_t x) {
+	leakCounter++;
+	return malloc(x);
+}
+
+void operator delete(void *p) {
+	leakCounter--;
+	free(p);
+}
 
 void compressDemo(std::string file) {
 	std::ifstream infile(file);
@@ -621,7 +627,7 @@ int main(int , char **) {
 	tst.test("String.concat","Hello world!") >> [](std::ostream &out) {
 		String s("Hello ");
 		String t("world!");
-		out << String(s+t);
+		out << s+t;
 	};
 	tst.test("String.insert","Hello big world!") >> [](std::ostream &out) {
 		String s("Hello world!");
@@ -630,6 +636,10 @@ int main(int , char **) {
 	tst.test("String.replace","Hello whole planet!") >> [](std::ostream &out) {
 		String s("Hello world!");
 		out << s.replace(6,5, "whole planet");
+	};
+	tst.test("String.concat2","Hello world and poeple!") >> [](std::ostream &out) {
+		String s = {"Hello"," ","world"," ","and"," ","poeple!"};
+		out << s;
 	};
 	tst.test("String.split","[\"one\",\"two\",\"three\"]") >> [](std::ostream &out) {
 		String s("one::two::three");
@@ -808,15 +818,14 @@ int main(int , char **) {
 		out<<"ok";
 	};
 	
-	tst.test("MemoryLeaks", "") >> [](std::ostream &out) {
+	tst.test("MemoryLeaks", "0") >> [](std::ostream &out) {
 #ifdef _WIN32
 		if (_CrtDumpMemoryLeaks()) {
 			out << "Detected memory leaks!";
 		}
-#else
-		throw TestNotImplemented();
 #endif
-
+		Value x(10);
+		out << leakCounter-1;
 	};
 
 	return tst.didFail()?1:0;

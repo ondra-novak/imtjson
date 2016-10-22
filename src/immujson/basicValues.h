@@ -20,8 +20,12 @@ namespace json {
 	public:
 		virtual ValueType type() const override { return boolean; }
 		virtual bool getBool() const override  = 0;		
+		virtual double getNumber() const override {return getBool()?1.0:0;}
+		virtual std::intptr_t getInt() const override {return getBool()?1:0;}
+		virtual std::uintptr_t getUInt() const override {return getBool()?1:0;}
 
 		static const IValue *getBool(bool v);
+
 
 		virtual bool equal(const IValue *other) const override;
 

@@ -2,6 +2,7 @@
 #include <utility>
 #include <map>
 #include <stack>
+#include <vector>
 
 namespace json {
 

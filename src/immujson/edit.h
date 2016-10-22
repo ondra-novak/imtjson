@@ -1,67 +1,39 @@
 #pragma once
 
-#include "object.h"
-#include "array.h"
 
 namespace json {
 
-	class Object2Object: public Object {
-	public:
-		Object2Object(Value oldVal, Object &parent, const StringView<char> &name)
-			:Object(oldVal), parent(parent), name(name) {}
-		~Object2Object() noexcept(false) {
-			if (dirty()) {
-				parent.checkInstance();
-				parent.set(name, *this);
-			}
-		}
-	protected:
-		Object &parent;
-		const StringView<char> &name;
-	};
+	class Object;
+	class Array;
 
-	class Object2Array : public Object {
+	template<typename Provider, typename Parent, typename Index>
+	class AutoCommitT: public Provider {
 	public:
-		Object2Array(Value oldVal, Array &parent, std::size_t index)
-			:Object(oldVal), parent(parent), index(index) {}
-		~Object2Array() noexcept(false) {
-			if (dirty()) {
+		AutoCommitT(const Value &oldVal, Parent &parent, const Index &index)
+			:Provider(oldVal),parent(parent),index(index) {}
+		~AutoCommitT() noexcept(false) {
+			if (this->dirty()) try {
 				parent.checkInstance();
 				parent.set(index, *this);
+			} catch (...) {
+				if (!std::uncaught_exception()) throw;
 			}
 		}
-	protected:
-		Array &parent;
-		std::size_t index;
-	};
-
-	class Array2Object : public Array {
-	public:
-		Array2Object(Value oldVal, Object &parent, const StringView<char> &name)
-			:Array(oldVal), parent(parent), name(name) {}
-		~Array2Object() noexcept(false) {
-			if (dirty()) {
-				parent.checkInstance();
-				parent.set(name, *this);
-			}
-		}
-	protected:
-		Object &parent;
-		const StringView<char> &name;
-	};
-
-	class Array2Array : public Array {
-	public:
-		Array2Array(Value oldVal, Array &parent, std::size_t index)
-			:Array(oldVal), parent(parent), index(index) {}
-		~Array2Array() noexcept(false) {
-			if (dirty()) {
+		void commit() {
+			if (this->dirty()) {
 				parent.checkInstance();
 				parent.set(index, *this);
+				this->revert();
 			}
 		}
 	protected:
-		Array &parent;
-		std::size_t index;
+		Parent &parent;
+		Index index;
 	};
+
+	typedef AutoCommitT<Object, Object, StringView<char> > Object2Object;
+	typedef AutoCommitT<Object, Array, std::size_t > Object2Array;
+	typedef AutoCommitT<Array, Object, StringView<char> >  Array2Object ;
+	typedef AutoCommitT<Array, Array, std::size_t > Array2Array;
+
 }

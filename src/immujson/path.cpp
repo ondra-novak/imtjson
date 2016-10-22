@@ -219,5 +219,10 @@ Value json::PPath::toValue() const {
 	return ref->toValue();
 }
 
+PPath::PPath(const Path p):ref(p.copy().ref) {
+}
+
+
 
 }
+

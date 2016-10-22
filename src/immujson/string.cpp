@@ -44,7 +44,7 @@ std::size_t String::length() const {
 	return impl->getString().length;
 }
 
-std::size_t String::empty() const {
+bool String::empty() const {
 	return length() == 0;
 }
 
@@ -54,7 +54,32 @@ char String::operator [](std::size_t pos) const {
 	else return s[pos];
 }
 
-String String::operator +(const StringView<char>& other) const {
+String::String(const std::initializer_list<StringView<char> >& strlist) {
+	std::string v;
+	std::size_t cnt = 0;
+	for (auto &&item : strlist) {
+		cnt += item.length;
+	}
+	v.reserve(cnt);
+	for (auto &&item : strlist) {
+		v.append(item.data,item.length);
+	}
+	impl = new StringValue(std::move(v));
+}
+
+
+String operator+(StringView<char> a, StringView<char> b) {
+	if (a.empty() && b.empty()) return String();
+
+	std::string v;
+	v.reserve(a.length+b.length);
+	v.append(a.data,a.length);
+	v.append(b.data,b.length);
+
+	return String(std::move(v));
+}
+
+/*String String::operator +(const StringView<char>& other) const {
 	if (other.empty()) return *this;
 
 	StringView<char> a = impl->getString();
@@ -68,12 +93,8 @@ String String::operator +(const StringView<char>& other) const {
 
 	return String(new StringValue(std::move(v)));
 
-}
+}*/
 
-String String::operator +(const String &other) const {
-	if (empty()) return other;
-	return operator+(other.operator StringView<char>());
-}
 
 
 String::operator StringView<char>() const {
@@ -158,12 +179,6 @@ std::size_t String::indexOf(const StringView<char> other, std::size_t start) con
 	return a.indexOf(other, start);
 }
 
-Value String::substrValue(std::size_t pos, std::size_t length) const {
-	StringView<char> a = impl->getString();
-	if (pos > a.length) pos = a.length;
-	if (pos+length > a.length) length = a.length - pos;
-	return new SubStrString(impl, pos, length);
-}
 
 
 PValue String::getHandle() const {
@@ -183,7 +198,13 @@ String::String(const StringView<char>& str):impl(Value(str).getHandle()) {
 String::String(const char* str):impl(Value(str).getHandle()) {
 }
 
-String::String(const std::string& str):impl(Value(str).getHandle()) {
+String::String(const std::basic_string<char>& str):impl(Value(str).getHandle()) {
+
+}
+
+String::String(std::basic_string<char>&& str):String(Value(new StringValue(std::move(str)))) {
+
 }
 
 }
+

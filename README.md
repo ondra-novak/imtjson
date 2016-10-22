@@ -1,4 +1,7 @@
-# immujson
+# ImmuJSON
 JSON library written in pure C++ with immutable structure only!
 
-TODO: add details
+Choose language
+
+* [Czech](navod.md)
+* English - sorry, not yet :(

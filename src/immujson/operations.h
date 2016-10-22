@@ -58,30 +58,55 @@ inline Value json::Value::sort(const Fn& sortFn) const {
 }
 
 
-template<typename Fn>
-void Value::merge(const Value &other, Fn mergeFn) const {
+///Perform simple merge (alternative to std::merge)
+/**
+ * @param liter first starting iterator
+ * @param lend first ending iterator
+ * @param riter second starting iterator
+ * @param rend second ending iterator
+ * @param fn a function which receives values from first and second container.
+ *  The function must return <0 to advance the first iterator, >0 to advance
+ *   the second iterator, or =0 to advance both iterators.
+ * @param undefined defines value used as placeholder when one
+ *  of the iterators reached its end. The function can detect, that merge is
+ *  in the final phase. This value appear as the first argument when the first
+ *  iterator reached its end, or as the second argument when to
+ *  second iterator reached  its end. In both these situations, return
+ *  value of the function is ignored.
+ */
+template<typename Iter1, typename Iter2, typename Fn, typename Undefined>
+void merge(Iter1 liter, Iter1 lend, Iter2 riter, Iter2 rend, Fn fn, Undefined undefined)  {
 
-	auto liter = this->begin();
-	auto riter = other.begin();
-	auto lend = this->end();
-	auto rend = other.end();
+	using FnRet = decltype(fn(*liter,*riter));
+	const FnRet zero(0);
+
 	while (liter != lend && riter != rend) {
-		int res = mergeFn(*liter,*riter);
-		if (res<0) ++liter;
-		else if (res>0) ++riter;
+		FnRet res = fn(*liter,*riter);
+		if (res<zero) ++liter;
+		else if (res>zero) ++riter;
 		else {
 			++liter;
 			++riter;
 		}
 	}
 	while (liter != lend) {
-		mergeFn(*liter,undefined);
+		fn(*liter,undefined);
 		++liter;
 	}
 	while (riter != rend) {
-		mergeFn(undefined,*riter);
+		fn(undefined,*riter);
 		++riter;
 	}
+
+}
+
+
+template<typename Fn>
+void Value::merge(const Value &other, const Fn &mergeFn) const {
+
+	json::merge(this->begin(),this->end(),
+				other.begin(),other.end(),
+				mergeFn, undefined);
 }
 
 template<typename Fn>

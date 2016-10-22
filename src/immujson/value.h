@@ -282,10 +282,24 @@ namespace json {
 		///Converts the value to string
 		/**
 		 * In compare to getString(), this function converts anything in the variable to a
-		 * string representation. It doesn mean, that numbers are converted to string, boolean
-		 * is converted to "true" or "false", null is returned as "null".
+		 * string representation. Numbers are converted to string, boolean
+		 * is converted to "true" or "false", null is returned as word "null". Strings are
+		 * returned as they are.
+		 *
+		 * @note Main difference between toString an strigify is that strings are returned as
+		 * they are. The function strigify returns the string with quotes and all non-ascii
+		 * characters are escaped
 		 *
 		 * @return string representation of the value
+		 *
+		 *
+		 *  - null -> stringify() to "null"
+		 *  - boolean -> stringify() to true/false
+		 *  - number -> stringify() to number
+		 *  - undefined -> returned "<undefined>"
+		 *  - object -> stringify()
+		 *  - array -> strigify()
+		 *  - string -> direct value
 		 */
 		String toString() const ;
 
@@ -426,6 +440,9 @@ namespace json {
 		bool defined() const {return type() != undefined;}
 
 
+		///Returns true if content is null
+		bool isNull() const {return type() != null;}
+
 		///Perform operation map on every item of the array or the object
 		/** Function works on containers. Result depend on type of value.
 		 * If called on object, result is object and values are bound with
@@ -497,7 +514,7 @@ namespace json {
 		 * @note Both container should be sorted
 		 */
 		template<typename Fn>
-		void merge(const Value &other, Fn mergeFn) const;
+		void merge(const Value &other, const Fn &mergeFn) const;
 
 		///Merges to array
 		/**
@@ -560,7 +577,7 @@ namespace json {
 		 */
 		template<typename Fn>
 		Value split(const Fn &sortFn) const;
-#if 0
+
 		//@{
 		///Create slice
 		/**The  slice() method returns the selected elements in an array, as a new array object.
@@ -579,7 +596,7 @@ namespace json {
 		Value slice(std::intptr_t start) const;
 		Value slice(std::intptr_t start, std::intptr_t end) const;
 		//@}
-#endif
+
 
 		///Makes intersection of two containers
 		/**

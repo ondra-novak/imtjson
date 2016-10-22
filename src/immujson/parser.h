@@ -1,7 +1,8 @@
 #pragma once
 
 #include <sstream>
-#include "value.h"
+#include "object.h"
+#include "array.h"
 
 namespace json {
 

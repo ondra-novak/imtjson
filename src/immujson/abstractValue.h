@@ -32,5 +32,4 @@ namespace json {
 		static const IValue *getUndefined();
 	};
 
-
 }

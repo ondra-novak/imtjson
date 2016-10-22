@@ -4,12 +4,11 @@
 #include <functional>
 #include "value.h"
 #include "stackProtection.h"
+#include "edit.h"
 
 namespace json {
 
 
-	class Object2Object;
-	class Array2Object;
 	class ObjectIterator;
 
 	///The class helps to build JSON object
@@ -223,6 +222,18 @@ namespace json {
 		void mergeDiffs(const Object &left, const Object &right, const ConflictResolver &resolver,const Path &path);
 		//@}
 
+		///Direct access to the items
+		/** Function retrieves iterable view of items if the source value is Object
+		 *
+		 * @note Function only supports build-in object type.
+		 *
+		 * @return View to items. Items are stored as PValues, so you still need
+		 * to convert them to Values.
+		 *
+		 * @p tip - Items in object are ordered by its key
+		 *
+		 * */
+		static StringView<PValue> getItems(const Value &v);
 	protected:
 		Value base;
 		typedef std::map<StringView<char>, Value> Changes;
@@ -262,6 +273,8 @@ namespace json {
 		static Value mergeDiffsObjs(const Value &lv,const Value &rv, const ConflictResolver& resolver, const Path &path);
 
 		class NameValueIter;
+
+
 	};
 
 

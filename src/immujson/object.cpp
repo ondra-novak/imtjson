@@ -1,6 +1,6 @@
 #include "object.h"
 #include "objectValue.h"
-#include "edit.h"
+#include "array.h"
 #include <time.h>
 
 #include "path.h"
@@ -369,6 +369,12 @@ Value Value::setKey(const StringView<char> &key) const {
 	if (getKey() == key) return *this;
 	if (key.empty()) return Value(v->unproxy());
 	return Value(new ObjectProxy(key,v->unproxy()));
+}
+
+StringView<PValue> Object::getItems(const Value& v) {
+	const IValue *pv = v.getHandle();
+	const ObjectValue *ov = dynamic_cast<const ObjectValue *>(pv->unproxy());
+	if (ov) return ov->getItems(); else return StringView<PValue>();
 }
 
 }

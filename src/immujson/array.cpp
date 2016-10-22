@@ -1,6 +1,6 @@
 #include "array.h"
 #include "arrayValue.h"
-#include "edit.h"
+#include "object.h"
 #include <time.h>
 
 namespace json {
@@ -111,6 +111,9 @@ namespace json {
 
 	PValue Array::commit() const
 	{
+		if (empty()) return AbstractArrayValue::getEmptyArray();
+		if (!dirty()) return base.getHandle();
+
 		std::vector<PValue> result;
 		result.reserve(changes.offset + changes.size());
 		for (std::size_t x = 0; x < changes.offset; ++x) {
@@ -161,5 +164,27 @@ namespace json {
 		return ArrayIterator(this,size());
 	}
 
-}
 
+	Array &Array::reserve(std::size_t items) {
+		changes.reserve(items);
+		return *this;
+	}
+
+	Object2Array Array::addObject() {
+		std::size_t pos = size();
+		add(AbstractObjectValue::getEmptyObject());
+		return object(pos);
+	}
+
+	Array2Array Array::addArray() {
+		std::size_t pos = size();
+		add(AbstractArrayValue::getEmptyArray());
+		return array(pos);
+	}
+
+	StringView<PValue> Array::getItems(const Value& v) {
+		const IValue *pv = v.getHandle();
+		const ArrayValue *av = dynamic_cast<const ArrayValue *>(pv->unproxy());
+		if (av) return av->getItems(); else return StringView<PValue>();
+	}
+}
