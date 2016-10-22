@@ -10,7 +10,7 @@ Od ostatních běžně dostupných knihoven se odlišuje zejména důrazem na im
 
 ## Immutabilita
 
-Immutabilita - neměnnost - se u JSONu projevuje zejména při práci s kontejnery. Týká se to hodnot typů **array** a **object**. Zatímco u jiných knihoven - a v *javascriptu* se změna kteréhokoliv prvku pole nebo objektu projevů všude tam, kde je příslušný kontejner referencovaný, u knihovny **immujson** toto (záměrně) není možné. Příklad
+Immutabilita - neměnnost - se u JSONu projevuje zejména při práci s kontejnery. Týká se to hodnot typů **array** a **object**. Zatímco u jiných knihoven a v *javascriptu* se změna kteréhokoliv prvku pole nebo objektu projeví všude tam, kde je příslušný kontejner referencovaný, u knihovny **immujson** toto (záměrně) není možné. Příklad
 
 ```
 var a = {"x":10,"y":20,"z":30}
@@ -71,7 +71,7 @@ Velice podobně se pracuje s **Array**.
 
 # Přehled možností knihovny 
 
-Detaily jednotlivých funkcí lze najít přímo v dokumentaci ve zdrojácích. V této části jsou uvedeny jen ty důležité části a aspekty práce s ImmuJSON, které nejsou při čtení referenčí příručšky hned patrné
+Detaily jednotlivých funkcí lze najít přímo v dokumentaci ve zdrojácích. V této části jsou uvedeny jen ty důležité části a aspekty práce s ImmuJSON, které nejsou při čtení referenčí příručky hned patrné
 
 ## Parsování formátu JSON
 
@@ -109,7 +109,7 @@ Výše uvedený příklad serializuje JSON do otevřeného soketu.
 
 ## Typy, které lze uložit v instanci třídy Value
 
- * **`number`** - jakékoliv číslo. Znamenková a neznamenková celá čísla využívají bitovou šířku aktuální platformy. Čísla s plovoucí řádkou a číslo s rozsahem mimo počet bitů platformy se ukládají jako **double**. Typ čísla nerozlišuje způsob uložení, nicméně rozhranní nabízí funkci, přes kterou lze získat informaci o způsobu uložení - viz **Value::flags()**
+ * **`number`** - jakékoliv číslo. Znamenková a neznamenková celá čísla využívají bitovou šířku aktuální platformy. Čísla s plovoucí čárkou a číslo s rozsahem mimo počet bitů platformy se ukládají jako **double**. Typ čísla nerozlišuje způsob uložení, nicméně rozhranní nabízí funkci, přes kterou lze získat informaci o způsobu uložení - viz **Value::flags()**
  * **`string`** - aktuální verze ImmuJSON podporuje pouze 8bitové znaky. Znaky mezinárodních abeced jsou kódované pomocí UTF-8. Pokud se v JSONu objevuje escape sekvence \uXXXX je při parsování převedena na UTF-8 sekvenci. Parser také normalizuje UTF-8 sekvence, pokud by byly prodloužené.
  * **`boolean`** - hodnota true nebo false
  * **`object`** - kontejner, kde lze hodnoty adresovat pomocí klíče. Objekty jsou vždy řazeny podle klíče (binární řazení). Pořadí klíčů v původním JSONu je zahozeno.
