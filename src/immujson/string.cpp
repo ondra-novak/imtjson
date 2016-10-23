@@ -172,6 +172,7 @@ Value String::split(const StringView<char> separator, std::size_t maxCount) cons
 
 String& String::operator +=(const StringView<char> other) {
 	impl = ((*this) + other).getHandle();
+	return *this;
 }
 
 std::size_t String::indexOf(const StringView<char> other, std::size_t start) const {

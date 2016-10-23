@@ -35,7 +35,7 @@ inline Value json::Value::map(const Fn& mapFn) const {
 template<typename Fn, typename Total>
 inline Total json::Value::reduce(const Fn& reduceFn, Total curVal) const {
 	this->forEach([&curVal, reduceFn](const Value &v) {
-		curVal= reduceFn(curVal, v);
+		curVal = Total(reduceFn(curVal, v));
 		return true;
 	});
 	return curVal;

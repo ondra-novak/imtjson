@@ -293,6 +293,7 @@ Value json::Object::applyDiff(const Value& baseObject, const Value& diffObject) 
 		append(merged,(*newIt).getHandle());
 		++newIt;
 	}
+	return new ObjectValue(std::move(merged));
 
 }
 
@@ -362,7 +363,7 @@ Value Object::mergeDiffsObjs(const Value& lv, const Value& rv,
 		if (v.getKey() == name) out.push_back(v.getHandle());
 		else out.push_back(new ObjectProxy(name,v.getHandle()->unproxy()));
 	});
-	Value v (new ObjectValue(std::move(out)));
+	return (new ObjectValue(std::move(out)));
 }
 
 Value Value::setKey(const StringView<char> &key) const {
