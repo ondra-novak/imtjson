@@ -187,4 +187,90 @@ namespace json {
 		const ArrayValue *av = dynamic_cast<const ArrayValue *>(pv->unproxy());
 		if (av) return av->getItems(); else return StringView<PValue>();
 	}
+
+Array::Array(const Array& other):base(other.base),changes(other.changes) {
+
 }
+
+Array::Array(Array&& other):base(std::move(other.base)),changes(std::move(other.changes)) {
+}
+
+Array& Array::operator =(const Array& other) {
+	base = other.base;
+	changes = other.changes;
+	return *this;
+}
+
+Array& Array::operator =(Array&& other) {
+	base = std::move(other.base);
+	changes = std::move(other.changes);
+	return *this;
+}
+
+
+Array::Changes::Changes(const Changes& base)
+	:std::vector<PValue>(base),offset(base.offset)
+{
+}
+
+Array::Changes::Changes(Changes&& base)
+	:std::vector<PValue>(std::move(base)),offset(base.offset) {
+}
+
+Array::Changes& Array::Changes::operator =(const Changes& base) {
+	std::vector<PValue>::operator =(base);
+	offset = base.offset;
+	return *this;
+}
+
+Array::Changes& Array::Changes::operator =(Changes&& base) {
+	std::vector<PValue>::operator =(std::move(base));
+	offset = base.offset;
+	return *this;
+}
+
+Array& Array::reverse() {
+	Array out;
+	for (std::size_t x = size(); x > 0; x--)
+		out.add((*this)[x-1]);
+	*this = std::move(out);
+}
+
+
+Array& Array::slice(std::intptr_t start) {
+	if (start < 0) {
+		if (-start < size()) {
+			return slice(size()+start);
+		}
+	} else if (start >= size()) {
+		clear();
+	} else {
+		eraseSet(0,start);
+	}
+	return *this;
+}
+
+
+Array& Array::slice(std::intptr_t start, std::intptr_t end) {
+	if (end < 0) {
+		if (-end < size()) {
+			slice(start, size()+end);
+		} else {
+			clear();
+		}
+	} else if (end < size()) {
+		trunc(end);
+	}
+	return slice(start);
+}
+
+Array& json::Array::setSize(std::size_t length, Value fillVal) {
+	reserve(length);
+	if (size() > length) return trunc(length);
+	while (size() < length) add(fillVal);
+	return *this;
+}
+
+
+}
+

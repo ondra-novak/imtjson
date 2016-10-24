@@ -9,52 +9,29 @@
 #define SRC_IMMUJSON_OPERATIONS_H_
 
 #include "arrayValue.h"
+#include "object.h"
+#include "array.h"
 #include "value.h"
 namespace json {
 
 template<typename Fn>
-inline Value json::Value::map(const Fn& mapFn) const {
+inline Value Value::map(const Fn& mapFn) const {
 	if (type() == object) {
-		Object out;
-		this->forEach([mapFn, &out](const Value &v){
-			out.set(v.getKey(),mapFn(v));
-			return true;
-		});
-		return out;
+		return Object(*this).map(mapFn);
 	} else {
-		Array out;
-		this->forEach([mapFn, &out](const Value &v){
-			out.add(mapFn(v));
-			return true;
-		});
-		return out;
-
+		return Array(*this).map(mapFn);
 	}
 }
 
 template<typename Fn, typename Total>
-inline Total json::Value::reduce(const Fn& reduceFn, Total curVal) const {
-	this->forEach([&curVal, reduceFn](const Value &v) {
-		curVal = Total(reduceFn(curVal, v));
-		return true;
-	});
-	return curVal;
+inline Total Value::reduce(const Fn& reduceFn, Total curVal) const {
+	return Array(*this).reduce(reduceFn,curVal);
 }
 
 
 template<typename Fn>
-inline Value json::Value::sort(const Fn& sortFn) const {
-	std::vector<PValue> tmpvect;
-	tmpvect.reserve(this->size());
-	this->forEach([&tmpvect](const PValue &v) {
-		tmpvect.push_back(v);
-		return true;
-	});
-	std::sort(tmpvect.begin(), tmpvect.end(),
-			[sortFn](const PValue &v1, const PValue &v2) {
-		return sortFn(v1,v2) < 0;
-	});
-	return new ArrayValue(std::move(tmpvect));
+inline Value Value::sort(const Fn& sortFn) const {
+	return Array(*this).sort(sortFn);
 }
 
 
@@ -160,7 +137,7 @@ inline Value Value::mergeToObject(const Value& other, const Fn& mergeFn) const {
 
 
 template<typename Fn>
-inline Value json::Value::uniq(const Fn& sortFn) const {
+inline Value Value::uniq(const Fn& sortFn) const {
 	Array out;
 	Value prevValue;
 	forEach([&](const Value &v){
@@ -175,15 +152,71 @@ inline Value json::Value::uniq(const Fn& sortFn) const {
 }
 
 template<typename Fn>
-inline Value json::Value::split(const Fn& sortFn) const {
+inline Value Value::split(const Fn& sortFn) const {
+	return Array(*this).split(sortFn);
+
+}
+
+template<typename CompareFn, typename ReduceFn, typename InitVal>
+inline Value Value::group(const CompareFn& cmp, const ReduceFn& reduceFn, InitVal initVal) {
+	return Array(*this).group(cmp);
+}
+
+
+template<typename Fn>
+inline Array Array::map(Fn mapFn) const {
+	Array out;
+	for (auto item:*this) {
+		out.add(mapFn(item));
+	}
+	return Array(std::move(out));
+}
+
+template<typename Cmp, typename Src, typename T>
+inline T genReduce(Cmp reduceFn, const Src &src, T init) {
+	T acc = init;
+	for (auto &&item:src) {
+		acc = reduceFn(acc, item);
+	}
+	return T(std::move(acc));
+}
+
+
+
+template<typename T, typename ReduceFn>
+inline T Array::reduce(const ReduceFn& reduceFn, T init) const {
+	return genReduce<ReduceFn, Array, T>(reduceFn,*this,init);
+}
+
+template<typename Src, typename Cmp>
+inline Array genSort(const Cmp &cmp, const Src &src, std::size_t expectedSize) {
+	Array out;
+	out.reserve(expectedSize);
+	for (auto &&item:src) {
+		out.push_back(item);
+	}
+	std::sort(out.changes.begin(), out.changes.end(),
+			[cmp](const PValue &v1, const PValue &v2) {
+		return cmp(v1,v2) < 0;
+	});
+	return Array(std::move(out));
+}
+
+template<typename Cmp>
+inline Array Array::sort(const Cmp& cmp) const {
+	return genSort(cmp,*this, this->size());
+}
+
+template<typename Cmp>
+inline Array Array::split(const Cmp& cmp) const {
 	Array out;
 	Array curSet;
 	Value prevValue;
-	forEach([&]( const Value &v){
+	for (Value v:*this) {
 		if (!prevValue.defined() ) {
 			curSet.add(v);
 			prevValue = v;
-		} else if (sortFn(prevValue,v) != 0) {
+		} else if (cmp(prevValue,v) != 0) {
 			out.add(curSet);
 			curSet.clear();
 			curSet.add(v);
@@ -191,11 +224,39 @@ inline Value json::Value::split(const Fn& sortFn) const {
 		} else {
 			curSet.add(v);
 		}
-		return true;
-	});
+	};
 	out.add(curSet);
-	return out;
+	return Array(std::move(out));
+}
 
+template<typename Cmp, typename T, typename ReduceFn>
+inline Array Array::group(const Cmp& cmp, const ReduceFn& reduceFn, T init) const {
+	Array splitted = split(cmp);
+	Array res;
+	for(auto &&item : splitted) {
+		T x = init;
+		res.add(Value(item.reduce<ReduceFn, T>(reduceFn,x)));
+	}
+	return std::move(res);
+}
+
+template<typename Fn>
+inline Object Object::map(Fn mapFn) const {
+	Object out;
+	for (auto item:*this) {
+		out.set(item.getKey(),mapFn(item));
+	}
+	return Object(std::move(out));
+}
+
+template<typename T, typename ReduceFn>
+inline T Object::reduce(const ReduceFn& reduceFn, T init) const {
+	return genReduce(reduceFn,*this,init);
+}
+
+template<typename Cmp>
+inline Array Object::sort(const Cmp& cmp) const {
+	return genSort(cmp,*this, this->base.size() + this->changes.size());
 }
 
 

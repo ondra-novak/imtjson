@@ -578,25 +578,6 @@ namespace json {
 		template<typename Fn>
 		Value split(const Fn &sortFn) const;
 
-		//@{
-		///Create slice
-		/**The  slice() method returns the selected elements in an array, as a new array object.
-			The slice() method selects the elements starting at the given start argument,
-					and ends at, but does not include, the given end argument.
-
-		   @param start	An integer that specifies where to start the selection
-		   	   	       (The first element has an index of 0).
-		   	   	       Use negative numbers to select from the end of an array.
-		   @param end  Optional. An integer that specifies where to end the selection.
-		   	   	   	   If omitted, all elements from the start position and to the end of
-		   	   	   	   the array will be selected. Use negative numbers to select from
-		   	   	   	   the end of an array
-		   @return A new Array, containing the selected elements
-		*/
-		Value slice(std::intptr_t start) const;
-		Value slice(std::intptr_t start, std::intptr_t end) const;
-		//@}
-
 
 		///Makes intersection of two containers
 		/**
@@ -622,6 +603,18 @@ namespace json {
 		 */
 		template<typename Fn>
 		Value makeUnion(const Value &other, const Fn &sortFn) const;
+
+		///Combination split+reduce.
+		/** Splits rows to groups according to compare function. Note that
+		 * source container should be sorted by same order. After split the reduce is performed for each group.
+		 * Result is single-dimensional array with reduced results
+		 * @param cmp compare function
+		 * @param reduce refuce function
+		 * @param initVal initial value for each reduce() call
+		 * @return array with result
+		 */
+		template<typename CompareFn, typename ReduceFn, typename InitVal>
+		Value group(const CompareFn &cmp, const ReduceFn &reduce, InitVal initVal);
 
 protected:
 

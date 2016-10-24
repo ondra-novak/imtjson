@@ -222,6 +222,16 @@ namespace json {
 		void mergeDiffs(const Object &left, const Object &right, const ConflictResolver &resolver,const Path &path);
 		//@}
 
+
+		template<typename Fn>
+		Object map(Fn mapFn) const;
+
+		template<typename T, typename ReduceFn>
+		T reduce(const ReduceFn &reduceFn, T init) const ;
+
+		template<typename Cmp>
+		Array sort(const Cmp &cmp) const;
+
 		///Direct access to the items
 		/** Function retrieves iterable view of items if the source value is Object
 		 *
@@ -273,6 +283,7 @@ namespace json {
 		static Value mergeDiffsObjs(const Value &lv,const Value &rv, const ConflictResolver& resolver, const Path &path);
 
 		class NameValueIter;
+
 
 
 	};

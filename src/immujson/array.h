@@ -12,8 +12,14 @@ namespace json {
 	class Array: public StackProtected {
 	public:
 		Array(Value value);
+		Array(const Array &other);
+		Array(Array &&other);
 		Array();
 		~Array();
+
+
+		Array &operator=(const Array &other);
+		Array &operator=(Array &&other);
 
 		///Preallocates memory to hold up to specified items
 		/** Function reservers extra space to allow add new items up to specified count
@@ -81,6 +87,9 @@ namespace json {
 		 * it only modifies a single integer variable
 		 */
 		Array &trunc(std::size_t length);
+
+		Array &setSize(std::size_t length, Value fillVal);
+
 		///Removes all items from the array
 		/**
 		 * @return reference to this
@@ -182,6 +191,7 @@ namespace json {
 		ArrayIterator end() const;
 
 
+
 		///Direct access to the items
 		/** Function retrieves iterable view of items if the source value is Object
 		 *
@@ -193,6 +203,28 @@ namespace json {
 		 * */
 		static StringView<PValue> getItems(const Value &v);
 
+		Array &reverse();
+
+
+		Array &slice(std::intptr_t start);
+		Array &slice(std::intptr_t start, std::intptr_t end);
+
+		template<typename Fn>
+		Array map(Fn mapFn) const;
+
+		template<typename T, typename ReduceFn>
+		T reduce(const ReduceFn &reduceFn, T init) const ;
+
+		template<typename Cmp>
+		Array sort(const Cmp &cmp) const;
+
+		template<typename Cmp>
+		Array split(const Cmp &cmp) const;
+
+		template<typename Cmp,typename T, typename ReduceFn>
+		Array group(const Cmp &cmp,const ReduceFn &reduceFn, T init) const;
+
+
 	protected:
 		Value base;
 
@@ -201,11 +233,18 @@ namespace json {
 
 			Changes(const Value &base) :offset(base.size()) {}
 			Changes() :offset(0) {}
+			Changes(const Changes &base);
+			Changes(Changes &&base);
+			Changes &operator=(const Changes &base);
+			Changes &operator=(Changes &&base);
 		};
 
 		Changes changes;
 
 		void extendChanges(size_t pos);
+
+		template<typename Src, typename Cmp>
+		friend Array genSort(const Cmp &cmp, const Src &src, std::size_t expectedSize) ;
 
 	};
 
