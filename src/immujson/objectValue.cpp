@@ -49,4 +49,8 @@ namespace json {
 		return getUndefined();
 	}
 
+	ObjectValue::ObjectValue(std::vector<PValue>&& value):v(std::move(value)) {
+	}
+
 }
+

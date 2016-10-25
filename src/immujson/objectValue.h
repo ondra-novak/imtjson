@@ -11,6 +11,7 @@ namespace json {
 	public:
 
 		ObjectValue(const std::vector<PValue> &value);
+		ObjectValue(std::vector<PValue> &&value);
 
 		virtual std::size_t size() const override;
 		virtual const IValue *itemAtIndex(std::size_t index) const override;

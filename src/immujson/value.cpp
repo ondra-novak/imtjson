@@ -216,7 +216,7 @@ namespace json {
 
 	bool Value::operator !=(const Value& other) const {
 		if (other.v == v) return false;
-		else return other.v->equal(v);
+		else return !other.v->equal(v);
 	}
 
 
