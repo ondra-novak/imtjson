@@ -7,6 +7,7 @@
 #include "parser.h"
 #include "serializer.h"
 #include "string.h"
+#include "stringValue.h"
 
 namespace json {
 
@@ -32,15 +33,22 @@ namespace json {
 	{
 	}
 
-	Value::Value(const char * value):v(value && *value?new StringValue(StringView<char>(value)):AbstractStringValue::getEmptyString())
+	static const IValue *allocString(const StringView<char> &str) {
+		if (str.empty()) return AbstractStringValue::getEmptyString();
+		else {
+			return new(str) StringValue(str);
+		}
+	}
+
+	Value::Value(const char * value):v(allocString(value))
 	{
 	}
 
-	Value::Value(const std::string & value):v(value.empty()?AbstractStringValue::getEmptyString():new StringValue(value))
+	Value::Value(const std::string & value):v(allocString(value))
 	{
 	}
 
-	Value::Value(const StringView<char>& value):v(value.empty()?AbstractStringValue::getEmptyString():new StringValue(value))
+	Value::Value(const StringView<char>& value):v(allocString(value))
 	{
 	}
 

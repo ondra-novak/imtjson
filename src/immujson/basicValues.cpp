@@ -162,18 +162,6 @@ namespace json {
 	}
 
 
-	std::intptr_t StringValue::getInt() const {
-		return Value::fromString(v).getInt();
-	}
-
-	std::uintptr_t StringValue::getUInt() const {
-		return Value::fromString(v).getUInt();
-	}
-
-
-	double StringValue::getNumber() const {
-		return Value::fromString(v).getNumber();
-	}
 
 
 

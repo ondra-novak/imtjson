@@ -107,7 +107,7 @@ namespace json {
 	using UnsignedIntegerValue = NumberValueT<std::uintptr_t, numberUnsignedInteger>;
 	using IntegerValue = NumberValueT<std::intptr_t, numberInteger>;
 	using NumberValue = NumberValueT<double,0>;
-
+/*
 	class StringValue : public AbstractStringValue {
 	public:
 		StringValue(const StringView<char> &str) :v(str) {}
@@ -126,6 +126,7 @@ namespace json {
 		std::string v;
 
 	};
+	*/
 }
 
 

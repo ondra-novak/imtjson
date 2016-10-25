@@ -42,12 +42,6 @@ public:
 	 * c-string and std::string.
 	 */
 	String(const StringView<char> &str);
-	///Creates new string by moving the string value to the object directly
-	/** This is the fastest way to create string from the std::string
-	 *
-	 * @param str string value
-	 */
-	String(std::basic_string<char> &&str);
 
 	///Creates new string from C-string
 	/**

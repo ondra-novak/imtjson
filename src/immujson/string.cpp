@@ -5,10 +5,16 @@
  *      Author: ondra
  */
 
+
 #include "basicValues.h"
 #include "string.h"
 
+#include <cstring>
+#include "stringValue.h"
+
 #include "array.h"
+
+
 namespace json {
 
 
@@ -55,16 +61,17 @@ char String::operator [](std::size_t pos) const {
 }
 
 String::String(const std::initializer_list<StringView<char> >& strlist) {
-	std::string v;
 	std::size_t cnt = 0;
 	for (auto &&item : strlist) {
 		cnt += item.length;
 	}
-	v.reserve(cnt);
-	for (auto &&item : strlist) {
-		v.append(item.data,item.length);
-	}
-	impl = new StringValue(std::move(v));
+
+	impl = new(cnt) StringValue(cnt, [&](char *buff) {
+		for (auto &&item : strlist) {
+			memcpy(buff, item.data, item.length);
+			buff+=item.length;
+		}
+	});
 }
 
 
@@ -107,16 +114,22 @@ const char* String::c_str() const {
 
 
 String String::insert(std::size_t pos, const StringView<char>& what) {
+	using namespace std;
+
 	if (what.empty()) return *this;
+
+
 
 	StringView<char> a = impl->getString();
 	if (pos > a.length) pos = a.length;
-	std::string v;
-	v.reserve(a.length+what.length);
-	v.append(a.data,pos);
-	v.append(what.data,what.length);
-	v.append(a.data+pos,a.length - pos);
-	return String(new StringValue(std::move(v)));
+	std::size_t sz = a.length+what.length;
+
+	return String(new(sz) StringValue(sz,[&](char *trg) {
+		std::memcpy(trg, a.data, pos);
+		std::memcpy(trg+pos,what.data,what.length);
+		std::memcpy(trg+pos+what.length,a.data+pos,a.length-pos);
+	}));
+
 
 }
 
@@ -126,12 +139,13 @@ String String::replace(std::size_t pos, std::size_t size,
 	if (pos > a.length) pos = a.length;
 	if (pos+size > a.length) size = a.length - pos;
 
-	std::string v;
-	v.reserve(a.length+what.length - size);
-	v.append(a.data, pos);
-	v.append(what.data,what.length);
-	v.append(a.data+pos+size, a.length - pos - size);
-	return String(new StringValue(std::move(v)));
+	std::size_t needsz = a.length+what.length - size;
+	return String(new(needsz) StringValue(needsz,[&](char *buff){
+		std::memcpy(buff, a.data, pos);
+		std::memcpy(buff+pos, what.data, what.length);
+		std::memcpy(buff+pos+what.length, a.data+pos+size, a.length-pos-size);
+	}));
+
 }
 
 class SubStrString: public AbstractStringValue {
@@ -181,7 +195,6 @@ std::size_t String::indexOf(const StringView<char> other, std::size_t start) con
 }
 
 
-
 PValue String::getHandle() const {
 	return impl;
 }
@@ -200,10 +213,6 @@ String::String(const char* str):impl(Value(str).getHandle()) {
 }
 
 String::String(const std::basic_string<char>& str):impl(Value(str).getHandle()) {
-
-}
-
-String::String(std::basic_string<char>&& str):String(Value(new StringValue(std::move(str)))) {
 
 }
 
