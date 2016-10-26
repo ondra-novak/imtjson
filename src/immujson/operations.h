@@ -176,7 +176,7 @@ template<typename Cmp, typename Src, typename T>
 inline T genReduce(Cmp reduceFn, const Src &src, T init) {
 	T acc = init;
 	for (auto &&item:src) {
-		acc = reduceFn(acc, item);
+		acc = (T)reduceFn(acc, item);
 	}
 	return T(std::move(acc));
 }
