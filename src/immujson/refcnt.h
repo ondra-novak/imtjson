@@ -38,11 +38,27 @@ namespace json {
 		~RefCntPtr()  {
 			releaseRefPtr();
 		}
+		RefCntPtr(RefCntPtr &&other) :ptr(other.ptr)  {
+			other.ptr = nullptr;
+		}
+
+
 
 		RefCntPtr &operator=(const RefCntPtr &other)  {
-			if (other.ptr) other.ptr->addRef();
-			releaseRefPtr();
-			ptr = other.ptr;
+			if (other.ptr != ptr) {
+				if (other.ptr) other.ptr->addRef();
+				releaseRefPtr();
+				ptr = other.ptr;
+			}
+			return *this;
+		}
+
+		RefCntPtr &operator=(RefCntPtr &&other) {
+			if (this != &other) {
+				releaseRefPtr();
+				ptr = other.ptr;
+				other.ptr = nullptr;
+			}
 			return *this;
 		}
 

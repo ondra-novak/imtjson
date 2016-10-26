@@ -9,9 +9,9 @@ namespace json {
 		}
 	};
 
-	static UndefinedValue undefinedVal;
 
 	const IValue *AbstractValue::getUndefined() {
+		static UndefinedValue undefinedVal;
 		return &undefinedVal;
 	}
 

@@ -56,7 +56,7 @@ namespace json {
 		const T * const data;
 		const std::size_t length;
 
-		char operator[](std::size_t pos) const { return data[pos]; }
+		const T &operator[](std::size_t pos) const { return data[pos]; }
 		
 		const T *begin() const { return data; }
 		const T *end() const { return data + length; }

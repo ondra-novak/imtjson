@@ -108,6 +108,10 @@ String::operator StringView<char>() const {
 	return impl->getString();
 }
 
+StringView<char> String::str() const {
+	return impl->getString();
+}
+
 const char* String::c_str() const {
 	return impl->getString().data;
 }

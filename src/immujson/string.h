@@ -110,6 +110,8 @@ public:
 
 	///Converts String to StringView
 	operator StringView<char>() const;
+	///Converts String to StringView
+	StringView<char> str() const;
 	///Converts String to c-string (with terminating zero character)
 	const char *c_str() const;
 	///Insert substring to the string

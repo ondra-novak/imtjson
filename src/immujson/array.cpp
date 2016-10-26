@@ -117,7 +117,7 @@ namespace json {
 		std::vector<PValue> result;
 		result.reserve(changes.offset + changes.size());
 		for (std::size_t x = 0; x < changes.offset; ++x) {
-			result.push_back(base[x].v);
+			result.push_back(base[x].getHandle());
 		}
 		for (auto &&x : changes) {
 			if (x->type() != undefined) result.push_back(x);

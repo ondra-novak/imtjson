@@ -817,7 +817,7 @@ int main(int , char **) {
 		compressDemo("src/tests/test.json");
 		out<<"ok";
 	};
-
+#if 0 //removed because immujson is leaving allocated some objects which are deleted at-exit
 	{
 		//memory leaks
 		//out of test class, because it can affect the test
@@ -843,6 +843,6 @@ int main(int , char **) {
 
 
 	}
-
+#endif
 	return tst.didFail()?1:0;
 }
