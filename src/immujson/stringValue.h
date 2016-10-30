@@ -33,9 +33,11 @@ public:
 	void operator delete(void *ptr, std::size_t sz);
 
 protected:
+	StringValue(StringValue &&) = delete;
 	std::size_t size;
 	char charbuff[65536];
 
+	static void *putMagic(void *obj);
 
 
 };

@@ -1,3 +1,4 @@
+#include <cstring>
 #include "object.h"
 #include "objectValue.h"
 #include "array.h"
@@ -10,8 +11,7 @@ namespace json {
 	class ObjectProxy : public AbstractValue {
 	public:
 
-		ObjectProxy(const StringView<char> &name, const PValue &value)
-			:name(name), value(value) {}
+		ObjectProxy(const StringView<char> &name, const PValue &value);
 		
 		virtual ValueType type() const override { return value->type(); }
 		virtual ValueTypeFlags flags() const override { return value->flags() | proxy; }
@@ -25,17 +25,41 @@ namespace json {
 		virtual const IValue *itemAtIndex(std::size_t index) const override { return value->itemAtIndex(index); }
 		virtual const IValue *member(const StringView<char> &name) const override { return value->member(name); }
 		virtual bool enumItems(const IEnumFn &fn) const override { return value->enumItems(fn); }
-		virtual StringView<char> getMemberName() const override { return name; }
+		virtual StringView<char> getMemberName() const override { return StringView<char>(key,keysize); }
 		virtual const IValue *unproxy() const override { return value->unproxy(); }
 		virtual bool equal(const IValue *other) const override {
 				return value->equal(other->unproxy());
 		}
 
+		void *operator new(std::size_t sz, const StringView<char> &str );
+		void operator delete(void *ptr, const StringView<char> &str);
+		void operator delete(void *ptr, std::size_t sz);
+
 	protected:
-		std::string name;
+		ObjectProxy(ObjectProxy &&) = delete;
 		PValue value;
+		std::size_t keysize;
+		char key[256];
 
 	};
+
+	ObjectProxy::ObjectProxy(const StringView<char> &name, const PValue &value):value(value),keysize(name.length) {
+		std::memcpy(key,name.data,name.length);
+		key[name.length] = 0;
+	}
+
+
+	void *ObjectProxy::operator new(std::size_t sz, const StringView<char> &str ) {
+		std::size_t needsz = sz - sizeof(ObjectProxy::key) + str.length+1;
+		return ::operator new(needsz);
+	}
+	void ObjectProxy::operator delete(void *ptr, const StringView<char> &) {
+		::operator delete (ptr);
+	}
+	void ObjectProxy::operator delete(void *ptr, std::size_t) {
+		::operator delete (ptr);
+	}
+
 
 	class ObjectDiff: public ObjectValue {
 	public:
@@ -73,7 +97,7 @@ namespace json {
 			}
 
 		}
-		v = new ObjectProxy(name, v);
+		v = new(name) ObjectProxy(name, v);
 		StringView<char> curName = v->getMemberName();
 		changes[curName] = v;
 		return *this;
@@ -361,7 +385,7 @@ Value Object::mergeDiffsObjs(const Value& lv, const Value& rv,
 	mergeDiffsImpl(lv.begin(),lv.end(),rv.begin(),rv.end(),resolver,Path(path,name),
 			[&out](const StringView<char> &name, const Value &v){
 		if (v.getKey() == name) out.push_back(v.getHandle());
-		else out.push_back(new ObjectProxy(name,v.getHandle()->unproxy()));
+		else out.push_back(new(name) ObjectProxy(name,v.getHandle()->unproxy()));
 	});
 	return (new ObjectValue(std::move(out)));
 }
@@ -369,7 +393,7 @@ Value Object::mergeDiffsObjs(const Value& lv, const Value& rv,
 Value Value::setKey(const StringView<char> &key) const {
 	if (getKey() == key) return *this;
 	if (key.empty()) return Value(v->unproxy());
-	return Value(new ObjectProxy(key,v->unproxy()));
+	return Value(new(key) ObjectProxy(key,v->unproxy()));
 }
 
 StringView<PValue> Object::getItems(const Value& v) {
