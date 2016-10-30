@@ -214,7 +214,8 @@ int main(int , char **) {
 				("age",19)
 		).toStream(out);
 	};
-	tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:Azaxe,") >> [](std::ostream &out) {
+
+tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:Azaxe,") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
 		Object obj(v);
 		obj("kabrt", 289)
@@ -226,6 +227,15 @@ int main(int , char **) {
 	};
 	tst.test("Object.addSubobject", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\",\"sub\":{\"kiki\":-32.431,\"kuku\":false}}") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
+		Object o(v);
+		o.object("sub")
+			("kiki", -32.431)
+			("kuku", false);
+		v = o;
+		v.toStream(out);
+	};
+	tst.test("Object.addSubobject2", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\",\"sub\":{\"aaa\":true,\"kiki\":-32.431,\"kuku\":false}}") >> [](std::ostream &out) {
+		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\",\"sub\":{\"kiki\":3,\"aaa\":true}}");
 		Object o(v);
 		o.object("sub")
 			("kiki", -32.431)

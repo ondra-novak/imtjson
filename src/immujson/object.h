@@ -284,9 +284,9 @@ namespace json {
 
 		class NameValueIter;
 
-
-
-	};
+private:
+	void set_internal(const PValue& v);
+};
 
 
 	class ObjectIterator {

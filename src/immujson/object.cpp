@@ -84,6 +84,12 @@ namespace json {
 	{
 	}
 
+void Object::set_internal(const PValue& v) {
+	StringView<char> curName = v->getMemberName();
+	changes.erase(curName);
+	changes.insert(std::make_pair(curName, v));
+}
+
 	Object & Object::set(const StringView<char>& name, const Value & value)
 	{
 		PValue v = value.getHandle();
@@ -98,16 +104,13 @@ namespace json {
 
 		}
 		v = new(name) ObjectProxy(name, v);
-		StringView<char> curName = v->getMemberName();
-		changes[curName] = v;
+		set_internal(v);
 		return *this;
 	}
 
 	Object & Object::set(const Value & value)
 	{
-		StringView<char> curName = value.v->getMemberName();
-		changes[curName] = value.v;
-		return *this;
+		set_internal(value.getHandle());
 	}
 
 	Object & Object::unset(const StringView<char>& name)
@@ -340,8 +343,10 @@ void Object::mergeDiffsImpl(It lit, It lend, It2 rit, It2 rend, const ConflictRe
 					} else {
 						setFn(name ,applyDiff(rv,lv));
 					}
-				} else {
+				} else if (rv.flags() & objectDiff) {
 					setFn(name ,applyDiff(lv,rv));
+				} else {
+					setFn(name , resolver(Path(path,name), lv, rv));
 				}
 
 			} else {
