@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <functional>
 #include "value.h"
 
 namespace json {
@@ -56,6 +57,26 @@ public:
 	 * @param strlist list of strings. All strings are concatenated into big-one
 	 */
 	String(const std::initializer_list<StringView<char> > &strlist);
+
+	///Construct the string using the function.
+	/**Allows to construct the string by some specific way
+	 * This reduces any posibility of unnecesery copying for long strings.
+	 *
+	 * The constructor need to know the exact length of the string.
+	 * You must not write more characters. You can write less characters, however
+	 * the extra space remains allocated.
+	 *
+	 * @param sz initial size of the buffer
+	 * @param fillFn function which is called to fill the allocated buffer. It receives
+	 * only one argument - pointer to the buffer. The size of the buffer is
+	 * equal to size specified in the constructor, so the function must receive
+	 * the size some other way (for example though capture list of a lamba function declaration)
+	 *
+	 * The function returns count of written characters. Returned value must be
+	 * less or equal to initial size, otherwise the function abort() is called for security reasons
+	 */
+	String(std::size_t sz, std::function<std::size_t(char *)> fillFn);
+
 
 	///Retrieve substring
 	/**

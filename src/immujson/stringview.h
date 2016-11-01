@@ -91,4 +91,7 @@ namespace json {
 	}
 
 
+	typedef StringView<char> StrViewA;
+	typedef StringView<wchar_t> StrViewW;
+
 }

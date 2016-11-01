@@ -69,6 +69,11 @@ double json::StringValue::getNumber() const {
 	return Value::parse([&pos,this](){return charbuff[pos++];}).getNumber();
 }
 
+void json::StringValue::stringOverflow() {
+	std::cerr << "String buffer overflow, aborting" << std::endl << std::flush;
+	abort();
+}
+
 
 }
 

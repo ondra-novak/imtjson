@@ -38,14 +38,18 @@ protected:
 	char charbuff[65536];
 
 	static void *putMagic(void *obj);
+	void stringOverflow();
 
 
 };
 
 template<typename Fn>
 inline StringValue::StringValue(std::size_t strSz, const Fn& fn):size(strSz) {
-	fn(charbuff);
 	charbuff[strSz] = 0;
+	std::size_t wrsz = fn(charbuff);
+	if (wrsz > strSz || charbuff[strSz] != 0) stringOverflow();
+	charbuff[wrsz] = 0;
+	size = wrsz;
 }
 
 

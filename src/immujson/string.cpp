@@ -26,6 +26,9 @@ String::String():impl(AbstractStringValue::getEmptyString())
 String::String(Value v):impl(v.getHandle()) {
 }
 
+String::String(std::size_t sz, std::function<std::size_t(char *)> fillFn):impl(new(sz) StringValue(sz, fillFn)) {
+}
+
 
 StringView<char> String::substr(std::size_t pos, std::size_t length) const {
 	return impl->getString().substr(pos,length);
@@ -71,6 +74,7 @@ String::String(const std::initializer_list<StringView<char> >& strlist) {
 			memcpy(buff, item.data, item.length);
 			buff+=item.length;
 		}
+		return cnt;
 	});
 }
 
@@ -132,6 +136,7 @@ String String::insert(std::size_t pos, const StringView<char>& what) {
 		std::memcpy(trg, a.data, pos);
 		std::memcpy(trg+pos,what.data,what.length);
 		std::memcpy(trg+pos+what.length,a.data+pos,a.length-pos);
+		return sz;
 	}));
 
 
@@ -148,6 +153,7 @@ String String::replace(std::size_t pos, std::size_t size,
 		std::memcpy(buff, a.data, pos);
 		std::memcpy(buff+pos, what.data, what.length);
 		std::memcpy(buff+pos+what.length, a.data+pos+size, a.length-pos-size);
+		return needsz;
 	}));
 
 }
