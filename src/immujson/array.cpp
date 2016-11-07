@@ -28,6 +28,13 @@ namespace json {
 			changes.push_back(v.data[i].v);
 		return *this;
 	}
+	Array& json::Array::addSet(const Value& v) {
+		changes.reserve(changes.size() + v.size());
+		for (std::size_t i = 0, cnt = v.size(); i < cnt; i++)
+			changes.push_back(v[i].getHandle());
+		return *this;
+	}
+
 	Array & Array::insert(std::size_t pos, const Value & v)
 	{
 		extendChanges(pos);
@@ -43,6 +50,24 @@ namespace json {
 		}
 		return *this;
 	}
+	Array& json::Array::insertSet(std::size_t pos, const Value& v) {
+		extendChanges(pos);
+		changes.insert(changes.begin() + (pos - changes.offset), v.size(), PValue());
+		for (std::size_t i = 0, cnt = v.size(); i < cnt; i++) {
+			changes[pos + changes.offset + i] = v[i].v;
+		}
+		return *this;
+	}
+
+	Array& json::Array::addSet(const std::initializer_list<Value>& v) {
+		return addSet(StringView<Value>(v));
+	}
+
+	Array& json::Array::insertSet(std::size_t pos,
+			const std::initializer_list<Value>& v) {
+		return insertSet(pos,StringView<Value>(v));
+	}
+
 	Array & Array::erase(std::size_t pos)
 	{
 		extendChanges(pos);

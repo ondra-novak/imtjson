@@ -49,6 +49,20 @@ namespace json {
 		 */
 		Array &addSet(const StringView<Value> &v);
 
+		///Add (append) set of items
+		/**
+		 * @param v set of items to add (append)
+		 * @return reference to this
+		 */
+		Array &addSet(const std::initializer_list<Value> &v);
+
+		///Add (appned) set of items
+		/**
+		 * @param v conteiner (object or array) which's items are added
+		 * @return reference to this
+		 */
+		Array &addSet(const Value &v);
+
 		///Inserts an item at the position
 		/**
 		 * @param pos position. Must be in the range 0 - size()
@@ -63,6 +77,20 @@ namespace json {
 		 * @return reference to this
 		 */
 		Array &insertSet(std::size_t pos, const StringView<Value> &v);
+		///Inserts a set of items at the position
+		/**
+		 * @param pos position. Must be in the range 0 - size()
+		 * @param v set of items
+		 * @return reference to this
+		 */
+		Array &insertSet(std::size_t pos, const std::initializer_list<Value> &v);
+		///Inserts a set of items at the position
+		/**
+		 * @param pos position. Must be in the range 0 - size()
+		 * @param v set of items
+		 * @return reference to this
+		 */
+		Array &insertSet(std::size_t pos, const Value &v);
 
 		///Erases one item at the position
 		/**

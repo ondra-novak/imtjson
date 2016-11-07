@@ -154,6 +154,16 @@ public:
 	bool operator<(const String &other) const  {return StringView<char>(*this) < StringView<char>(other);}
 	friend String operator+(StringView<char> str, StringView<char> str2);
 
+	///Allows to test whether string created from Value is defined
+	/** The string is defined only when underlying value is type of string
+	 * otherwise string is undefined
+	 *
+	 * @retval true string is defined
+	 * @retval false string is not defined.
+	 */
+	bool defined() const {return impl->type() == string;}
+
+
 	PValue getHandle() const;
 protected:
 	PValue impl;

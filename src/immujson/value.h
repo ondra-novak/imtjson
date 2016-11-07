@@ -11,6 +11,8 @@ namespace json {
 	class PPath;
 	class ValueIterator;
 	class String;
+	template<typename T> class ConvValueAs;
+	template<typename T> class ConvValueFrom;
 
 	///Stores one JSON value
 	/** The instance of the class Value can store one value of any JSON type:
@@ -616,6 +618,27 @@ namespace json {
 		template<typename CompareFn, typename ReduceFn, typename InitVal>
 		Value group(const CompareFn &cmp, const ReduceFn &reduce, InitVal initVal);
 
+		///Convert Value to user defined type
+		/** Template function accepts a name of a type to convert value into.
+		 * To achieve correct function, you have to declare a function
+		 * ConvValueAs<T>::convert which receives the value. The function must
+		 * return converted value
+		 *
+		 * @return result type
+		 */
+		template<typename T>
+		T as() const {return ConvValueAs<T>::convert(*this);}
+
+		///Convert user defined type to a Value
+		/**
+		 * @param v a value as user defined type. You have to declare a
+		 * function ConvValueFrom<T>::convert which receives the argument and
+		 * it must return the value
+		 * @return Value from the "v"
+		 */
+		template<typename T>
+		static Value from(const T &v) {return ConvValueFrom<T>::convert(v);}
+
 protected:
 
 		PValue v;
@@ -674,4 +697,5 @@ protected:
 	 */
 	typedef Value var;
 }
+#include "conv.h"
 
