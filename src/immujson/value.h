@@ -443,7 +443,7 @@ namespace json {
 
 
 		///Returns true if content is null
-		bool isNull() const {return type() != null;}
+		bool isNull() const {return type() == null;}
 
 		///Perform operation map on every item of the array or the object
 		/** Function works on containers. Result depend on type of value.
