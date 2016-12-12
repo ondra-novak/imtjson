@@ -166,6 +166,8 @@ public:
 	virtual StringView<char> getString() const override {
 		return parent->getString().substr(pos,length);
 	}
+	virtual bool getBool() const override {return true;}
+
 
 	PValue parent;
 	std::size_t pos;

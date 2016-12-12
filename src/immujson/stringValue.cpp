@@ -32,14 +32,14 @@ StringView<char> json::StringValue::getString() const {
 	return StringView<char>(charbuff, size);
 }
 
-std::intptr_t json::StringValue::getInt() const {
+std::intptr_t json::AbstractStringValue::getInt() const {
 	std::size_t pos = 0;
-	return Value::parse([&pos,this](){return charbuff[pos++];}).getInt();
+	return Value::fromString(getString()).getInt();
 }
 
-std::uintptr_t json::StringValue::getUInt() const {
+std::uintptr_t json::AbstractStringValue::getUInt() const {
 	std::size_t pos = 0;
-	return Value::parse([&pos,this](){return charbuff[pos++];}).getUInt();
+	return Value::fromString(getString()).getUInt();
 }
 
 void* json::StringValue::operator new(std::size_t sz, const StringView<char>& str) {
@@ -64,9 +64,9 @@ void json::StringValue::operator delete(void* ptr, std::size_t sz) {
 	::operator delete(ptr);
 }
 
-double json::StringValue::getNumber() const {
+double json::AbstractStringValue::getNumber() const {
 	std::size_t pos = 0;
-	return Value::parse([&pos,this](){return charbuff[pos++];}).getNumber();
+	return Value::fromString(getString()).getNumber();
 }
 
 void json::StringValue::stringOverflow() {

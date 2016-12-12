@@ -22,9 +22,6 @@ public:
 	virtual StringView<char> getString() const override;
 	virtual bool getBool() const override {return true;}
 
-	virtual std::intptr_t getInt() const override;
-	virtual std::uintptr_t getUInt() const override;
-	virtual double getNumber() const override;
 
 	void *operator new(std::size_t sz, const StringView<char> &str );
 	void operator delete(void *ptr, const StringView<char> &str);

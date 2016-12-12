@@ -51,6 +51,11 @@ namespace json {
 		virtual ValueType type() const override { return string; }
 		virtual StringView<char> getString() const override = 0;
 
+		virtual std::intptr_t getInt() const override;
+		virtual std::uintptr_t getUInt() const override;
+		virtual double getNumber() const override;
+
+
 		static const IValue *getEmptyString();
 		virtual bool equal(const IValue *other) const override;
 

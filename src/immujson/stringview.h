@@ -75,7 +75,7 @@ namespace json {
 
 		std::size_t indexOf(const StringView sub, std::size_t pos) const {
 			if (sub.length > length) return -1;
-			std::size_t eflen = length - sub.length;
+			std::size_t eflen = length - sub.length + 1;
 			while (pos < eflen) {
 				if (substr(pos,sub.length) == sub) return pos;
 				pos++;
@@ -93,5 +93,6 @@ namespace json {
 
 	typedef StringView<char> StrViewA;
 	typedef StringView<wchar_t> StrViewW;
+	typedef StringView<unsigned char> BinaryView;
 
 }
