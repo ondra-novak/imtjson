@@ -124,13 +124,22 @@ putting the array into definition allows parametrized definition
 
 ["enum",val1,val2,val3 ...]   - one of specified value
 
-["object","type1", ...]      - defines object with dynamic structure, which act as an associated array.
-                                   Only types of values are validated. Keys are ignored unless
-                                   the rule "key" is used
+["object",{..template..}, type]  - more generic object validation
+                                      - template is object's template.
+                                      - type is default type for items not specified in the template, It is allowed to
+                                         have multiple types in [...]
 
 ["tuple",valpos1,valpos2,valpos3, ...]  - array, where every position has defined type (or a value).
                                    ["tuple","number","string",["number",null],["boolean","optional"] ] ->
                                    -> [10,"xxx",20], [23,"abc",null], [42,"cde",null,true], ...
+
+["vartuple",valpos1,valpos2,valpos3,...,valposN] - same as tuple, but source can have more items. The last type specifies
+                                type of remaining items.
+                                ["vartuple","string","integer"] allows ["aaa",1] and ["aaa",1,2], but not ["aaa"]. If you
+                                need such function, you have to add "optional" to last rule
+                                  ["vartuple","string",["integer","optional"]]
+
+
 
 
 ["()", val1, val2 ]           - opened interval (val1 = null menas -infinity, val2 = null means +infinity)
@@ -211,11 +220,10 @@ public:
 	 * @param ruleName name of the rule
 	 * @param args arguments if the rule. Array is always here
 	 * @param subject the item it is subject of validation
-	 * @retval undetermined The rule cannot accept or reject the subject. It gives chance to other rules
-	 * @retval accepted The rule accepted the subject
-	 * @retval rejected The rule rejected the subject
 	 */
-	virtual Result onNativeRule(const Value &subject,const StrViewA & ruleName, const Value &args);
+	virtual bool onNativeRuleAccept(const Value &subject,const StrViewA & ruleName, const Value &args);
+
+	virtual bool onNativeRuleReject(const Value &subject,const StrViewA & ruleName, const Value &args);
 
 
 	///Validate the subject
@@ -255,7 +263,7 @@ public:
 protected:
 
 
-	bool validateInternal(const Value &subject,const StrViewA &rule, const Value &args, const Path &path);
+	bool validateInternal(const Value &subject,const StrViewA &rule, const Value &args);
 
 
 	///Definition
@@ -272,9 +280,21 @@ protected:
 
 	bool validateRuleLine(const Value& subject, const Value& ruleLine);
 	bool validateRuleLine2(const Value& subject, const Value& ruleLine, unsigned int offset);
-	Result validateObject(const Value& subject, const Value& ruleLine);
-	Result validateSingleRule(const Value& subject, const Value& ruleLine);
-	Result validateSingleRule2(const Value& subject, StrViewA name, const Value& args);
+	bool validateObject(const Value& subject, const Value& ruleLine, const Value& extraRules);
+	bool validateSingleRuleForAccept(const Value& subject, const Value& ruleLine);
+	bool validateSingleRuleForReject(const Value& subject, const Value& ruleLine);
+	bool evalRuleAccept(const Value& subject, StrViewA name, const Value& args);
+	bool evalRuleReject(const Value& subject, StrViewA name, const Value& args);
+	bool checkClassAccept(const Value& subject, StrViewA name, const Value& args);
+	bool checkClassReject(const Value& subject, StrViewA name, const Value& args);
+
+	bool checkKey(const Value &subject, const Value &args);
+
+	bool opPrefix(const Value &subject, const Value &args);
+
+	bool opSuffix(const Value &subject, const Value &args);
+	bool opTuple(const Value &subject, const Value &args, bool varTuple);
+
 };
 
 
