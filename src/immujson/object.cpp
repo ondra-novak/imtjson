@@ -111,6 +111,7 @@ void Object::set_internal(const PValue& v) {
 	Object & Object::set(const Value & value)
 	{
 		set_internal(value.getHandle());
+		return *this;
 	}
 
 	Object & Object::unset(const StringView<char>& name)

@@ -118,7 +118,7 @@ putting the array into definition allows parametrized definition
 ["type1","type2",["type_with_arg",arg1,arg2,arg3,...],"type3",...]
 
 
-["array","type1", ...]       - specify allowed types of items in the array
+["array",rule]       - specify allowed types of items in the array
 
 ["set",val1,val2,val3 ...]   - array which works as set. You can put to the array only specified values
 
@@ -151,17 +151,16 @@ putting the array into definition allows parametrized definition
 ["value", val] -              - exact value.
 ["max-size", number ]         - the item is rejected, when its size is above the specified number
 ["min-size", number ]         - the item is rejected, when its size is below the specified number
-["key", "type1", "type2",...] - the key must be of given type.
+["key", rule] - the key must be of given type.
                                      Because the keys are always strings, only string derived
                                      types or string values or string ranges can be used.
 
 Transormations
 
-["to-string",... ]            - converts item to string and validates against rules in arguments
-["to-number",... ]            - converts item to number and validates against rules in arguments
-["to-array",... ]             - converts string to array of characters and validates against rules in arguments
-["suffix", "xxx", ... ]       - string needs to have suffix "xxx". Rest of string is validated against rules in arguments
-["prefix", "xxx", ... ]       - string needs to have prefix "xxx". Rest of string is validated against rules in arguments
+["to-string",rule ]            - converts item to string and validates against rules in arguments
+["to-number",rule ]            - converts item to number and validates against rules in arguments
+["suffix", "xxx", rule ]       - string needs to have suffix "xxx". Rest of string is validated against rules in arguments
+["prefix", "xxx", rule ]       - string needs to have prefix "xxx". Rest of string is validated against rules in arguments
                                    example: ["prefix","flag","uppercase"] -> accepted: "flagXXX", rejected: "flag123", rejected: "fooBar"
                                           -> "prefix(flag,uppercase)
 
@@ -198,20 +197,6 @@ class Validator {
 public:
 	virtual ~Validator() {}
 
-	enum Result {
-		///The rule did not produced a result
-		/** If current state is undetermined, then result state is still undetermined. Undetermined state is finally rejected.
-		 *  If current state is accepted, then result state is still accepted
-		 */
-		undetermined,
-		///The rule accepts the item
-		/** Changes current state to accepted. */
-		accepted,
-		///The rule rejcts the item
-		/** By rejecting the rule also rejects the item and stops processing other rules */
-		rejected,
-		///The rule is not defined
-	};
 
 	///Evaluates the native rule
 	/**

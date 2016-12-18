@@ -29,6 +29,7 @@ namespace json {
 	class Value {
 	public:
 
+		typedef std::pair<Value, Value> TwoValues;
 		///Initialize variable with value of specified type
 		/** You can use this constructor, if you need to get a value of specified type regardless
 		 * on content. The constructor just creates the empty value. The main advantage
@@ -579,6 +580,18 @@ namespace json {
 		 */
 		template<typename Fn>
 		Value split(const Fn &sortFn) const;
+
+		///Splits container into two arrays
+		/**
+			@param pos position where to split. Positive number specifies how
+			many items will be put to left side, other items will be put to right
+			side. Negative number specifies how many characters counted from the
+			end will be put to right side, other items will be put to left side.
+
+			If absolute number of position is highter then count of items, the
+			value is capped.
+		*/
+		TwoValues splitAt(int pos) const;
 
 
 		///Makes intersection of two containers

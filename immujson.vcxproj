@@ -287,6 +287,7 @@
     <ClInclude Include="src\immujson\string.h" />
     <ClInclude Include="src\immujson\stringValue.h" />
     <ClInclude Include="src\immujson\stringview.h" />
+    <ClInclude Include="src\immujson\validator.h" />
     <ClInclude Include="src\immujson\value.h" />
     <ClInclude Include="src\tests\testClass.h" />
   </ItemGroup>
@@ -301,6 +302,7 @@
     <ClCompile Include="src\immujson\stackProtection.cpp" />
     <ClCompile Include="src\immujson\string.cpp" />
     <ClCompile Include="src\immujson\stringValue.cpp" />
+    <ClCompile Include="src\immujson\validator.cpp" />
     <ClCompile Include="src\immujson\value.cpp" />
     <ClCompile Include="src\tests\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

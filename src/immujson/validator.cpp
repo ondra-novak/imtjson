@@ -6,6 +6,8 @@
  */
 
 #include "validator.h"
+#include "array.h"
+#include "string.h"
 
 namespace json {
 
@@ -60,12 +62,12 @@ bool Validator::validateRuleLine(const Value& subject, const Value& ruleLine) {
 	}
 }
 
-bool Validator::onNativeRuleAccept(const Value& subject,
-		const StrViewA& ruleName, const Value& args) {
+bool Validator::onNativeRuleAccept(const Value& , const StrViewA& , const Value& ) {
+	return false;
 }
 
-bool Validator::onNativeRuleReject(const Value& subject,
-		const StrViewA& ruleName, const Value& args) {
+bool Validator::onNativeRuleReject(const Value& , const StrViewA& , const Value& ) {
+	return false;
 }
 
 bool Validator::validateRuleLine2(const Value& subject, const Value& ruleLine, unsigned int offset) {
@@ -92,6 +94,27 @@ bool Validator::validateRuleLine2(const Value& subject, const Value& ruleLine, u
 	}
 	if (!ok) {
 		rejections.add({curPath->toValue(), ruleLine});
+		return false;
+	}
+}
+
+
+static bool isLess(const Value &a, const Value &b) {
+	if (a.type() != b.type()) return false;
+	switch (a.type()) {
+	case number: 
+		if ((a.flags() & numberInteger) && (b.flags() & numberInteger))
+			return a.getInt() < b.getInt();
+		else if ((a.flags() & numberUnsignedInteger) && (b.flags() & numberUnsignedInteger))
+			return a.getUInt() < b.getUInt();
+		else
+			return a.getNumber() < b.getNumber();
+	case string:
+		return a.getString() < b.getString();
+		break;
+	case boolean:
+		return a.getBool() == false && b.getBool() == true;
+	default:
 		return false;
 	}
 }
@@ -129,11 +152,41 @@ bool Validator::evalRuleAccept(const Value& subject, StrViewA name, const Value&
 		} else if (name == "object") {
 			if (subject.type() != object) return false;
 			if (args.empty()) return true;
-			return validateObject(subject,args[1],args,2);
+			return validateObject(subject,args[1],args[2]);
 		} else if (name == "tuple") {
 			return opTuple(subject,args,false);
-		}  else if (name == "vartuple") {
-			return opTuple(subject,args,true);
+		}
+		else if (name == "vartuple") {
+			return opTuple(subject, args, true);
+		} else if (name == "()") {
+			return isLess(args[1], subject) && isLess(subject, args[2]) ;
+		} else if (name == "<)") {
+			return !isLess(subject, args[1])  && isLess(subject, args[2]) ;
+		} else if (name == "<>") {
+			return !isLess(subject, args[1])  && !isLess( args[2], subject) ;
+		} else if (name == "(>") {
+			return isLess(args[1], subject)  && !isLess( args[2], subject) ;
+		}
+		else if (name == "value") {
+			return subject == args;
+		}
+		else if (name == "sub") {
+			return validateRuleLine2(v, args, 1);
+		}
+		else if (name == "to-string") {
+			return validateRuleLine(subject.toString(), args[1]);
+		}
+		else if (name == "to-number") {
+			return validateRuleLine(subject.getNumber(), args[1]);
+		} else if (name[0] == '$') {
+
+			int pos = atoi(name.data + 1);
+			if (pos<0 || pos >= curArgs->size()) {
+				return false;
+			}
+			else {
+				return validateSingleRuleForAccept(subject, curArgs->operator[](pos)
+			}
 		} else {
 			return checkClassAccept(subject,name, args);
 		}
@@ -202,7 +255,7 @@ bool Validator::validateObject(const Value& subject, const Value& templateObj, c
 			StackSave<const Path *> store(curPath);
 			Path nxtPath(*curPath, v.getKey());
 			curPath = &nxtPath;
-			if (!validateRuleLine2(v,extraRules,extraRulesOffset)) return false;
+			if (!validateRuleLine2(v,extraRules,0)) return false;
 		}
 	}
 
@@ -214,7 +267,7 @@ bool Validator::validateObject(const Value& subject, const Value& templateObj, c
 
 bool Validator::validateSingleRuleForAccept(const Value& subject, const Value& ruleLine) {
 
-	return  ruleLine.type() == object?validateObject(subject,ruleLine, {}, 0):
+	return  ruleLine.type() == object?validateObject(subject,ruleLine, {}):
 			   ruleLine.type() == array?evalRuleAccept(subject,ruleLine[0].getString(),ruleLine):
 			   ruleLine.type() == string?evalRuleAccept(subject,ruleLine.getString(),{}):
 			   subject == ruleLine;
@@ -248,32 +301,90 @@ bool Validator::checkClassReject(const Value& subject, StrViewA name, const Valu
 }
 
 bool Validator::opPrefix(const Value& subject, const Value& args) {
-	StrViewA txt = subject.getString();
-	StrViewA str = args[1].getString();
-	if (txt.substr(0,str.length) != str) return false;
-	if (args.size() > 2) {
-		return validateRuleLine2(txt.substr(str.length), args, 2);
-	} else {
+	Value pfix = args[1];
+	Value rule = args[2];
+	if (pfix.type() == array) {
+		auto spl = subject.splitAt(pfix.size());
+		if (spl.first != pfix)  return false;
+		if (rule.defined()) return validateRuleLine(spl.second, rule);
+		return true;
+	}
+	else {
+		StrViewA txt = subject.getString();
+		StrViewA str = pfix.getString();
+		if (txt.substr(0, str.length) != str) return false;
+		if (rule.defined()) return validateRuleLine(txt.substr(str.length), rule);
 		return true;
 	}
 
 }
 
 bool Validator::opSuffix(const Value& subject, const Value& args) {
-	StrViewA txt = subject.getString();
-	StrViewA str = args[1].getString();
-	if (txt.length < str.length) return false;
-	std::size_t pos = txt.length-str.length;
-	if (txt.substr(pos) != str) return false;
-	if (args.size() > 2) {
-		return validateRuleLine2(txt.substr(0,pos), args, 2);
-	} else {
+	Value sfix = args[1];
+	Value rule = args[2];
+	if (sfix.type() == array) {
+		auto spl = subject.splitAt(-sfix.size());
+		if (spl.second != sfix)  return false;
+		if (rule.defined()) return validateRuleLine(spl.first, rule);
+		return true;
+
+	}
+	else {
+		StrViewA txt = subject.getString();
+		StrViewA str = sfix.getString();
+		if (txt.length < str.length) return false;
+		std::size_t pos = txt.length - str.length;
+		if (txt.substr(pos) != str) return false;
+		if (args.size() > 2) return validateRuleLine(txt.substr(0, pos), rule);		
 		return true;
 	}
 }
 
 bool Validator::opTuple(const Value& subject, const Value& args,
 		bool varTuple) {
+
+	if (subject.type() != array) return false;
+	std::size_t cnt = args.size() - 1;
+	if (varTuple && cnt) cnt--;
+	for (std::size_t i = 0; i < cnt; i++) {
+
+		StackSave<const Path *> store(curPath);
+		Path nxtPath(*curPath, i);
+		curPath = &nxtPath;
+		
+		Value v = subject[i];
+		if (!validateRuleLine(v, args[i + 1])) {
+			return false;
+		}
+	}
+	if (varTuple) {
+
+		if (subject.size() <= cnt) {
+
+			StackSave<const Path *> store(curPath);
+			Path nxtPath(*curPath, cnt);
+			curPath = &nxtPath;
+
+			Value v = subject[cnt];
+
+			if (!validateRuleLine(v, undefined))
+				return false;
+		}
+		else for (std::size_t i = cnt; i < subject.size();++i) {
+
+			StackSave<const Path *> store(curPath);
+			Path nxtPath(*curPath, i);
+			curPath = &nxtPath;
+
+			Value v = subject[cnt];
+
+			if (!validateRuleLine(v, subject[i]))
+				return false;
+
+		}
+
+	}
+	return true;
 }
 
 }

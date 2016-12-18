@@ -152,6 +152,61 @@ namespace json {
 		});
 	}
 
+	class SubArray : public AbstractArrayValue {
+	public:
+
+		SubArray(PValue parent, std::size_t start, std::size_t len)
+			:parent(parent), start(start), len(len) {
+
+			if (typeid(*parent) == typeid(SubArray)) {
+				const SubArray *x = static_cast<const SubArray *>((const IValue *)parent);
+				this->parent = x->parent;
+				this->start = this->start + x->start;
+			}
+		}
+
+		virtual std::size_t size() const override {
+			return len;
+		}
+		virtual const IValue *itemAtIndex(std::size_t index) const override {
+			return parent->itemAtIndex(start + index);
+		}
+		virtual bool enumItems(const IEnumFn &fn) const override {
+			for (std::size_t x = 0; x < len; x++) {
+				if (!fn(itemAtIndex(x))) return false;
+			}
+			return true;
+		}
+
+		virtual bool getBool() const override { return true; }
+	protected:
+		PValue parent;
+		std::size_t start;
+		std::size_t len;
+	};
+
+	
+	Value::TwoValues Value::splitAt(int pos) const
+	{
+		std::size_t sz = size();
+		if (pos > 0) {
+			if ((unsigned)pos < sz) {
+				return TwoValues(new SubArray(v, 0, pos), new SubArray(v, pos, sz - pos));
+			}
+			else {
+				return TwoValues(*this, {});
+			}
+		}
+		else if (pos < 0) {
+			if ((int)sz + pos > 0) return splitAt((int)sz + pos);
+			else return TwoValues({}, *this);
+		}
+		else {
+			return TwoValues(*this, {});
+		}
+		return std::pair<Value, Value>();
+	}
+
 	std::vector<PValue> Value::prepareValues(const std::initializer_list<Value>& data) {
 		std::vector<PValue> out;
 		out.reserve(data.size());
