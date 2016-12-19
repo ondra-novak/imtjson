@@ -20,16 +20,7 @@
 
 using namespace json;
 
-static int leakCounter = 0;
-void *operator new(std::size_t x) {
-	leakCounter++;
-	return malloc(x);
-}
-
-void operator delete(void *p) {
-	leakCounter--;
-	free(p);
-}
+void runValidatorTests(TestSimple &tst);
 
 void compressDemo(std::string file) {
 	std::ifstream infile(file);
@@ -793,6 +784,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		res.toStream(out);
 	};
 
+	runValidatorTests(tst);
 
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
 		std::string buff;

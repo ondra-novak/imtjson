@@ -147,7 +147,7 @@ putting the array into definition allows parametrized definition
 ["()", val1, null ]           - (val1, infinity)
 ["<)", val1, val2 ]           - opened left interval, closed right interval
 ["(>", val1, val2 ]           - closed left interval, opened right interval
-["<>", val1, val2 ]           - closed interval
+["<>", val1, val2 ]           eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee- closed interval
 ["value", val] -              - exact value.
 ["max-size", number ]         - the item is rejected, when its size is above the specified number
 ["min-size", number ]         - the item is rejected, when its size is below the specified number
@@ -196,6 +196,50 @@ namespace json {
 class Validator {
 public:
 	virtual ~Validator() {}
+
+
+	static StrViewA strString;
+	static StrViewA strNumber;
+	static StrViewA strBoolean;
+	static StrViewA strArray;
+	static StrViewA strObject;
+	static StrViewA strAny;
+	static StrViewA strBase64;
+	static StrViewA strHex;
+	static StrViewA strUppercase;
+	static StrViewA strLowercase;
+	static StrViewA strIdentifier;
+	static StrViewA strCamelCase;
+	static StrViewA strAlpha;
+	static StrViewA strAlnum;
+	static StrViewA strDigits;
+	static StrViewA strInteger;
+	static StrViewA strNative;
+	static StrViewA strSet;
+	static StrViewA strEnum;
+	static StrViewA strTuple;
+	static StrViewA strVarTuple;
+	static StrViewA strRangeOpenOpen;
+	static StrViewA strRangeOpenClose;
+	static StrViewA strRangeCloseOpen;
+	static StrViewA strRangeCloseClose;
+	static StrViewA strValue;
+	static StrViewA strMinSize;
+	static StrViewA strMaxSize;
+	static StrViewA strKey;
+	static StrViewA strToString;
+	static StrViewA strToNumber;
+	static StrViewA strPrefix;
+	static StrViewA strSuffix;
+	static StrViewA strSplit;
+	static StrViewA strNull;
+	static StrViewA strOptional;
+	static StrViewA strSub;
+	static StrViewA strShift;
+	static char valueEscape;
+	static char argEscape;
+
+
 
 
 	///Evaluates the native rule
@@ -279,6 +323,9 @@ protected:
 
 	bool opSuffix(const Value &subject, const Value &args);
 	bool opTuple(const Value &subject, const Value &args, bool varTuple);
+	bool opSplit(const Value &subject, std::size_t at, const Value &left, const Value &right);
+
+	Value argDeref(const Value &arg) const;
 
 };
 
