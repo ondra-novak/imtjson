@@ -207,7 +207,7 @@ namespace json {
 				else return TwoValues(array, *this);
 			}
 			else {
-				return TwoValues(*this, array);
+				return TwoValues(array, *this);
 			}
 			return std::pair<Value, Value>();
 		}

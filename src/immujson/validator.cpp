@@ -97,7 +97,7 @@ bool Validator::validateRuleLine(const Value& subject, const Value& ruleLine) {
 		bool ok = evalRuleAccept(subject, ruleLine.getString(), {})
 				&& evalRuleReject(subject, ruleLine.getString(), {});
 		if (!ok) {
-			rejections.add({curPath->toValue(), ruleLine});
+			addRejection(*curPath, ruleLine);
 		}
 		return ok;
 	}
@@ -119,25 +119,26 @@ bool Validator::validateRuleLine2(const Value& subject, const Value& ruleLine, u
 		if (o) {
 			--o;
 		} else {
-			bool ok = validateSingleRuleForAccept(subject, x);
+			ok = validateSingleRuleForAccept(subject, x);
 			if (ok) break;
 		}
 	}
-	if (ok)
-	o = offset;
-	for (auto &&x : ruleLine) {
-		if (o) {
-			--o;
-		} else {
-			bool ok = validateSingleRuleForReject(subject, x);
-			if (!ok) break;
+	if (ok) {
+		o = offset;
+		for (auto &&x : ruleLine) {
+			if (o) {
+				--o;
+			} else {
+				ok = validateSingleRuleForReject(subject, x);
+				if (!ok) break;
+			}
 		}
 	}
 	if (!ok) {
-		rejections.add({curPath->toValue(), ruleLine});
+		addRejection(*curPath, ruleLine);
 		return false;
 	}
-	return true;
+	return ok;
 }
 
 
@@ -281,6 +282,7 @@ bool Validator::evalRuleAccept(const Value& subject, StrViewA name, const Value&
 				Path newPath(*curPath, pos);
 				curPath = &newPath;
 				if (!validateRuleLine2(v, args, 1)) return false;
+				++pos;
 			}
 			return true;
 		} else if (name == strObject) {
@@ -544,8 +546,9 @@ bool Validator::opTuple(const Value& subject, const Value& args,
 
 		}
 
+	} else {
+		return subject.size() <= cnt;
 	}
-	return true;
 }
 
 bool Validator::opSplit(const Value& subject, std::size_t at, const Value& left, const Value& right) {
@@ -569,4 +572,14 @@ Value Validator::argDeref(const Value &v) const {
 	return v;
 }
 
+void Validator::addRejection(const Path& path, const Value& rule) {
+	Value vp = path.toValue();
+	if (!rejections.empty()) {
+		Value pvp = rejections[rejections.size()-1][0];
+		if (pvp.size()>vp.size() && pvp.splitAt(vp.size()).first == vp) return;
+	}
+	rejections.add({vp, rule});
 }
+
+}
+

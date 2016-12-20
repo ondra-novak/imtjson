@@ -789,7 +789,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value::TwoValues v = testset.splitAt(4);
 		out << v.first.toString() << "," << v.second.toString();
 	};
-	tst.test("Operation.splitAt2", "[1,2,3,4,5,6,7,8],[]") >> [](std::ostream &out) {
+	tst.test("Operation.splitAt2", "[],[1,2,3,4,5,6,7,8]") >> [](std::ostream &out) {
 		Value testset = { 1,2,3,4,5,6,7,8 };
 		Value::TwoValues v = testset.splitAt(0);
 		out << v.first.toString() << "," << v.second.toString();

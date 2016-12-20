@@ -147,7 +147,7 @@ putting the array into definition allows parametrized definition
 ["()", val1, null ]           - (val1, infinity)
 ["<)", val1, val2 ]           - opened left interval, closed right interval
 ["(>", val1, val2 ]           - closed left interval, opened right interval
-["<>", val1, val2 ]           eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee- closed interval
+["<>", val1, val2 ]          - closed interval
 ["value", val] -              - exact value.
 ["max-size", number ]         - the item is rejected, when its size is above the specified number
 ["min-size", number ]         - the item is rejected, when its size is below the specified number
@@ -327,6 +327,7 @@ protected:
 
 	Value argDeref(const Value &arg) const;
 
+	void addRejection(const Path &path, const Value &rule);
 };
 
 
