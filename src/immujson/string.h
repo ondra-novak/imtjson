@@ -141,6 +141,8 @@ public:
 	String replace(std::size_t pos, std::size_t size, const StringView<char> &what);
 	///Splits string to array
 	Value split(const StringView<char> separator, std::size_t maxCount = -1) const;
+	///split at given position
+	Value::TwoValues splitAt(std::intptr_t pos) const;
 	///Appends sting
 	String &operator += (const StringView<char> other);
 	///Finds substring

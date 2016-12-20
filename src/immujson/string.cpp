@@ -196,6 +196,27 @@ Value String::split(const StringView<char> separator, std::size_t maxCount) cons
 
 }
 
+Value::TwoValues String::splitAt(std::intptr_t pos) const
+{
+	std::size_t sz = length();
+	if (pos > 0) {
+		if ((unsigned)pos < sz) {
+			return Value::TwoValues(new SubStrString(impl, 0, pos), new SubStrString(impl, pos, sz - pos));
+		}
+		else {
+			return Value::TwoValues(*this, {});
+		}
+	}
+	else if (pos < 0) {
+		if ((int)sz + pos > 0) return splitAt((int)sz + pos);
+		else return Value::TwoValues({}, *this);
+	}
+	else {
+		return Value::TwoValues(*this, {});
+	}	
+
+}
+
 String& String::operator +=(const StringView<char> other) {
 	impl = ((*this) + other).getHandle();
 	return *this;

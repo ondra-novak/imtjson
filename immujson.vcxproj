@@ -273,6 +273,7 @@
     <ClInclude Include="src\immujson\arrayValue.h" />
     <ClInclude Include="src\immujson\basicValues.h" />
     <ClInclude Include="src\immujson\compress.h" />
+    <ClInclude Include="src\immujson\conv.h" />
     <ClInclude Include="src\immujson\edit.h" />
     <ClInclude Include="src\immujson\ivalue.h" />
     <ClInclude Include="src\immujson\json.h" />
@@ -310,6 +311,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\tests\validatorTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\immujson\compress.tcc" />

@@ -188,23 +188,29 @@ namespace json {
 	
 	Value::TwoValues Value::splitAt(int pos) const
 	{
-		std::size_t sz = size();
-		if (pos > 0) {
-			if ((unsigned)pos < sz) {
-				return TwoValues(new SubArray(v, 0, pos), new SubArray(v, pos, sz - pos));
-			}
-			else {
-				return TwoValues(*this, {});
-			}
-		}
-		else if (pos < 0) {
-			if ((int)sz + pos > 0) return splitAt((int)sz + pos);
-			else return TwoValues({}, *this);
+		if (type() == string) {
+			String s = *this;
+			return s.splitAt(pos);
 		}
 		else {
-			return TwoValues(*this, {});
+			std::size_t sz = size();
+			if (pos > 0) {
+				if ((unsigned)pos < sz) {
+					return TwoValues(new SubArray(v, 0, pos), new SubArray(v, pos, sz - pos));
+				}
+				else {
+					return TwoValues(*this, array);
+				}
+			}
+			else if (pos < 0) {
+				if ((int)sz + pos > 0) return splitAt((int)sz + pos);
+				else return TwoValues(array, *this);
+			}
+			else {
+				return TwoValues(*this, array);
+			}
+			return std::pair<Value, Value>();
 		}
-		return std::pair<Value, Value>();
 	}
 
 	std::vector<PValue> Value::prepareValues(const std::initializer_list<Value>& data) {

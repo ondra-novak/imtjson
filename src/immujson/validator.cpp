@@ -137,6 +137,7 @@ bool Validator::validateRuleLine2(const Value& subject, const Value& ruleLine, u
 		rejections.add({curPath->toValue(), ruleLine});
 		return false;
 	}
+	return true;
 }
 
 
@@ -245,6 +246,7 @@ static bool opIsIdentifier(const Value &v) {
 		char c = str[i];
 		if ((!isalnum(c) || (i == 0 && !isalpha(c))) && c != '_') return false;
 	}
+	return true;
 }
 
 static bool opIsInteger(const Value &v) {
@@ -278,8 +280,9 @@ bool Validator::evalRuleAccept(const Value& subject, StrViewA name, const Value&
 				StackSave<const Path *> pathSave(curPath);
 				Path newPath(*curPath, pos);
 				curPath = &newPath;
-				return validateRuleLine2(v,args,1);
+				if (!validateRuleLine2(v, args, 1)) return false;
 			}
+			return true;
 		} else if (name == strObject) {
 			if (subject.type() != object) return false;
 			if (args.empty()) return true;
@@ -462,7 +465,7 @@ bool Validator::opPrefix(const Value& subject, const Value& args) {
 	Value pfix = args[1];
 	Value rule = args[2];
 	if (pfix.type() == array) {
-		auto spl = subject.splitAt(pfix.size());
+		auto spl = subject.splitAt((int)pfix.size());
 		if (spl.first != pfix)  return false;
 		if (rule.defined()) return validateRuleLine(spl.second, rule);
 		return true;
@@ -481,7 +484,7 @@ bool Validator::opSuffix(const Value& subject, const Value& args) {
 	Value sfix = args[1];
 	Value rule = args[2];
 	if (sfix.type() == array) {
-		auto spl = subject.splitAt(-sfix.size());
+		auto spl = subject.splitAt(-(int)sfix.size());
 		if (spl.second != sfix)  return false;
 		if (rule.defined()) return validateRuleLine(spl.first, rule);
 		return true;
@@ -546,7 +549,7 @@ bool Validator::opTuple(const Value& subject, const Value& args,
 }
 
 bool Validator::opSplit(const Value& subject, std::size_t at, const Value& left, const Value& right) {
-	Value::TwoValues s = subject.splitAt(at);
+	Value::TwoValues s = subject.splitAt((int)at);
 	return validateRuleLine(s.first,left) && validateRuleLine(s.second,right);
 }
 

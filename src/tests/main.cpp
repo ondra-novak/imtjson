@@ -784,6 +784,28 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		res.toStream(out);
 	};
 
+	tst.test("Operation.splitAt", "[1,2,3,4],[5,6,7,8]") >> [](std::ostream &out) {
+		Value testset = { 1,2,3,4,5,6,7,8 };
+		Value::TwoValues v = testset.splitAt(4);
+		out << v.first.toString() << "," << v.second.toString();
+	};
+	tst.test("Operation.splitAt2", "[1,2,3,4,5,6,7,8],[]") >> [](std::ostream &out) {
+		Value testset = { 1,2,3,4,5,6,7,8 };
+		Value::TwoValues v = testset.splitAt(0);
+		out << v.first.toString() << "," << v.second.toString();
+	};
+	tst.test("Operation.splitAt3", "[1,2,3,4,5],[6,7,8]") >> [](std::ostream &out) {
+		Value testset = { 1,2,3,4,5,6,7,8 };
+		Value::TwoValues v = testset.splitAt(-3);
+		out << v.first.toString() << "," << v.second.toString();
+	};
+	tst.test("Operation.splitAt4", "Hello, world") >> [](std::ostream &out) {
+		Value testset = "Hello world";
+		Value::TwoValues v = testset.splitAt(5);
+		out << v.first.toString() << "," << v.second.toString();
+	};
+
+
 	runValidatorTests(tst);
 
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
