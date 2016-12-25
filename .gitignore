@@ -36,3 +36,5 @@ Release-Test/
 src/tests/test.json.cmp
 src/tests/test.json.decmp
 src/tests/test.json.raw
+immujson.VC.*
+*.filters

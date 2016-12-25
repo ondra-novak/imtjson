@@ -545,6 +545,7 @@ bool Validator::opTuple(const Value& subject, const Value& args,
 				return false;
 
 		}
+		return true;
 
 	} else {
 		return subject.size() <= cnt;
@@ -576,7 +577,7 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 	Value vp = path.toValue();
 	if (!rejections.empty()) {
 		Value pvp = rejections[rejections.size()-1][0];
-		if (pvp.size()>vp.size() && pvp.splitAt(vp.size()).first == vp) return;
+		if (pvp.size()>vp.size() && pvp.splitAt((int)vp.size()).first == vp) return;
 	}
 	rejections.add({vp, rule});
 }
