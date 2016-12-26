@@ -16,6 +16,7 @@
 #include "../immujson/json.h"
 #include "../immujson/compress.tcc"
 #include "../immujson/basicValues.h"
+#include "../immujson/comments.h"
 #include "testClass.h"
 
 using namespace json;
@@ -803,6 +804,20 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value testset = "Hello world";
 		Value::TwoValues v = testset.splitAt(5);
 		out << v.first.toString() << "," << v.second.toString();
+	};
+	tst.test("Parser.commented", "{\"blockComment\\/*not here*\\/\":\"here\\\"\\r\\n\",\"lineComment\\/\\/not here\":\"here\"}") >> [](std::ostream &out) {
+		StrViewA str = "{\r\n"
+			"\"lineComment//not here\":\r\n"
+			"\"here\",//there is comment\r\n"
+			"\"blockComment/*not here*/\":\"here\\\"\\r\\n\"/*there is comment*/"
+			"}";
+		std::size_t pos = 0;
+		Value v = Value::parse(removeComments([&pos, &str]() {
+			int i = str[pos++];
+			return i;
+		}));
+		out << v.stringify();
+
 	};
 
 
