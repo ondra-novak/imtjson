@@ -218,7 +218,8 @@ namespace json {
 		std::string name;
 		bool cont;
 		do {
-			if (c != '"') throw ParseError("Expected a string");
+			if (c != '"') 
+				throw ParseError("Expected a string");
 			rd.commit();
 			try {
 				name = readString();
@@ -227,7 +228,8 @@ namespace json {
 				e.addContext(name);
 			}
 			try {
-				if (rd.nextWs() != ':') throw ParseError("Expected ':'");
+				if (rd.nextWs() != ':') 
+					throw ParseError("Expected ':'");
 				rd.commit();
 				Value v = parse();
 				tmpobj.set(name, v);

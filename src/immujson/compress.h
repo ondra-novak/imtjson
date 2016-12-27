@@ -1,6 +1,6 @@
 #pragma once
 #include <utility>
-#include <map>
+#include <unordered_map>
 #include <stack>
 #include <vector>
 
@@ -9,17 +9,32 @@ namespace json {
 class CompressDecompresBase {
 public:
 	typedef unsigned int ChainCode;
-	static const ChainCode initialChainCode = -1;
-	static const ChainCode firstCode = 128;
-	static const ChainCode maxCodeToEncode = 0x3FFF+0xC0;
+	static const ChainCode initialChainCode = -1;	
+	static const ChainCode codeShift = 26;
+	static const ChainCode firstCode = 128-codeShift;
+	///Specifies mask which selects between single bytes and two bytes chaincodes
+	/** It also defines size of the dictionary. Possible values are
+		0x80,0xC0,0xE0,0xF0,0xF8,0xFC,0xFE,0xFF.
+		Larger values generates smaller dictionary.
+		Best compression ration is for 0x80, the dictionary can hold up to 32893 sequences.
+	*/
+	static const ChainCode extCodeMask = 0x80;
+	static const ChainCode maxCodeToEncode = ((extCodeMask ^ 0xFF)<<8) + 0xFF + extCodeMask;
 	static const ChainCode flushCode = maxCodeToEncode;
 	static const ChainCode optimizeCode = maxCodeToEncode-1;
 	static const ChainCode maxCode = maxCodeToEncode - 2;
-	static const ChainCode maxCodeForOptimize = maxCode - 100;
+	static const ChainCode maxCodeForOptimize = maxCode - 16;
 
 
 													//key to db - current chain code and next char
 	typedef std::pair<ChainCode, char> Sequence;
+
+	struct SequenceHash {
+		std::size_t operator()(const Sequence v) const {
+			return (v.first << 8) | v.second;
+		}
+	};
+
 	//value of db 
 	struct SeqInfo {
 		//next code for current key
@@ -29,7 +44,10 @@ public:
 		SeqInfo(ChainCode nextCode) :nextCode(nextCode), used(false) {}
 	};
 
-	typedef std::map<Sequence, SeqInfo> SeqDB;
+	typedef std::map<Sequence, SeqInfo> SeqDBOrdered;
+	// typedef SeqDBOrdered SeqDB;
+	typedef std::unordered_map<Sequence, SeqInfo, SequenceHash> SeqDB;
+
 
 };
 
@@ -46,7 +64,9 @@ public:
 	~Compress();
 
 protected:
-	Fn output;
+	Fn output;	
+
+	void compress(char c);
 
 
 
@@ -56,6 +76,8 @@ protected:
 	ChainCode nextCode;
 	//last sequence code - while we walk through the available sequencies
 	ChainCode lastSeq;
+
+	unsigned int utf8len;
 
 	void write(ChainCode code);
 
@@ -71,12 +93,16 @@ public:
 
 	char operator()();
 
+
 	void reset();
 	
 	~Decompress();
 protected:
 
 	Fn input;
+
+	char decompress();
+
 
 	//information about chain code - key is index in table
 	//because first code is always 128, index is shifted about 128 down
@@ -102,54 +128,23 @@ protected:
 	//previous code to connect first character of next code and create new code
 	ChainCode prevCode;
 
+
+
 	void optimizeDB();
 
 	ChainCode read();
 
-	
+	unsigned int utf8len;
+
 
 };
 
-template<typename Fn>
-class CompressAdjUtf8 {
-public:
-	CompressAdjUtf8(const Fn &fn):fn(fn),remain(0) {}
-
-	void operator()(char c);
-
-protected:
-	Fn fn;
-	std::uintptr_t uchar;
-	int remain;
-
-};
-
-template<typename Fn>
-class DecompressAdjUtf8 {
-public:
-	DecompressAdjUtf8(const Fn &fn):fn(fn) {}
-
-	char operator()();;
-
-protected:
-	Fn fn;
-	std::stack<char> outbytes;
-
-	char output(std::uintptr_t uchar);
-
-};
 
 template<typename Fn>
 Compress<Fn> compress(const Fn &fn) { return Compress<Fn>(fn); }
 
 template<typename Fn>
 Decompress<Fn> decompress(const Fn &fn) { return Decompress<Fn>(fn); }
-
-template<typename Fn>
-CompressAdjUtf8<Compress<Fn> > compressUtf8(const Fn &fn) { return CompressAdjUtf8<Compress<Fn> >(Compress<Fn>(fn)); }
-
-template<typename Fn>
-DecompressAdjUtf8<Decompress<Fn> > decompressUtf8(const Fn &fn) { return DecompressAdjUtf8<Decompress< Fn> >(Decompress< Fn>(fn)); }
 
 
 }

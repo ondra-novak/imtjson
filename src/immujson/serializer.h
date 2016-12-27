@@ -6,7 +6,18 @@
 
 namespace json {
 
+	///Configures precision of floating numbers
+	/** Global variable specifies count of decimal digits of float numbers. 
+	The default value is 4 for 16bit platform, 8 for 32bit platform and 9 for
+	64bit platform. It can be changed, however, maximum digits is limited
+	to size of uintptr_t type. This limits count of digits max to 10digits on
+	32bit platform and 21 digits on 64bit platform 
+	*/
 	extern uintptr_t maxPrecisionDigits;
+	///Specifies default output format for unicode character during serialization
+	/** If output format is not specified by serialization function. Default
+	is emitEscaped*/
+	extern UnicodeFormat defaultUnicodeFormat;
 
 
 	template<typename Fn>
@@ -15,7 +26,7 @@ namespace json {
 
 
 
-		Serializer(const Fn &target) :target(target) {}
+		Serializer(const Fn &target, bool utf8output) :target(target), utf8output(utf8output) {}
 
 		void serialize(const Value &obj);
 		virtual void serialize(const IValue *ptr);
@@ -31,6 +42,7 @@ namespace json {
 
 	protected:
 		Fn target;
+		bool utf8output;
 
 		void write(const StringView<char> &text);
 		void writeUnsigned(std::uintptr_t value);
@@ -52,7 +64,13 @@ namespace json {
 	template<typename Fn>
 	inline void Value::serialize(const Fn & target) const
 	{
-		Serializer<Fn> serializer(target);
+		serialize(defaultUnicodeFormat, target);
+	}
+
+	template<typename Fn>
+	inline void Value::serialize(UnicodeFormat format, const Fn & target) const
+	{
+		Serializer<Fn> serializer(target, format == emitUtf8);
 		return serializer.serialize(*this);
 	}
 
@@ -72,6 +90,7 @@ namespace json {
 		case string: serializeString(ptr); break;
 		case boolean: serializeBoolean(ptr); break;
 		case null: serializeNull(ptr); break;
+		case undefined: writeString("undefined"); break;
 		}
 
 
@@ -227,13 +246,36 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writeUnicode(unsigned int uchar) {		
-		target('\\');
-		target('u');
-		const char hex[] = "0123456789ABCDEF";
-		for (unsigned int i = 0; i < 4; i++) {
-			unsigned int b = (uchar >> ((3 - i) * 4)) & 0xF;
-			target(hex[b]);
+	inline void Serializer<Fn>::writeUnicode(unsigned int uchar) {	
+		//see: http://stackoverflow.com/questions/2965293/javascript-parse-error-on-u2028-unicode-character
+		if (utf8output && uchar >=0x80 && uchar != 0x2028 && uchar != 0x2029) {
+			if (uchar >= 0x80 && uchar <= 0x7FF) {
+				target((char)(0xC0 | (uchar >> 6)));
+				target((char)(0x80 | (uchar & 0x3F)));
+			}
+			else if (uchar >= 0x800 && uchar <= 0xFFFF) {
+				target((char)(0xE0 | (uchar >> 12)));
+				target((char)(0x80 | ((uchar >> 6) & 0x3F)));
+				target((char)(0x80 | (uchar & 0x3F)));
+			}
+			else if (uchar >= 0x10000 && uchar <= 0x10FFFF) {
+				target((char)(0xF0 | (uchar >> 18)));
+				target((char)(0x80 | ((uchar >> 12) & 0x3F)));
+				target((char)(0x80 | ((uchar >> 6) & 0x3F)));
+				target((char)(0x80 | (uchar & 0x3F)));
+			}
+			else {
+				notValidUTF8("");
+			}
+		}
+		else {
+			target('\\');
+			target('u');
+			const char hex[] = "0123456789ABCDEF";
+			for (unsigned int i = 0; i < 4; i++) {
+				unsigned int b = (uchar >> ((3 - i) * 4)) & 0xF;
+				target(hex[b]);
+			}
 		}
 	}
 

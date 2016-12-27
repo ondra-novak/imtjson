@@ -100,9 +100,25 @@ namespace json {
 		return String(buff);
 	}
 
+	String Value::stringify(UnicodeFormat format) const
+	{
+		std::string buff;
+		serialize(format,[&](char c) {
+			buff.push_back(c);
+		});
+		return String(buff);
+	}
+
 	void Value::toStream(std::ostream & output) const
 	{
 		serialize([&](char c) {
+			output.put(c);
+		});
+	}
+
+	void Value::toStream(UnicodeFormat format, std::ostream & output) const
+	{
+		serialize(format, [&](char c) {
 			output.put(c);
 		});
 	}
@@ -148,6 +164,13 @@ namespace json {
 	void Value::toFile(FILE * f) const
 	{
 		serialize([&](char c) {
+			fputc(c, f);
+		});
+	}
+
+	void Value::toFile(UnicodeFormat format, FILE * f) const
+	{
+		serialize(format, [&](char c) {
 			fputc(c, f);
 		});
 	}
@@ -276,6 +299,8 @@ namespace json {
 	}
 
 	uintptr_t maxPrecisionDigits = sizeof(uintptr_t) < 4 ? 4 : (sizeof(uintptr_t) < 8 ? 9 : 12);
+	UnicodeFormat defaultUnicodeFormat = emitEscaped;
+
 	///const double maxMantisaMult = pow(10.0, floor(log10(std::uintptr_t(-1))));
 
 	bool Value::operator ==(const Value& other) const {

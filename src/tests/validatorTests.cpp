@@ -82,8 +82,23 @@ void runValidatorTests(TestSimple &tst) {
 	tst.test("Validator.tuple-fail3","[[[1],\"string\"]]") >> [](std::ostream &out) {
 		vtest(out,Object("",{{"tuple","number","string","string"}}),{12,21,"abc"});
 	};
-	tst.test("Validator.vartuple","ok") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"vartuple","number","string","number"}}),{12,"abc",11,12,13,14});
+	tst.test("Validator.tuple+","ok") >> [](std::ostream &out) {
+		vtest(out,Object("",{{"tuple+","number","string","number"}}),{12,"abc",11,12,13,14});
+	};
+	tst.test("Validator.object", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", Object("aaa","number")("bbb","string")("ccc","boolean")), Object("aaa",12)("bbb","xyz")("ccc",true));
+	};
+	tst.test("Validator.object.failExtra", "[[[\"ddd\"],\"undefined\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", Object("aaa", "number")("bbb", "string")("ccc", "boolean")), Object("aaa", 12)("bbb", "xyz")("ccc", true)("ddd",12));
+	};
+	tst.test("Validator.object.failMissing", "[[[\"bbb\"],\"string\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", Object("aaa", "number")("bbb", "string")("ccc", "boolean")), Object("aaa", 12)("ccc", true));
+	};
+	tst.test("Validator.object.okExtra", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { {"object",Object("aaa", "number")("bbb", "string")("ccc", "boolean"),"number"} }), Object("aaa", 12)("bbb", "xyz")("ccc", true)("ddd", 12));
+	};
+	tst.test("Validator.object.okMissing", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { { "object",Object("aaa", "number")("bbb", {"string","optional"})("ccc", "boolean"),"number" } }), Object("aaa", 12)("ccc", true));
 	};
 
 

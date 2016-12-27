@@ -7,7 +7,7 @@ namespace json {
 
 
 template<typename Fn>
-Compress<Fn>::Compress(const Fn& output):output(output),nextCode(firstCode),lastSeq(initialChainCode) {
+Compress<Fn>::Compress(const Fn& output):output(output),nextCode(firstCode),lastSeq(initialChainCode), utf8len(0) {
 }
 
 template<typename Fn>
@@ -28,10 +28,48 @@ void Compress<Fn>::reset() {
 
 template<typename Fn>
 void Compress<Fn>::operator ()(char c) {
+	if (utf8len) {
+		utf8len--;
+		compress(c & 0x7F);
+	}
+	else if (c & 0x80) {
+		if ((c & 0xE0) == 0xC0) {
+			compress(1);
+			compress(c & 0x3F);
+			utf8len = 1;
+		}
+		else if ((c & 0xF0) == 0xE0) {
+			compress(2);
+			compress(c & 0x1F);
+			utf8len = 2;
+		}
+		else if ((c & 0xF8) == 0xF0) {
+			compress(3);
+			compress(c & 0x0F);
+			utf8len = 3;
+		}
+		else if ((c & 0xFC) == 0xF8) {
+			compress(4);
+			compress(c & 0x0F);
+			utf8len = 4;
+		}
+		else {
+			throw std::runtime_error("Unsupported character - invalid UTF-8 sequence");
+		}
+	}
+	else if ((unsigned int)c < 32) {
+		throw std::runtime_error("Unsupported character - jsons containing control characters are not supported");
+	}
+	else {
+		compress(c-codeShift);
+	}
+}
 
-	//non-ascii characters are rejected with exception
-	if (c & 0x80)
-		throw std::runtime_error("Unsupported character - only 7-bit ascii is supported");
+template<typename Fn>
+void Compress<Fn>::compress(char c) {
+
+	if ((unsigned int)c >= firstCode)
+		throw std::runtime_error("Invalid input");
 	//for very first character...
 	if (lastSeq == initialChainCode) {
 		//initialize lastSeq
@@ -74,14 +112,14 @@ inline void Compress<Fn>::write(ChainCode code) {
 	//code below 0xC0 are written directly
 	//0x00-0x7F = ascii directly
 	//0x80-0xBF = first 64 compress-codes
-	if (code < 0xC0) {
+	if (code < extCodeMask) {
 		output((unsigned char)code);
 	} else {
 		//first 0xC0 codes are written above
-		code -= 0xC0;
+		code -= extCodeMask;
 		//numbers equal and above 0xC0 are written in two bytes
 		//11xxxxxx xxxxxxxx - 14 bits (max 0x3FFF)
-		output((unsigned char)(code >> 8) | 0xC0);
+		output((unsigned char)(code >> 8) | extCodeMask);
 		output(((unsigned char)(code & 0xFF)));
 	}
 }
@@ -95,10 +133,11 @@ void Compress<Fn>::optimizeDB()
 	ChainCode translateTable[maxCode];
 	//initialize table to map codes below 128 in the identity
 	for (unsigned int i = 0; i < firstCode; i++) translateTable[i] = i;
+	SeqDBOrdered seqdbo(seqdb.begin(), seqdb.end());
 	SeqDB newdb;
 	//we starting here
 	ChainCode newNextCode = firstCode;
-	for (auto &&x : seqdb) {
+	for (auto &&x : seqdbo) {
 		//only used codes
 		if (x.second.used && x.second.nextCode < maxCodeForOptimize) {
 			//insert to new database - translated key + reference to newly created code
@@ -120,11 +159,29 @@ void Compress<Fn>::optimizeDB()
 template<typename Fn>
 inline Decompress<Fn>::Decompress(const Fn & input) 
 	:input(input)
-	,prevCode(initialChainCode) {}
+	,prevCode(initialChainCode), utf8len(0) {}
 
 template<typename Fn>
 char Decompress<Fn>::operator()()
 {
+	char c = decompress();
+	if (utf8len) {
+		utf8len--;
+		return (c | 0x80);
+	}
+	else {
+		switch (c) {
+		case -1: return -1;
+		case 1: utf8len = 1; return decompress() | 0xC0;
+		case 2: utf8len = 2;  return decompress() | 0xE0;
+		case 3: utf8len = 3;  return decompress() | 0xF0;
+		case 4: utf8len = 4;  return decompress() | 0xF8;
+		default: return c+codeShift;
+		}
+	}
+}
+template<typename Fn>
+char Decompress<Fn>::decompress() {
 	//decompressor first checks whether there are ready bytes
 	if (!readychars.empty()) {
 		//if do, pick top of stack
@@ -146,7 +203,7 @@ char Decompress<Fn>::operator()()
 		if (cc == optimizeCode) {
 			optimizeDB();
 			prevCode = initialChainCode;
-			return operator()();
+			return decompress();
 		}
 /*		//for very first code
 		if (prevCode == initialChainCode) {
@@ -222,7 +279,7 @@ void Decompress<Fn>::optimizeDB()
 	ChainCode translateTable[maxCode];
 	decltype(seqdb) newdb;
 	ChainCode oldcc = firstCode;
-	SeqDB tmpdb;
+	SeqDBOrdered tmpdb;
 	for (unsigned int i = 0; i < firstCode; i++) translateTable[i] = i;
 	for (auto &&x : seqdb) {
 		if (x.used && oldcc < maxCodeForOptimize) {
@@ -244,100 +301,10 @@ CompressDecompresBase::ChainCode Decompress<Fn>::read()
 {
 	unsigned char b = input();
 	ChainCode cc = b;
-	if ((b & 0xC0) != 0xC0) return cc;
+	if ((b & extCodeMask) != extCodeMask) return cc;
 	b = input();
-	cc = (cc & ~0xC0) << 8 | b;		
-	return cc+0xC0;
-}
-
-template<typename Fn>
-inline void CompressAdjUtf8<Fn>::operator ()(char c) {
-	if (c > 2) {
-		fn(c);
-	} else {
-		if ((c & 0xC0) == 0x80) {
-			if (remain == 0)
-				throw std::runtime_error("Invalid UTF-8 character");
-			uchar = (uchar << 6) | ( (unsigned char)c & ~0x80);
-			remain--;
-			if (remain == 0) {
-				if (uchar < 0x80) {
-					fn(0x0);
-					fn((char)uchar);
-				} else if (uchar < 0x400) {
-					fn(0x1);
-					fn((char)(uchar >> 7));
-					fn((char)(uchar & 0x7F));
-				} else {
-					fn(0x2);
-					fn((char)(uchar >> 14));
-					fn((char)((uchar >> 7) & 0x7F));
-					fn((char)(uchar & 0x7F));
-				}
-			}
-		}else {
-			if (remain != 0)
-				throw std::runtime_error("Invalid UTF-8 character");
-			if ((c & 0xE0) == 0xC0) {
-				uchar = ((unsigned char)c & ~0xE0);
-				remain=1;
-			} else 	if (((unsigned char)c & 0xF0) == 0xE0) {
-				uchar = ((unsigned char)c & ~0xF0);
-				remain=2;
-			} else 	if (((unsigned char)c & 0xF8) == 0xF0) {
-				uchar = ((unsigned char)c & ~0xF8);
-				remain=3;
-			} else {
-				throw std::runtime_error("Invalid UTF-8 character");
-			}
-		}
-	}
-}
-
-template<typename Fn>
-inline char DecompressAdjUtf8<Fn>::operator ()() {
-	if (!outbytes.empty()) {
-		char o = outbytes.top();
-		outbytes.pop();
-		return o;
-	}
-	char c = fn();
-	std::uintptr_t uchar;
-	switch (c) {
-	case 0:
-		return fn();
-	case 1:
-		uchar = (unsigned char)fn();
-		uchar = (uchar << 7) | (unsigned char)fn();
-		return output(uchar);
-	case 2:
-		uchar = fn();
-		uchar = (uchar << 7) | (unsigned char)fn();
-		uchar = (uchar << 7) | (unsigned char)fn();
-		return output(uchar);
-
-	default: return c;
-	}
-}
-
-template<typename Fn>
-inline char DecompressAdjUtf8<Fn>::output(std::uintptr_t uchar) {
-	if (uchar >= 0x80 && uchar <= 0x7FF) {
-		outbytes.push((char)(0x80 | (uchar & 0x3F)));
-		return (char)(0xC0 | (uchar >> 6));
-	}
-	else if (uchar >= 0x800 && uchar <= 0xFFFF) {
-		outbytes.push((char)(0x80 | (uchar & 0x3F)));
-		outbytes.push((char)(0x80 | ((uchar >> 6) & 0x3F)));
-		return (char)(0xE0 | (uchar >> 12));
-	}
-	else {
-		outbytes.push((char)(0x80 | (uchar & 0x3F)));
-		outbytes.push((char)(0x80 | ((uchar >> 6) & 0x3F)));
-		outbytes.push((char)(0x80 | ((uchar >> 12) & 0x3F)));
-		return ((char)(0xF0 | (uchar >> 18)));
-	}
-
+	cc = (cc & ~extCodeMask) << 8 | b;
+	return cc+ extCodeMask;
 }
 
 

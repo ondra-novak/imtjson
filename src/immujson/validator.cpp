@@ -31,7 +31,7 @@ StrViewA Validator::strNative = "native";
 StrViewA Validator::strSet = "set";
 StrViewA Validator::strEnum = "enum";
 StrViewA Validator::strTuple = "tuple";
-StrViewA Validator::strVarTuple = "vartuple";
+StrViewA Validator::strVarTuple = "tuple+";
 StrViewA Validator::strRangeOpenOpen = "range()";
 StrViewA Validator::strRangeOpenClose = "range(>";
 StrViewA Validator::strRangeCloseOpen = "range<)";
@@ -93,7 +93,14 @@ bool Validator::validateInternal(const Value& subject, const StrViewA& rule, con
 bool Validator::validateRuleLine(const Value& subject, const Value& ruleLine) {
 	if (ruleLine.type() == array) {
 		return validateRuleLine2(subject, ruleLine,0);
+	}
+	else if (ruleLine.type() == object) {
+		bool ok = validateObject(subject, ruleLine, undefined);
+		if (!ok) 
+			addRejection(*curPath, ruleLine);
+		return ok;
 	} else {
+
 		bool ok = evalRuleAccept(subject, ruleLine.getString(), {})
 				&& evalRuleReject(subject, ruleLine.getString(), {});
 		if (!ok) {
@@ -418,7 +425,7 @@ bool Validator::validateObject(const Value& subject, const Value& templateObj, c
 			StackSave<const Path *> store(curPath);
 			Path nxtPath(*curPath, v.getKey());
 			curPath = &nxtPath;
-			if (!validateRuleLine2(v,extraRules,0)) return false;
+			if (!validateRuleLine(v,extraRules)) return false;
 		}
 	}
 
@@ -528,18 +535,18 @@ bool Validator::opTuple(const Value& subject, const Value& args,
 			Path nxtPath(*curPath, cnt);
 			curPath = &nxtPath;
 
-			Value v = argDeref(args[cnt]);
+			Value v = argDeref(args[cnt+1]);
 
 			if (!validateRuleLine(undefined,v))
 				return false;
 		}
-		else for (std::size_t i = cnt; i < subject.size();++i) {
+		else for (std::size_t i = cnt+1; i < subject.size();++i) {
 
 			StackSave<const Path *> store(curPath);
 			Path nxtPath(*curPath, i);
 			curPath = &nxtPath;
 
-			Value v = argDeref(args[cnt]);
+			Value v = argDeref(args[cnt+1]);
 
 			if (!validateRuleLine(subject[i],v))
 				return false;
@@ -579,7 +586,10 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 		Value pvp = rejections[rejections.size()-1][0];
 		if (pvp.size()>vp.size() && pvp.splitAt((int)vp.size()).first == vp) return;
 	}
-	rejections.add({vp, rule});
+	if (rule.defined())
+		rejections.add({ vp, rule });
+	else
+		rejections.add({ vp, "undefined" });
 }
 
 }

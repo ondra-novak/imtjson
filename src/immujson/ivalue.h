@@ -24,6 +24,16 @@ namespace json {
 
 	};
 
+	enum UnicodeFormat {
+		///Emit unicode characters using escape sequence \uXXXX
+		/** This mode is default*/
+		emitEscaped,
+		///emit unicode as utf-8 sequence. 
+		/** Not ale unicode characters are written as utf-8. Some of them
+		are still escaped */
+		emitUtf8
+	};
+
 
 	///Various flags tied with JSON's type
 	/**@see userDefined, numberInteger, numberUnsignedInteger, proxy

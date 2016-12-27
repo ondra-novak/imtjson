@@ -53,6 +53,33 @@ void compressDemo(std::string file) {
 
 }
 
+bool compressTest(std::string file) {
+	Value input,compressed;
+	{
+		std::ifstream infile(file, std::ifstream::binary);
+		input = Value::fromStream(infile);
+		//re-parse because float numbers can be rounded (maxPrecisionDigits in effect)
+		input = Value::fromString(input.stringify());
+	}
+	{
+		std::ofstream outfile(file + ".cmp", std::ifstream::binary);
+		input.serialize(json::emitUtf8, compress([&](char c) {outfile.put(c); }));
+	}
+	{
+		std::ifstream infile(file + ".cmp", std::ifstream::binary);
+		compressed = Value::parse(decompress([&]() {return infile.get(); }));
+	}
+	{
+		std::ofstream outfile(file + ".decmp", std::ifstream::binary);
+		compressed.toStream(json::emitUtf8, outfile);
+	}
+/*	{
+		std::ofstream outfile(file + ".orig", std::ifstream::binary);
+		input.toStream(json::emitUtf8, outfile);
+	}*/
+	return input == compressed;
+}
+
 void subobject(Object &&obj) {
 	obj("outbreak", 19)
 		("outgrow", 21);
@@ -824,37 +851,10 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	runValidatorTests(tst);
 
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
-		std::string buff;
-		std::ifstream testfile("src/tests/test.json",std::ifstream::binary);
-		if (!testfile) throw std::runtime_error("test file not found");
-		Value v1 = Value::fromStream(testfile);
-		String s = v1.stringify();
-		std::string cs;
-		{
-			auto cmp = compress([&cs](char c) {
-				cs.push_back(c);
-			});
-
-			for (auto &&x : (StringView<char>)s) { cmp(x); }
-		}
-
-		std::string ds;
-		std::string::const_iterator csiter = cs.begin();
-		{
-			auto decmp = decompress([&csiter]() {
-				char c = *csiter;
-				++csiter;
-				return c; });
-
-			char z;
-			while ((z = decmp()) != -1) ds.push_back(z);
-		}
-
-		if (StringView<char>(ds) == s) out << "ok";
+		if (compressTest("src/tests/test.json")) out << "ok"; else out << "not same";
 	};
-	tst.test("compress.demo1","ok") >> [](std::ostream &out) {
-		compressDemo("src/tests/test.json");
-		out<<"ok";
+	tst.test("compress.utf-8","ok") >> [](std::ostream &out) {
+		if (compressTest("src/tests/test2.json")) out << "ok"; else out << "not same";
 	};
 #if 0 //removed because immujson is leaving allocated some objects which are deleted at-exit
 	{

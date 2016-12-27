@@ -379,22 +379,44 @@ namespace json {
 		template<typename Fn>
 		void serialize(const Fn &target) const;
 
+		///Serializes the value to JSON
+		/**
+		* @param format Specify how unicode character should be written. 
+		* @param target a function which accepts one argument of type char. The function serialize
+		* calls the target for each character that has to be sent to the output. In case that function
+		* is unable to accept more characters, it should throw an exception
+		*
+		*/
+		template<typename Fn>
+		void serialize(UnicodeFormat format, const Fn &target) const;
+
+
+
 		///Converts value to JSON string
 		/**
 		 * @return string contains valid JSON
 		 */
 		String stringify() const;
 
+
+		String stringify(UnicodeFormat format) const;
+
 		///Sends the value as JSON string to output stream
 		/**
 		 * @param output output stream
 		 */
 		void toStream(std::ostream &output) const;
+
+
+		void toStream(UnicodeFormat format, std::ostream &output) const;
+
 		///Sends the value as JSON string to C compatible file
 		/**
 		 * @param f C-compatible file
 		 */
 		void toFile(FILE *f) const;
+
+		void toFile(UnicodeFormat format, FILE *f) const;
 
 		///Retrieves a smart pointer (PValue) to underlying object
 		/**
