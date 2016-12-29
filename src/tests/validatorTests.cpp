@@ -50,58 +50,90 @@ void runValidatorTests(TestSimple &tst) {
 		vtest(out,Object("","boolean"),"w2133");
 	};
 	tst.test("Validator.array","ok") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"array","number"}}),{12,32,87,21});
+		vtest(out,Object("",{array,"number"}),{12,32,87,21});
 	};
 	tst.test("Validator.arrayMixed","ok") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"array","number","boolean"}}),{12,32,87,true,12});
+		vtest(out,Object("",{array,"number","boolean"}),{12,32,87,true,12});
 	};
-	tst.test("Validator.array.fail","[[[1],[\"array\",\"number\"]]]") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"array","number"}}),{12,"pp",32,87,21});
+	tst.test("Validator.array.fail","[[[1],[[],\"number\"]]]") >> [](std::ostream &out) {
+		vtest(out,Object("",{array,"number"}),{12,"pp",32,87,21});
 	};
-	tst.test("Validator.arrayMixed-fail","[[[2],[\"array\",\"number\",\"boolean\"]]]") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"array","number","boolean"}}),{12,32,"aa",87,true,12});
+	tst.test("Validator.arrayMixed-fail","[[[2],[[],\"number\",\"boolean\"]]]") >> [](std::ostream &out) {
+		vtest(out,Object("",{array,"number","boolean"}),{12,32,"aa",87,true,12});
 	};
 	tst.test("Validator.array.limit","ok") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"array","number"},{"maxsize",3}}),{10,20,30});
+		vtest(out,Object("",{{array,"number"},{"maxsize",3}}),{10,20,30});
 	};
-	tst.test("Validator.array.limit-fail","[[[],[[\"array\",\"number\"],[\"maxsize\",3]]]]") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"array","number"},{"maxsize",3}}),{10,20,30,40});
+	tst.test("Validator.array.limit-fail","[[[],[[[],\"number\"],[\"maxsize\",3]]]]") >> [](std::ostream &out) {
+		vtest(out,Object("",{{array,"number"},{"maxsize",3}}),{10,20,30,40});
 	};
 	tst.test("Validator.tuple","ok") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"tuple","number","string","string"}}),{12,"abc","cdf"});
+		vtest(out, Object("", { {3},"number","string","string" }), { 12,"abc","cdf" });
 	};
-	tst.test("Validator.tuple-fail1","[[[],[[\"tuple\",\"number\",\"string\",\"string\"]]]]") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"tuple","number","string","string"}}),{12,"abc","cdf",232});
+	tst.test("Validator.tuple-fail1","[[[3],[[3],\"number\",\"string\",\"string\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { {3},"number","string","string" }), { 12,"abc","cdf",232 });
 	};
 	tst.test("Validator.tuple-fail2","[[[2],\"string\"]]") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"tuple","number","string","string"}}),{12,"abc"});
+		vtest(out, Object("", { {3},"number","string","string" }), { 12,"abc" });
 	};
 	tst.test("Validator.tuple-optional","ok") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"tuple","number","string",{"string","optional"}}}),{12,"abc"});
+		vtest(out, Object("", { {3},"number","string",{"string","optional"} }), { 12,"abc" });
 	};
 	tst.test("Validator.tuple-fail3","[[[1],\"string\"]]") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"tuple","number","string","string"}}),{12,21,"abc"});
+		vtest(out, Object("", { {3},"number","string","string" }), { 12,21,"abc" });
 	};
 	tst.test("Validator.tuple+","ok") >> [](std::ostream &out) {
-		vtest(out,Object("",{{"tuple+","number","string","number"}}),{12,"abc",11,12,13,14});
+		vtest(out, Object("", { {2},"number","string","number" }), { 12,"abc",11,12,13,14 });
 	};
 	tst.test("Validator.object", "ok") >> [](std::ostream &out) {
 		vtest(out, Object("", Object("aaa","number")("bbb","string")("ccc","boolean")), Object("aaa",12)("bbb","xyz")("ccc",true));
 	};
-	tst.test("Validator.object.failExtra", "[[[\"ddd\"],\"undefined\"]]") >> [](std::ostream &out) {
+	tst.test("Validator.object.failExtra", "[[[],{\"aaa\":\"number\",\"bbb\":\"string\",\"ccc\":\"boolean\"}]]") >> [](std::ostream &out) {
 		vtest(out, Object("", Object("aaa", "number")("bbb", "string")("ccc", "boolean")), Object("aaa", 12)("bbb", "xyz")("ccc", true)("ddd",12));
 	};
 	tst.test("Validator.object.failMissing", "[[[\"bbb\"],\"string\"]]") >> [](std::ostream &out) {
 		vtest(out, Object("", Object("aaa", "number")("bbb", "string")("ccc", "boolean")), Object("aaa", 12)("ccc", true));
 	};
 	tst.test("Validator.object.okExtra", "ok") >> [](std::ostream &out) {
-		vtest(out, Object("", { {"object",Object("aaa", "number")("bbb", "string")("ccc", "boolean"),"number"} }), Object("aaa", 12)("bbb", "xyz")("ccc", true)("ddd", 12));
+		vtest(out, Object("",  Object("aaa", "number")("bbb", "string")("ccc", "boolean")("%","number")), Object("aaa", 12)("bbb", "xyz")("ccc", true)("ddd", 12));
+	};
+	tst.test("Validator.object.extraFailType", "[[[\"ddd\"],\"number\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", Object("aaa", "number")("bbb", "string")("ccc", "boolean")("%", "number")), Object("aaa", 12)("bbb", "xyz")("ccc", true)("ddd", "3232"));
 	};
 	tst.test("Validator.object.okMissing", "ok") >> [](std::ostream &out) {
-		vtest(out, Object("", { { "object",Object("aaa", "number")("bbb", {"string","optional"})("ccc", "boolean"),"number" } }), Object("aaa", 12)("ccc", true));
+		vtest(out, Object("", Object("aaa", "number")("bbb", {"string","optional"})("ccc", "boolean")("%","number")), Object("aaa", 12)("ccc", true));
+	};
+	tst.test("Validator.userClass", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("test", { "string","number" })("", Object("aaa", "test")("bbb","test")), Object("aaa", 12)("bbb","ahoj"));
+	};
+	tst.test("Validator.recursive", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("test", { "string",{array,"test"} })("", { array, "number","test" }), { 10,{{"aaa"}} });
 	};
 
-
+	tst.test("Validator.recursive.fail", "[[[0,1,0],[\"string\",[[],\"test\"]]],[[0,1,0],[[],\"test\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("test", { "string",{ array,"test" } })("", { "number","test" }), { { "ahoj",{ 12 } } });
+	};
+	tst.test("Validator.range", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, ">",0,"<",10,"string" }), {"ahoj",4});
+	};
+	tst.test("Validator.range.fail", "[[[1],[[],\">\",0,\"<\",10,\"string\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, ">",0,"<",10,"string" }), { "ahoj",15 });
+	};
+	tst.test("Validator.range.multiple", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, ">",0,"<",10,">=","A","<=","Z" }), { "A",5 });
+	};
+	tst.test("Validator.range.multiple.fail", "[[[0],[[],\">\",0,\"<\",10,\">=\",\"A\",\"<=\",\"Z\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, ">",0,"<",10,">=","A","<=","Z" }), { "a",5 });
+	};
+	tst.test("Validator.fnAll", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "all","hex",{">=","0","<=","9"} } ), "01255");
+	};
+	tst.test("Validator.fnAll.fail", "[[[],[\">=\",\"0\",\"<=\",\"9\"]],[[],[\"all\",\"hex\",[\">=\",\"0\",\"<=\",\"9\"]]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { "all","hex",{ ">=","0","<=","9" } }), "A589");
+	};
+	tst.test("Validator.fnAll.fail2", "[[[],\"hex\"],[[],[\"all\",\"hex\",[\">=\",\"0\",\"<=\",\"9\"]]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { "all","hex",{ ">=","0","<=","9" } }), "lkoo");
+	};
 }
 
 

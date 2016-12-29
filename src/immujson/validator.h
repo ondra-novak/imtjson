@@ -201,8 +201,6 @@ public:
 	static StrViewA strString;
 	static StrViewA strNumber;
 	static StrViewA strBoolean;
-	static StrViewA strArray;
-	static StrViewA strObject;
 	static StrViewA strAny;
 	static StrViewA strBase64;
 	static StrViewA strHex;
@@ -215,15 +213,14 @@ public:
 	static StrViewA strDigits;
 	static StrViewA strInteger;
 	static StrViewA strNative;
-	static StrViewA strSet;
-	static StrViewA strEnum;
-	static StrViewA strTuple;
-	static StrViewA strVarTuple;
-	static StrViewA strRangeOpenOpen;
-	static StrViewA strRangeOpenClose;
-	static StrViewA strRangeCloseOpen;
-	static StrViewA strRangeCloseClose;
-	static StrViewA strValue;
+	static StrViewA strNull;
+	static StrViewA strOptional;
+	static char valueEscape;
+	
+	static StrViewA strGreater;
+	static StrViewA strGreaterEqual;
+	static StrViewA strLess;
+	static StrViewA strLessEqual;
 	static StrViewA strMinSize;
 	static StrViewA strMaxSize;
 	static StrViewA strKey;
@@ -232,13 +229,7 @@ public:
 	static StrViewA strPrefix;
 	static StrViewA strSuffix;
 	static StrViewA strSplit;
-	static StrViewA strNull;
-	static StrViewA strOptional;
-	static StrViewA strSub;
-	static StrViewA strShift;
-	static char valueEscape;
-	static char argEscape;
-
+	static StrViewA strAll;
 
 
 
@@ -250,9 +241,8 @@ public:
 	 * @param args arguments if the rule. Array is always here
 	 * @param subject the item it is subject of validation
 	 */
-	virtual bool onNativeRuleAccept(const Value &subject,const StrViewA & ruleName, const Value &args);
+	virtual bool onNativeRule(const Value &subject, const StrViewA & ruleName) { return false; }
 
-	virtual bool onNativeRuleReject(const Value &subject,const StrViewA & ruleName, const Value &args);
 
 
 	///Validate the subject
@@ -260,13 +250,12 @@ public:
 	 *
 	 * @param subject item to validate
 	 * @param rule Name of rule to use (probably class).
-	 * @param args optionals arguments for the rule
 	 * @param path path to the subject. Default value expects root of the document. You can specify path if you are validating
 	 *  a part of the document.
 	 * @retval true validated
 	 * @retval false not valid
 	 */
-	bool validate(const Value &subject,const StrViewA &rule = StrViewA(), const Value &args = {}, const Path &path = Path::root);
+	bool validate(const Value &subject,const StrViewA &rule = StrViewA(), const Path &path = Path::root);
 
 
 	///Constructs validator above validator-definition (described above)
@@ -292,9 +281,25 @@ public:
 protected:
 
 
-	bool validateInternal(const Value &subject,const StrViewA &rule, const Value &args);
+	bool validateInternal(const Value &subject,const StrViewA &rule);
 
+	bool evalRuleSubObj(const Value & subject, const Value & rule, const StrViewA & key);
 
+	bool evalRuleSubObj(const Value & subject, const Value & rule, unsigned int index);
+
+	bool evalRuleSubObj(const Value & subject, const Value & rule, unsigned int index, unsigned int offset);
+
+	bool evalRule(const Value & subject, const Value & ruleLine);
+
+	int evalRuleWithParams(const Value & subject, const Value & rule, bool alreadyAccepted);
+
+	bool evalRuleArray(const Value & subject, const Value & rule, unsigned int tupleCnt);
+
+	int evalRuleAlternatives(const Value & subject, const Value & rule, unsigned int offset, bool alreadyAccepted);
+
+	bool evalRuleSimple(const Value & subject, const Value & rule);
+
+	
 	///Definition
 	Value def;
 
@@ -303,29 +308,18 @@ protected:
 
 	///current path (for logging)
 	const Path *curPath;
-	///Arguments for current class (should be an array)
-	const Value *curArgs;
 
 
-	bool validateRuleLine(const Value& subject, const Value& ruleLine);
-	bool validateRuleLine2(const Value& subject, const Value& ruleLine, unsigned int offset);
-	bool validateObject(const Value& subject, const Value& ruleLine, const Value& extraRules);
-	bool validateSingleRuleForAccept(const Value& subject, const Value& ruleLine);
-	bool validateSingleRuleForReject(const Value& subject, const Value& ruleLine);
-	bool evalRuleAccept(const Value& subject, StrViewA name, const Value& args);
-	bool evalRuleReject(const Value& subject, StrViewA name, const Value& args);
-	bool checkClassAccept(const Value& subject, StrViewA name, const Value& args);
-	bool checkClassReject(const Value& subject, StrViewA name, const Value& args);
+	bool evalRuleObject(const Value & subject, const Value & templateObj);
 
-	bool checkKey(const Value &subject, const Value &args);
+	bool checkClass(const Value& subject, StrViewA name);
+
 
 	bool opPrefix(const Value &subject, const Value &args);
 
 	bool opSuffix(const Value &subject, const Value &args);
-	bool opTuple(const Value &subject, const Value &args, bool varTuple);
 	bool opSplit(const Value &subject, std::size_t at, const Value &left, const Value &right);
 
-	Value argDeref(const Value &arg) const;
 
 	void addRejection(const Path &path, const Value &rule);
 };
