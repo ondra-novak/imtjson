@@ -674,6 +674,59 @@ namespace json {
 		template<typename T>
 		static Value from(const T &v) {return ConvValueFrom<T>::convert(v);}
 
+		///Determines, whether two values are "same"
+		/** When values are copied, they are shared instead performing a deep copy.
+		This function determines, whether the values has been created by copying one
+		from the other (so they are shared). In contrast to comparison operation, this
+		function just compares internal pointers without comparison of actual values
+
+		@code
+		Value a = 42;
+		Value b = 42;
+		Value c = a;
+		
+
+		bool b1 = a == b; // b1=true
+		bool b2 = a == c; // b2=true
+		bool b3 = a.same(b); // b3=false
+		bool b4 = a.same(c); // b4=true
+		@endcode
+
+		@param other other object
+
+		@retval true object are the same
+		@retval false object are not same (however, they can be still equal)
+
+		@note Some values are statically allocated, so even if they are created separatedly,
+		the function can still return true. This is the case of following values:
+		 an empty array, an empty object, an empty string, boolean values, null, and number zero
+		*/
+		bool same(const Value &other) const {
+			return v->unproxy() == other.v->unproxy();
+		}
+		
+		///Allows to order values by internal address
+		/**
+		 Every value has internal address. This function allows to make order of
+		 values by is internall address. Function can make storing some values in
+		 sets easyier especially objects and array, where comparison of each value can
+		 be inefficient. However, ordering doesn't reflect the value.
+
+		 @param other other object
+
+		 @retval true this object is before the other object
+		 @retval false this object is not before the other object, or they are the same.
+
+		 @note Some values are statically allocated, so even if they are created separatedly,
+		 the function can still return false, because they are considered as the same. 
+		 This is the case of following values:
+		 an empty array, an empty object, an empty string, boolean values, null, and number zero
+
+		*/
+		bool before(const Value &other) const {
+			return v->unproxy() < other.v->unproxy();
+		}
+
 protected:
 
 		PValue v;

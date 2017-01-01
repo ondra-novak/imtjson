@@ -55,17 +55,17 @@ void runValidatorTests(TestSimple &tst) {
 	tst.test("Validator.arrayMixed","ok") >> [](std::ostream &out) {
 		vtest(out,Object("",{array,"number","boolean"}),{12,32,87,true,12});
 	};
-	tst.test("Validator.array.fail","[[[1],[[],\"number\"]]]") >> [](std::ostream &out) {
+	tst.test("Validator.array.fail","[[[1],\"number\"]]") >> [](std::ostream &out) {
 		vtest(out,Object("",{array,"number"}),{12,"pp",32,87,21});
 	};
-	tst.test("Validator.arrayMixed-fail","[[[2],[[],\"number\",\"boolean\"]]]") >> [](std::ostream &out) {
+	tst.test("Validator.arrayMixed-fail","[[[2],\"number\"],[[2],\"boolean\"]]") >> [](std::ostream &out) {
 		vtest(out,Object("",{array,"number","boolean"}),{12,32,"aa",87,true,12});
 	};
 	tst.test("Validator.array.limit","ok") >> [](std::ostream &out) {
 		vtest(out,Object("",{{array,"number"},{"maxsize",3}}),{10,20,30});
 	};
-	tst.test("Validator.array.limit-fail","[[[],[[[],\"number\"],[\"maxsize\",3]]]]") >> [](std::ostream &out) {
-		vtest(out,Object("",{{array,"number"},{"maxsize",3}}),{10,20,30,40});
+	tst.test("Validator.array.limit-fail","[[[],[\"maxsize\",3]]]") >> [](std::ostream &out) {
+		vtest(out,Object("",{"all",{array,"number"},{"maxsize",3}}),{10,20,30,40});
 	};
 	tst.test("Validator.tuple","ok") >> [](std::ostream &out) {
 		vtest(out, Object("", { {3},"number","string","string" }), { 12,"abc","cdf" });
@@ -110,29 +110,140 @@ void runValidatorTests(TestSimple &tst) {
 		vtest(out, Object("test", { "string",{array,"test"} })("", { array, "number","test" }), { 10,{{"aaa"}} });
 	};
 
-	tst.test("Validator.recursive.fail", "[[[0,1,0],[\"string\",[[],\"test\"]]],[[0,1,0],[[],\"test\"]]]") >> [](std::ostream &out) {
+	tst.test("Validator.recursive.fail", "[[[],\"number\"],[[],\"string\"],[[0,1,0],[[],\"test\"]],[[0,1,0],\"test\"],[[0,1],\"test\"],[[0],\"test\"],[[],\"test\"]]") >> [](std::ostream &out) {
 		vtest(out, Object("test", { "string",{ array,"test" } })("", { "number","test" }), { { "ahoj",{ 12 } } });
 	};
 	tst.test("Validator.range", "ok") >> [](std::ostream &out) {
-		vtest(out, Object("", { array, ">",0,"<",10,"string" }), {"ahoj",4});
+		vtest(out, Object("", { array, {">",0,"<",10} ,"string" } ), { "ahoj",4 });
 	};
-	tst.test("Validator.range.fail", "[[[1],[[],\">\",0,\"<\",10,\"string\"]]]") >> [](std::ostream &out) {
-		vtest(out, Object("", { array, ">",0,"<",10,"string" }), { "ahoj",15 });
+	tst.test("Validator.range.fail", "[[[0],[\">\",0,\"<\",10]],[[1],\"string\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, {">",0,"<",10},"string" }), { "ahoj",15 });
 	};
 	tst.test("Validator.range.multiple", "ok") >> [](std::ostream &out) {
-		vtest(out, Object("", { array, ">",0,"<",10,">=","A","<=","Z" }), { "A",5 });
+		vtest(out, Object("", { array, {">",0,"<",10},{">=","A","<=","Z" } }), { "A",5 });
 	};
-	tst.test("Validator.range.multiple.fail", "[[[0],[[],\">\",0,\"<\",10,\">=\",\"A\",\"<=\",\"Z\"]]]") >> [](std::ostream &out) {
-		vtest(out, Object("", { array, ">",0,"<",10,">=","A","<=","Z" }), { "a",5 });
+	tst.test("Validator.range.multiple.fail", "[[[0],[\">\",0,\"<\",10]],[[0],[\">=\",\"A\",\"<=\",\"Z\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, {">",0,"<",10},{">=","A","<=","Z" } }), { "a",5 });
 	};
 	tst.test("Validator.fnAll", "ok") >> [](std::ostream &out) {
-		vtest(out, Object("", { "all","hex",{">=","0","<=","9"} } ), "01255");
+		vtest(out, Object("", { "all","hex",">=","0","<=","9", "#comment" } ), "01255");
 	};
-	tst.test("Validator.fnAll.fail", "[[[],[\">=\",\"0\",\"<=\",\"9\"]],[[],[\"all\",\"hex\",[\">=\",\"0\",\"<=\",\"9\"]]]]") >> [](std::ostream &out) {
-		vtest(out, Object("", { "all","hex",{ ">=","0","<=","9" } }), "A589");
+	tst.test("Validator.fnAll.fail", "[[[],[\"all\",\"hex\",\">=\",\"0\",\"<=\",\"9\",\"#comment\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { "all","hex", ">=","0","<=","9", "#comment"  }), "A589");
 	};
-	tst.test("Validator.fnAll.fail2", "[[[],\"hex\"],[[],[\"all\",\"hex\",[\">=\",\"0\",\"<=\",\"9\"]]]]") >> [](std::ostream &out) {
+	tst.test("Validator.fnAll.fail2", "[[[],\"hex\"]]") >> [](std::ostream &out) {
 		vtest(out, Object("", { "all","hex",{ ">=","0","<=","9" } }), "lkoo");
+	};
+	tst.test("Validator.prefix.ok", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "prefix","abc." }), "abc.123");
+	};
+	tst.test("Validator.prefix.fail", "[[[],[\"prefix\",\"abc.\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { "prefix","abc." }), "abd.123");
+	};
+	tst.test("Validator.suffix.ok", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "suffix",".abc" }), "123.abc");
+	};
+	tst.test("Validator.suffix.fail", "[[[],[\"suffix\",\".abc\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { "suffix",".abc" }), "123.abd");
+	};
+	tst.test("Validator.prefix.tonumber.ok", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "prefix","abc.", {"tonumber",{">",100}} }), "abc.123");
+	};
+	tst.test("Validator.suffix.tonumber.ok", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "suffix",".abc",{ "tonumber",{ ">",100 } } }), "123.abc");
+	};
+	tst.test("Validator.comment.any", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "#comment","any" }), 123);
+	};
+	tst.test("Validator.comment.any2", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "#comment","any" }), "3232");
+	};
+	tst.test("Validator.comment.any.fail", "[[[],\"#comment\"],[[],\"any\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { "#comment","any" }), undefined);
+	};
+	tst.test("Validator.enum1", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", {"'aaa","'bbb","'ccc" }), "aaa");
+	};
+	tst.test("Validator.enum2", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "'aaa","'bbb","'ccc" }), "bbb");
+	};
+	tst.test("Validator.enum3", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "'aaa","'bbb","'ccc" }), "ccc");
+	};
+	tst.test("Validator.enum4", "[[[],\"'aaa\"],[[],\"'bbb\"],[[],\"'ccc\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { "'aaa","'bbb","'ccc" }), "ddd");
+	};
+	tst.test("Validator.enum5", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { 111,222,333 }), 111);
+	};
+	tst.test("Validator.enum6", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { 111,222,333 }),222);
+	};
+	tst.test("Validator.enum7", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { 111,222,333 }), 333);
+	};
+	tst.test("Validator.enum8", "[[[],[111,222,333]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { 111,222,333 }), "111");
+	};
+	tst.test("Validator.set1", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, 1,2,3 }), { 1,2 });
+	};
+	tst.test("Validator.set2", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, 1,2,3 }), { 1,3 });
+	};
+	tst.test("Validator.set3", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, 1,2,3 }), array);
+	};
+	tst.test("Validator.set4", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, 1,2,3 }), { 2,3 });
+	};
+	tst.test("Validator.set5", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, 1,2,3 }), { 2, 3,3 });
+	};
+	tst.test("Validator.set6", "[[[1],[[],1,2,3]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, 1,2,3 }), { 2,4});
+	};
+	tst.test("Validator.prefix-array.ok", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "prefix",{"a","b"} }), { "a","b","c","d" });
+	};
+	tst.test("Validator.prefix-array.fail", "[[[],[\"prefix\",[\"a\",\"b\"]]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { "prefix",{ "a","b" } }), { "a","c","b","d" });
+	};
+	tst.test("Validator.suffix-arrau.ok", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { "suffix",{ "c","d" } }), { "a","b","c","d" });
+	};
+	tst.test("Validator.suffix-array.fail", "[[[],[\"suffix\",[\"c\",\"d\"]]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { "suffix",{ "c","d" } }), { "a","c","b","d" });
+	};
+	tst.test("Validator.key.ok", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", Object("%", { "all",{ "key",{"all","lowercase",{"maxsize",2} } },"number" })), Object("ab", 123)("cx", 456));
+	};
+	tst.test("Validator.key.fail", "[[[\"abc\"],[\"maxsize\",2]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", Object("%", { "all",{ "key",{ "all","lowercase",{ "maxsize",2 } } },"number" })), Object("abc", 123)("cx", 456));
+	};
+	tst.test("Validator.base64.ok", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", "base64"), "flZhTGlEYVRvUn5+flRlc1R+fg==");
+	};
+	tst.test("Validator.base64.fail1", "[[[],\"base64\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "base64"), "flZhTGl@YVRvUn5+flRlc1R+fg==");
+	};
+	tst.test("Validator.base64.fail2", "[[[],\"base64\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "base64"), "flZhTGlEYVRvUn5+flRlc1R+f===");
+	};
+	tst.test("Validator.base64.fail3", "[[[],\"base64\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "base64"), "flZhTGlEYVRvUn5+flRlc1R+f==");
+	};
+	tst.test("Validator.base64url.ok", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", "base64url"), "flZhTGlEYVRvUn5_flRlc1R_fg==");
+	};
+	tst.test("Validator.base64url.fail1", "[[[],\"base64url\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "base64url"), "flZhTGlEYVRvUn5+flRlc1R+fg==");
+	};
+	tst.test("Validator.not1", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("", { array, {"not",1,2,3} }), { 10,20 });
+	};
+	tst.test("Validator.not2", "[[[0],[\"not\",1,2,3]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", { array,{ "not",1,2,3 } }), { 1,3 });
 	};
 }
 

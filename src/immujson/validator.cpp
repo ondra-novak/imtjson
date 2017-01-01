@@ -17,6 +17,7 @@ StrViewA Validator::strNumber = "number";
 StrViewA Validator::strBoolean = "boolean";
 StrViewA Validator::strAny = "any";
 StrViewA Validator::strBase64 = "base64";
+StrViewA Validator::strBase64url = "base64url";
 StrViewA Validator::strHex = "hex";
 StrViewA Validator::strUppercase = "uppercase";
 StrViewA Validator::strLowercase = "lowercase";
@@ -42,7 +43,9 @@ StrViewA Validator::strGreaterEqual = ">=";
 StrViewA Validator::strLess = "<";
 StrViewA Validator::strLessEqual = "<=";
 StrViewA Validator::strAll = "all";
+StrViewA Validator::strNot = "not";
 char Validator::valueEscape = '\'';
+char Validator::commentEscape = '#';
 
 
 bool Validator::validate(const Value& subject, const StrViewA& rule, const Path &path) {
@@ -117,21 +120,28 @@ static bool opHex(const Value &v) {
 
 static bool opBase64(const Value &v) {
 	StrViewA str = v.getString();
+	if (str.empty()) return false;
 	if (str.length % 4 != 0) return false;
-	for (std::size_t i = 0; i < str.length; i++) {
+	std::size_t len = str.length;
+	if (str[len - 1] == '=') len--;
+	if (str[len - 1] == '=') len--;
+	for (std::size_t i = 0; i < len; i++) {
 		char c = str[i];
-		if (c == '=') {
-			if (i - str.length > 2) return false;
-			i++;
-			while (i < str.length) {
-				c = str[i];
-				if (c != '=') return false;
-				i++;
-			}
-			return true;
+		if (!isalnum(c) && c != '/' && c != '+') return false;
+	}
+	return true;
+}
 
-		}
-		if (!isalnum(c) && c != '_' && c != '-' && c != '/' && c != '+') return false;
+static bool opBase64url(const Value &v) {
+	StrViewA str = v.getString();
+	if (str.empty()) return false;
+	if (str.length % 4 != 0) return false;
+	std::size_t len = str.length;
+	if (str[len - 1] == '=') len--;
+	if (str[len - 1] == '=') len--;
+	for (std::size_t i = 0; i < len; i++) {
+		char c = str[i];
+		if (!isalnum(c) && c != '-' && c != '_') return false;
 	}
 	return true;
 }
@@ -223,8 +233,8 @@ bool Validator::evalRuleSubObj(const Value& subject, const Value& rule, unsigned
 	StackSave<const Path *> _(curPath);
 	Path newPath(*curPath, index);
 	curPath = &newPath;
-	int i = evalRuleAlternatives(subject, rule, offset, false);
-	if (i < 1) {
+	bool b = evalRuleAlternatives(subject, rule, offset);
+	if (!b) {
 		addRejection(*curPath, rule);
 		return false;
 	}
@@ -239,10 +249,11 @@ bool Validator::evalRule(const Value& subject, const Value& rule) {
 	bool res;
 	switch (rule.type()) {
 	case object: res = evalRuleObject(subject, rule); break;
-	case array: res = (evalRuleWithParams(subject, rule, false) == 1); break;
+	case array: res = evalRuleWithParams(subject, rule); break;
 	case string: res = evalRuleSimple(subject, rule); break;
 	case undefined: res = false; break;
-	default: return subject == rule;
+	default: 
+		return subject == rule;
 	}
 
 	if (res == false) {
@@ -252,66 +263,108 @@ bool Validator::evalRule(const Value& subject, const Value& rule) {
 
 }
 
-int Validator::evalRuleWithParams(const Value& subject, const Value& rule, bool alreadyAccepted) {
+bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 	if (rule.empty()) {
-		return subject.type() == array ? 1 : 0;
+		return subject.type() == array && subject.empty();
 	}
 	else {
 		Value fn = rule[0];
 		if (fn.type() == array) {
 			if (fn.empty()) {
-				return alreadyAccepted ? 0 : (evalRuleArray(subject, rule, 0) ? 1 : 0);
+				return evalRuleArray(subject, rule, 0);
 			}
 			else if (fn.size() == 1 && fn[0].type() == number) {
-				return alreadyAccepted ? 0 : (evalRuleArray(subject, rule, fn[0].getInt()) ? 1 : 0);
+				return evalRuleArray(subject, rule, fn[0].getInt());
 			}
 			else {
-				return evalRuleAlternatives(subject, rule, 0, alreadyAccepted);
+				return evalRuleAlternatives(subject, rule, 0);
 			}
 		}
 		else if (fn.type() == string) {
 			StrViewA token = fn.getString();
 			if (token == strMinSize) {
-				return checkMinSize(subject, rule[1].getUInt()) ? 0 : -1;
+				return checkMinSize(subject, rule[1].getUInt());
 			}
 			if (token == strMaxSize) {
-				return checkMaxSize(subject, rule[1].getUInt()) ? 0 : -1;
+				return checkMaxSize(subject, rule[1].getUInt());
 			}
 			if (token == strKey) {
 				Value newSubj = subject.getKey();
-				return evalRuleAlternatives(subject, rule, 1, alreadyAccepted);
+				return evalRuleAlternatives(newSubj, rule, 1);
 			}
 			if (token == strToString) {
 				Value newSubj = subject.toString();
-				return evalRuleAlternatives(subject, rule, 1, alreadyAccepted);
+				return evalRuleAlternatives(newSubj, rule, 1);
 			}
 			if (token == strToNumber) {
 				Value newSubj = subject.getNumber();
-				return evalRuleAlternatives(subject, rule, 1, alreadyAccepted);
+				return evalRuleAlternatives(newSubj, rule, 1);
 			}
 			if (token == strPrefix) {
-				return alreadyAccepted ? 0 : opPrefix(subject, rule) ? 1 : 0;
+				return opPrefix(subject, rule);
 			}
 			if (token == strSuffix) {
-				return alreadyAccepted ? 0 : opSuffix(subject, rule) ? 1 : 0;
+				return opSuffix(subject, rule);
 			}
 			if (token == strSplit) {
-				return alreadyAccepted ? 0 : opSplit(subject, rule[1].getUInt(),rule[2],rule[3]) ? 1 : 0;
+				return opSplit(subject, rule[1].getUInt(),rule[2],rule[3]);
 			}
-			if (token == strAll) {
-				for (std::size_t cnt = rule.size(), i = 1; i < cnt; i++) {
-					if (!evalRule(subject, rule[i])) return 0;
-				}
-				return true;
+			if (token == strGreater || token == strGreaterEqual || token == strLess || token == strLessEqual ) {
+				return opRangeDef(subject, rule, 0);
 			}
-			return evalRuleAlternatives(subject, rule, 0, alreadyAccepted);
+			if ( token == strAll) {
+				return opRangeDef(subject, rule, 1);
+			}
+			if (token == strNot) {
+				return !evalRuleAlternatives(subject, rule, 1);
+			}
+			return evalRuleAlternatives(subject, rule, 0);
 			
 		}
 		else {
-			return evalRuleAlternatives(subject, rule, 0, alreadyAccepted);
+			return evalRuleAlternatives(subject, rule, 0);
 		}
 	}
 }
+
+bool Validator::opRangeDef(const Value& subject, const Value& rule, std::size_t offset) {
+	std::size_t pos = offset;
+	std::size_t cnt = rule.size();
+	while (pos < cnt) {
+		Value v = rule[pos++];
+		if (v.type() == string) {
+			StrViewA name = v.getString();
+			if (name.substr(0, 1) == StrViewA(&commentEscape, 1)) 
+				continue;
+			if (name == strLess) {
+				Value p = rule[pos++];
+				if (p.type() != subject.type() || !isLess(subject, p)) return false; // subject >= p
+			}
+			else if (name == strGreaterEqual) {
+				Value p = rule[pos++];
+				if (p.type() != subject.type() || isLess(subject, p)) return false; //  subject < p
+			} 
+			else if (name == strGreater) {
+				Value p = rule[pos++];
+				if (p.type() != subject.type() || !isLess(p, subject)) return false; // subject <= p
+			}
+			else if (name == strLessEqual) {
+				Value p = rule[pos++];
+				if (p.type() != subject.type() || isLess(p, subject)) return false; //subject > p
+			} 
+			else {
+				if (!evalRule(subject, v)) return false;
+			}
+		}
+		else {
+			
+			if (!evalRule(subject, v)) return false;
+		}
+	}
+	return true;
+
+}
+
 
 bool Validator::evalRuleArray(const Value& subject, const Value& rule, unsigned int tupleCnt) {
 	if (subject.type() != array) return false;
@@ -327,52 +380,14 @@ bool Validator::evalRuleArray(const Value& subject, const Value& rule, unsigned 
 	return true;
 }
 
-int Validator::evalRuleAlternatives(const Value& subject, const Value& rule, unsigned int offset, bool alreadyAccepted) {
+bool Validator::evalRuleAlternatives(const Value& subject, const Value& rule, unsigned int offset) {
 	unsigned int pos = offset;
 	unsigned int cnt = rule.size();
 	while (pos < cnt) {
 		Value v = rule[pos++];
-		if (v.type() == array) {
-			int r = evalRuleWithParams(subject, v, alreadyAccepted);
-			if (r == -1) return -1;
-			if (r == 1) alreadyAccepted = true;
-		}
-		else {
-			StrViewA name = v.getString();
-			if (name == strGreater) {
-				Value p = rule[pos++];
-				if (p.type() == subject.type()) {
-					alreadyAccepted = true;
-					if (!isLess(p, subject)) return -1;
-				}
-			}
-			else if (name == strGreaterEqual) {
-				Value p = rule[pos++];
-				if (p.type() == subject.type()) {
-					alreadyAccepted = true;
-					if (isLess(subject, p)) return -1;
-				}
-			}
-			else if (name == strLess) {
-				Value p = rule[pos++];
-				if (p.type() == subject.type()) {
-					alreadyAccepted = true;
-					if (!isLess(subject, p)) return -1;
-				}
-			}
-			else if (name == strLessEqual) {
-				Value p = rule[pos++];
-				if (p.type() == subject.type()) {
-					alreadyAccepted = true;
-					if (isLess(p, subject)) return -1;
-				}
-			}
-			else if (!alreadyAccepted) {
-				if (evalRuleSimple(subject, v))  alreadyAccepted = true;
-			}
-		}
+		if (evalRule(subject, v)) return true;		
 	}
-	return alreadyAccepted ? 1 : 0;
+	return false;
 }
 
 bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
@@ -383,6 +398,9 @@ bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	}
 	else if (name.data[0] == valueEscape) {
 		return subject.getString() == name.substr(1);
+	}
+	else if (name.data[0] == commentEscape) {
+		return false;
 	}
 	else if (name == strString) {
 		return subject.type() == string;
@@ -407,6 +425,9 @@ bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	}
 	else if (name == strBase64) {
 		return opBase64(subject.toString());
+	}
+	else if (name == strBase64url) {
+		return opBase64url(subject.toString());
 	}
 	else if (name == strUppercase) {
 		return opUppercase(subject.toString());
@@ -555,14 +576,14 @@ bool Validator::opPrefix(const Value& subject, const Value& args) {
 	if (pfix.type() == array) {
 		auto spl = subject.splitAt((int)pfix.size());
 		if (spl.first != pfix)  return false;
-		if (rule.defined()) return evalRule(spl.second, rule);
+		if (rule.defined()) return evalRuleAlternatives(spl.second, args,2);
 		return true;
 	}
 	else {
 		StrViewA txt = subject.getString();
 		StrViewA str = pfix.getString();
 		if (txt.substr(0, str.length) != str) return false;
-		if (rule.defined()) return evalRule(txt.substr(str.length), rule);
+		if (rule.defined()) return evalRuleAlternatives(txt.substr(str.length), args,2);
 		return true;
 	}
 
@@ -574,7 +595,7 @@ bool Validator::opSuffix(const Value& subject, const Value& args) {
 	if (sfix.type() == array) {
 		auto spl = subject.splitAt(-(int)sfix.size());
 		if (spl.second != sfix)  return false;
-		if (rule.defined()) return evalRule(spl.first, rule);
+		if (rule.defined()) return evalRuleAlternatives(spl.first, args,2);
 		return true;
 
 	}
@@ -584,7 +605,7 @@ bool Validator::opSuffix(const Value& subject, const Value& args) {
 		if (txt.length < str.length) return false;
 		std::size_t pos = txt.length - str.length;
 		if (txt.substr(pos) != str) return false;
-		if (args.size() > 2) return evalRule(txt.substr(0, pos), rule);		
+		if (args.size() > 2) return evalRuleAlternatives(txt.substr(0, pos), args,2);		
 		return true;
 	}
 }
@@ -596,15 +617,36 @@ bool Validator::opSplit(const Value& subject, std::size_t at, const Value& left,
 }
 
 void Validator::addRejection(const Path& path, const Value& rule) {
-	Value vp = path.toValue();
-	if (!rejections.empty()) {
-		Value pvp = rejections[rejections.size()-1][0];
-		if (pvp.size()>vp.size() && pvp.splitAt((int)vp.size()).first == vp) return;
+	if (rule == lastRejectedRule) return;
+	for (Value v : rule) {
+		if (v.same(lastRejectedRule)) {
+			lastRejectedRule = rule;
+			return;
+		}
 	}
+	Value vp = path.toValue();
 	if (rule.defined())
 		rejections.add({ vp, rule });
 	else
 		rejections.add({ vp, "undefined" });
+
+	lastRejectedRule = rule;
+
+	/*
+	if (!rejections.empty()) {
+		std::size_t e = rejections.size() - 1;
+		Value pvp = rejections[e][0];
+		Value pr = rejections[e][1];
+		if (pvp.size()>vp.size() && pvp.splitAt((int)vp.size()).first == vp) 
+			//path is part of previous path - we don't need to report this rejection
+			return;
+		else if (pvp == vp) {
+			for (Value v : rule) if (v == pr) 
+				//path are same, and rule contains the previous rule
+				//- we don't need to report this rejection
+				return;
+		}
+	}*/
 }
 
 }

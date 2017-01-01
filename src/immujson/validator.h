@@ -13,182 +13,6 @@
 #include "value.h"
 
 
-/*
- * JSON structure validation
- *
- * Two jsons, first defines the structure, second JSON is tested, whether it matches the definition
- *
-
- The validation structure is an object:
-
- {
-    "rule-name-1":[.... rules...],
-	"rule-name-2":[.... rules...],
-	....
-	"" : [... main rules...]
-
- }
-
- If not otherwise specified, the main rule is the rule with the empty name. However,
- the validator can be configured to validate agains other rule.
-
- The name of the rule can be any string expept some reserved words, that will be described
- below. It is recomended to start the name with capital, because it is similar to a class
- definition.
-
- {
-    "Person" : [..... ],
- }
-
- The rules can be described using following types:
-
-  - object {...} - it says, that the class (name + rules) is always object.
-  - string - where the string is name of a type or class. Specifies which type od data can be stored here
-  - number - it requires exact value at given place
-  - boolean - it requires exact value at given place
-  - null - it requires null at given place
-  - array - primarly allows to specify multiple types or classes. For example, the
-             definition ["string","number"] allows to have at the place string or number.
-			 You can use classes as well: ["Person","Subject"]
-
- {
-   "Person": {
-               "name":"string",
-			   "age":"number",
-			   "children":["array:","Person","optional"],
-			   "parents":["tuple:",["Person","Person"],"Person","optional],
-
-             }
- }
-
- Above example defines Person as object, which has up to four fields: "name", "age",
- "children", "parents", where children and parents are optional. The "name" is a string,
- the "age" is a number. The field "children" is array of Person. Using the rule
- recursively is allowed. The field "children" is optional, so it can be ommited. The
- field "parents" can be tuple (array) with two Persons, or single Person (object) and
- it is also optional
-
- Table of single types
- "string"   - a string
- "number"   - a number
- "boolean"  - a boolean
- "array"    - any array (content is not validated)
- "object"   - any object (content is not validated)
- "any"      - any value of any type
- "base64"   - base64 string
- "hex"      - hex number
- "uppercase" - uppercase string
- "lowercase" - lowercase string
- "identifier" - C/C++ identifier
- "camelcase" - camelcase string
- "alpha"     - just alphabetic string
- "alnum"     - just apha or numbers
- "strnum"   - string, which can be converted to a number
- "integer"  - number without decimal dot
- {...}       - object with validation
- null       - null value
- "native"   - declares, that rule is evaluated by user defined function. This
-                keyword can be used only along with class. If
-				such rule is evaluated, the apropriate call back function
-				is called. The declaration only checks, that such native 
-				function exists.
-"$N"        - Nth argument of user class invokation
-
- Constants in definition
- true       - true must be there
- false      - false must be there
- 123        - specified number must be there
-
- "'string"  - putting single quote before the string defines string constant"
-                     "Offer":{
-					            "type": "'offer",
-								....
-					         } 
-			  Above example requires to have "offer" in the field type, otherwise
-			    the rule is rejected. This constant can be used instead the
-				type declaraction. If a value is expected, than the single
-				quote is part of the string.
-				 Equivalent: "type":["value:","offer"],
-
-
-Definitions with argument
-
-putting the array into definition allows parametrized definition
-
-["type1","type2",["type_with_arg",arg1,arg2,arg3,...],"type3",...]
-
-
-["array",rule]       - specify allowed types of items in the array
-
-["set",val1,val2,val3 ...]   - array which works as set. You can put to the array only specified values
-
-["enum",val1,val2,val3 ...]   - one of specified value
-
-["object",{..template..}, type]  - more generic object validation
-                                      - template is object's template.
-                                      - type is default type for items not specified in the template, It is allowed to
-                                         have multiple types in [...]
-
-["tuple",valpos1,valpos2,valpos3, ...]  - array, where every position has defined type (or a value).
-                                   ["tuple","number","string",["number",null],["boolean","optional"] ] ->
-                                   -> [10,"xxx",20], [23,"abc",null], [42,"cde",null,true], ...
-
-["vartuple",valpos1,valpos2,valpos3,...,valposN] - same as tuple, but source can have more items. The last type specifies
-                                type of remaining items.
-                                ["vartuple","string","integer"] allows ["aaa",1] and ["aaa",1,2], but not ["aaa"]. If you
-                                need such function, you have to add "optional" to last rule
-                                  ["vartuple","string",["integer","optional"]]
-
-
-
-
-["()", val1, val2 ]           - opened interval (val1 = null menas -infinity, val2 = null means +infinity)
-["()", null, val2 ]           - (infinity, val2)
-["()", val1, null ]           - (val1, infinity)
-["<)", val1, val2 ]           - opened left interval, closed right interval
-["(>", val1, val2 ]           - closed left interval, opened right interval
-["<>", val1, val2 ]          - closed interval
-["value", val] -              - exact value.
-["max-size", number ]         - the item is rejected, when its size is above the specified number
-["min-size", number ]         - the item is rejected, when its size is below the specified number
-["key", rule] - the key must be of given type.
-                                     Because the keys are always strings, only string derived
-                                     types or string values or string ranges can be used.
-
-Transormations
-
-["to-string",rule ]            - converts item to string and validates against rules in arguments
-["to-number",rule ]            - converts item to number and validates against rules in arguments
-["suffix", "xxx", rule ]       - string needs to have suffix "xxx". Rest of string is validated against rules in arguments
-["prefix", "xxx", rule ]       - string needs to have prefix "xxx". Rest of string is validated against rules in arguments
-                                   example: ["prefix","flag","uppercase"] -> accepted: "flagXXX", rejected: "flag123", rejected: "fooBar"
-                                          -> "prefix(flag,uppercase)
-
-
-Shortcuts
-
-"type(arg,arg,arg)"  -> ["type","arg","arg","arg"]
-
-"key('foo)"   -> ["key","'foo"]
-"array(string)" ->["array","string"]
-"set(aaa,bbb,ccc)" -> ["set","aaa","bbb","ccc"]
-"enum(aaa,bbb,ccc)" -> ["enum","aaa","bbb","ccc"]
-"type1,type2,type3" -> ["type1","type2","type3"]
-"string,array(number)" -> ["string",["array","number"] ]
-
-
-all these shortcuts above all expanded as strings. They cannot be used with non-string parts. For examle "max-size(10)"
-will not work. The shortcut can be used as long as whole definition stays strings only. Each part of the
-string should not contain comma ',' and parenthesis
-
-["array",["()",0,10]] - cannot be written as shortcut
-["key",["max-size",3]] - cannot be written as shortcur
-
-
-Nesting is possible
-"array(array(number))" - 2D array of numbers -> ["array",["array","number"]]
-
-*/
 
 namespace json {
 
@@ -203,6 +27,7 @@ public:
 	static StrViewA strBoolean;
 	static StrViewA strAny;
 	static StrViewA strBase64;
+	static StrViewA strBase64url;
 	static StrViewA strHex;
 	static StrViewA strUppercase;
 	static StrViewA strLowercase;
@@ -215,8 +40,7 @@ public:
 	static StrViewA strNative;
 	static StrViewA strNull;
 	static StrViewA strOptional;
-	static char valueEscape;
-	
+
 	static StrViewA strGreater;
 	static StrViewA strGreaterEqual;
 	static StrViewA strLess;
@@ -230,7 +54,10 @@ public:
 	static StrViewA strSuffix;
 	static StrViewA strSplit;
 	static StrViewA strAll;
+	static StrViewA strNot;
 
+	static char valueEscape;
+	static char commentEscape;
 
 
 	///Evaluates the native rule
@@ -291,11 +118,13 @@ protected:
 
 	bool evalRule(const Value & subject, const Value & ruleLine);
 
-	int evalRuleWithParams(const Value & subject, const Value & rule, bool alreadyAccepted);
+	bool evalRuleWithParams(const Value & subject, const Value & rule);
+
+	bool opRangeDef(const Value & subject, const Value & rule, std::size_t offset);
 
 	bool evalRuleArray(const Value & subject, const Value & rule, unsigned int tupleCnt);
 
-	int evalRuleAlternatives(const Value & subject, const Value & rule, unsigned int offset, bool alreadyAccepted);
+	bool evalRuleAlternatives(const Value & subject, const Value & rule, unsigned int offset);
 
 	bool evalRuleSimple(const Value & subject, const Value & rule);
 
@@ -305,6 +134,7 @@ protected:
 
 
 	Array rejections;
+	Value lastRejectedRule;
 
 	///current path (for logging)
 	const Path *curPath;

@@ -1,0 +1,91 @@
+{
+	"": {
+		"%": "Rule"
+	},
+
+	"Rule": ["SimpleRule",
+		"FunctionRule",
+		"AlternateRule",
+		"ObjectRule", 
+		[], 
+		{}, 
+		"number", 
+		true, 
+		false, 
+		null, 
+		"#Definition of general rule"
+	],
+
+	"SimpleRule": [
+		"string",
+		"#Simple rules are all strings, including direct values and classes"
+	],
+
+	"FunctionRule": [
+		"All",
+		"Range",
+		"MinMaxSize",
+		"Key",
+		"ToString",
+		"ToNumber",
+		"PrefixSuffix",
+		"Split",
+		"Not",
+		"Array"
+		"Tuple"
+		"# Each function has different rules"
+	],
+
+
+	"EmptyArr": [],
+
+	"All": ["prefix", ["all"], "AllCont"],
+
+	"AllCont": ["EmptyArr", "Range", "AllItem"],
+
+	"RangeCmd": [
+		[2],
+		["`>", "'<", "'>=", "'<="], "any"
+	],
+	"Range": ["split", 2, "RangeCmd", "AllCont"],
+	"AllItem": ["split", 1, "Rule", "AllCont"],
+
+	"MinMaxSize": [
+		[2],
+		["'minsize", "'maxsize"], "number"
+	],
+
+	"Key": [
+		[1], "'key", "Rule"
+	],
+
+	"ToString": [
+		[1], "'tostring", "Rule"
+	],
+
+	"PrefixSuffix": [
+		[2],
+		["'prefix", "'suffix"],
+		["string", []], "Rule"
+	],
+
+	"Split": [
+		[4], "'split", "number", "Rule", "Rule"
+	],
+
+	"AlternateRule": [
+		[1], "SimpleRule", "Rule"
+	],
+
+	"Not": [
+		[1], "'not", "Rule"
+	],
+
+	"ObjectRule": {
+		"%": "Rule"
+	}
+
+	"Array": [[1],[],"Rule","#Array is tuple, where first argument is [], and second is Rule, others are optional"],
+	"Tuple": [[2],[[1],"Number"],"Rule","Rule","#Tuple is array with number specifying count of items"],
+
+}

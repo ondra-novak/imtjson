@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="compress.tcc" />
+    <None Include="validator.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1DBBBAD5-8C68-4187-818B-9A09A449A166}</ProjectGuid>
