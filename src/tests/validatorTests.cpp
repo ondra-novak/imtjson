@@ -6,6 +6,7 @@
  */
 
 #include <iostream>
+#include <fstream>
 #include "testClass.h"
 #include "../immujson/validator.h"
 #include "../immujson/object.h"
@@ -244,6 +245,17 @@ void runValidatorTests(TestSimple &tst) {
 	};
 	tst.test("Validator.not2", "[[[0],[\"not\",1,2,3]]]") >> [](std::ostream &out) {
 		vtest(out, Object("", { array,{ "not",1,2,3 } }), { 1,3 });
+	};
+	tst.test("Validator.selfValidate", "ok") >> [](std::ostream &out) {
+		std::ifstream fstr("src/immujson/validator.json", std::ios::binary);
+		Value def = Value::fromStream(fstr);
+		Validator vd(def);
+		if (vd.validate(def)) {
+			out << "ok";
+		}
+		else {
+			out << vd.getRejections().toString();
+		}
 	};
 }
 

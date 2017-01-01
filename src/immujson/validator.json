@@ -31,8 +31,8 @@
 		"PrefixSuffix",
 		"Split",
 		"Not",
-		"Array"
-		"Tuple"
+		"Array",
+		"Tuple",
 		"# Each function has different rules"
 	],
 
@@ -45,7 +45,7 @@
 
 	"RangeCmd": [
 		[2],
-		["`>", "'<", "'>=", "'<="], "any"
+		["'>", "'<", "'>=", "'<="], "any"
 	],
 	"Range": ["split", 2, "RangeCmd", "AllCont"],
 	"AllItem": ["split", 1, "Rule", "AllCont"],
@@ -61,6 +61,10 @@
 
 	"ToString": [
 		[1], "'tostring", "Rule"
+	],
+
+	"ToNumber": [
+		[1], "'tonumber", "Rule"
 	],
 
 	"PrefixSuffix": [
@@ -83,9 +87,17 @@
 
 	"ObjectRule": {
 		"%": "Rule"
-	}
+	},
 
 	"Array": [[1],[],"Rule","#Array is tuple, where first argument is [], and second is Rule, others are optional"],
-	"Tuple": [[2],[[1],"Number"],"Rule","Rule","#Tuple is array with number specifying count of items"],
+	"Tuple": [[2],[[1],"number"],"Rule","Rule","#Tuple is array with number specifying count of items"],
+
+	"TestRule1":[],
+	"TestRule2":{},
+	"TestRule3":123,
+	"TestRule4":true,
+	"TestRule5":false,
+	"TestRule6":null,
+	"TestRule7":["<",10,">",30,["tostring",["<","1"]]]
 
 }
