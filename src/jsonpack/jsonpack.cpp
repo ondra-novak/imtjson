@@ -1,6 +1,8 @@
 // jsonpack.cpp : Defines the entry point for the console application.
 //
-#include <io.h>
+#ifdef _WIN32
+	#include <io.h>
+#endif
 #include <fcntl.h>
 #include <fstream>
 #include "../immujson/json.h"

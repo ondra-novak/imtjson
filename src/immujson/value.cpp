@@ -51,6 +51,13 @@ namespace json {
 	Value::Value(const StringView<char>& value):v(allocString(value))
 	{
 	}
+	Value::Value(const StringView<Value>& value)
+	{
+		std::vector<PValue> pvs;
+		pvs.reserve(value.length);
+		for (Value z: value) pvs.push_back(z.getHandle());
+		v = new ArrayValue(std::move(pvs));
+	}
 
 	String Value::toString() const
 	{

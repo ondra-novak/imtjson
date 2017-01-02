@@ -59,7 +59,7 @@ Validator::Validator(const Value& definition):def(definition),curPath(nullptr) {
 }
 
 Value Validator::getRejections() const {
-	return rejections;
+	return StringView<Value>(rejections);
 }
 
 template<typename T>
@@ -230,6 +230,7 @@ bool Validator::evalRuleSubObj(const Value& subject, const Value& rule, unsigned
 	return evalRule(subject, rule);
 }
 bool Validator::evalRuleSubObj(const Value& subject, const Value& rule, unsigned int index, unsigned int offset) {
+	std::size_t rejsz = rejections.size();
 	StackSave<const Path *> _(curPath);
 	Path newPath(*curPath, index);
 	curPath = &newPath;
@@ -239,6 +240,7 @@ bool Validator::evalRuleSubObj(const Value& subject, const Value& rule, unsigned
 		return false;
 	}
 	else {
+		rejections.resize(rejsz);
 		return true;
 	}
 }
@@ -246,6 +248,7 @@ bool Validator::evalRuleSubObj(const Value& subject, const Value& rule, unsigned
 
 bool Validator::evalRule(const Value& subject, const Value& rule) {
 	
+	std::size_t rejsz = rejections.size();
 	bool res;
 	switch (rule.type()) {
 	case object: res = evalRuleObject(subject, rule); break;
@@ -258,6 +261,8 @@ bool Validator::evalRule(const Value& subject, const Value& rule) {
 
 	if (res == false) {
 		addRejection(*curPath, rule);
+	} else {
+		rejections.resize(rejsz);
 	}
 	return res;
 
@@ -392,6 +397,8 @@ bool Validator::evalRuleAlternatives(const Value& subject, const Value& rule, un
 
 bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	StrViewA name = rule.getString();
+
+
 
 	if (name.empty()) {
 		return false;
@@ -626,9 +633,9 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 	}
 	Value vp = path.toValue();
 	if (rule.defined())
-		rejections.add({ vp, rule });
+		rejections.push_back({ vp, rule });
 	else
-		rejections.add({ vp, "undefined" });
+		rejections.push_back({ vp, "undefined" });
 
 	lastRejectedRule = rule;
 

@@ -133,7 +133,7 @@ protected:
 	Value def;
 
 
-	Array rejections;
+	std::vector<Value> rejections;
 	Value lastRejectedRule;
 
 	///current path (for logging)
@@ -152,6 +152,8 @@ protected:
 
 
 	void addRejection(const Path &path, const Value &rule);
+
+
 };
 
 
