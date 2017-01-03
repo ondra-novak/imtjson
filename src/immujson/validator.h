@@ -7,9 +7,10 @@
 
 #ifndef IMMUJSON_VALIDATOR_H_
 #define IMMUJSON_VALIDATOR_H_
-#include "array.h"
+#include <vector>
 #include "path.h"
 #include "stringview.h"
+#include "string.h"
 #include "value.h"
 
 
@@ -144,6 +145,16 @@ protected:
 	///current path (for logging)
 	const Path *curPath;
 
+	struct VarDef {
+		String name;
+		Value value;
+		VarDef() {}
+		VarDef(const String &name, const Value &value) :name(name), value(value) {}
+	};
+
+	typedef std::vector<VarDef> VarList;
+	VarList varList;
+
 
 	bool evalRuleObject(const Value & subject, const Value & templateObj);
 
@@ -157,6 +168,12 @@ protected:
 
 
 	void addRejection(const Path &path, const Value &rule);
+	
+	void pushVar(String name, Value value);
+	void popVar();
+	Value findVar(const StrViewA &name);
+	Value getVar(const Value &path);
+
 
 
 };

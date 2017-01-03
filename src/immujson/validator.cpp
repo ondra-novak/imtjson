@@ -738,5 +738,60 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 	}*/
 }
 
+void Validator::pushVar(String name, Value value)
+{
+	varList.push_back(VarDef(name, value));
+}
+
+void Validator::popVar()
+{
+	if (!varList.empty()) varList.pop_back();
+}
+
+Value Validator::findVar(const StrViewA & name)
+{
+	std::size_t cnt = varList.size();
+	while (cnt > 0) {
+		cnt--;
+		if (StrViewA(varList[cnt].name) == name) return varList[cnt].value;
+	}
+	return undefined;
+}
+
+Value Validator::getVar(const Value & path)
+{
+	if (path.type() == array && !path.empty()) {
+		Value n = path[0];
+		if (n.type() == string) {
+
+			Value x = findVar(n.getString());
+			if (x.defined()) {
+
+				std::size_t cnt = path.size();
+				for (std::size_t i = 1; i < cnt; i++) {
+					Value p = path[i];
+					switch (p.type()) {
+					case string: x = x[p.getString()]; break;
+					case number: x = x[p.getUInt()]; break;
+					case array: {
+						p = getVar(p);
+						switch (p.type()) {
+						case string: x = x[p.getString()]; break;
+						case number: x = x[p.getUInt()]; break;
+						default: return path;
+						}
+
+					} break;
+					default: return path;
+					}
+				}
+				return x;
+			}
+		}
+	}
+	return path;
+}
+
+
 }
 
