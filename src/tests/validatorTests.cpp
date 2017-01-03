@@ -246,6 +246,63 @@ void runValidatorTests(TestSimple &tst) {
 	tst.test("Validator.not2", "[[[0],[\"not\",1,2,3]]]") >> [](std::ostream &out) {
 		vtest(out, Object("", { array,{ "not",1,2,3 } }), { 1,3 });
 	};
+	tst.test("Validator.datetime","ok") >> [](std::ostream &out) {
+		vtest(out, Object("", "datetime"), "2016-12-20T12:38:00Z");
+	};
+	tst.test("Validator.datetime.fail1","[[[],\"datetime\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "datetime"), "2016-13-20T12:38:00Z");
+	};
+	tst.test("Validator.datetime.fail2","[[[],\"datetime\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "datetime"), "2016-00-20T12:38:00Z");
+	};
+	tst.test("Validator.datetime.leap.fail","[[[],\"datetime\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "datetime"), "2015-02-29T12:38:00Z");
+	};
+	tst.test("Validator.datetime.leap.ok","ok") >> [](std::ostream &out) {
+		vtest(out, Object("", "datetime"), "2016-02-29T12:38:00Z");
+	};
+	tst.test("Validator.datetime.fail3","[[[],\"datetime\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "datetime"), "2016-01-29T25:38:00Z");
+	};
+	tst.test("Validator.datetime.fail4","[[[],\"datetime\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "datetime"), "2016-12-20T12:70:00Z");
+	};
+	tst.test("Validator.datetime.fail5","[[[],\"datetime\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "datetime"), "2016-12-20T12:38:72Z");
+	};
+	tst.test("Validator.datetime.fail6","[[[],\"datetime\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "datetime"), "K<oe23HBY932pPLO(*JN");
+	};
+	tst.test("Validator.date.ok","ok") >> [](std::ostream &out) {
+		vtest(out, Object("", "date"), "1985-10-17");
+	};
+	tst.test("Validator.date.fail","[[[],\"date\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "date"), "1985-10-17 EOX");
+	};
+	tst.test("Validator.time.ok","ok") >> [](std::ostream &out) {
+		vtest(out, Object("", "timez"), "12:50:34Z");
+	};
+	tst.test("Validator.time.fail","[[[],\"timez\"]]") >> [](std::ostream &out) {
+		vtest(out, Object("", "timez"), "A2xE0:34Z");
+	};
+	tst.test("Validator.customtime.ok","ok") >> [](std::ostream &out) {
+		vtest(out, Object("", {"datetime","DD.MM.YYYY hh:mm:ss"} ), "02.04.2004 12:32:46");
+	};
+	tst.test("Validator.customtime.fail","[[[],[\"datetime\",\"DD.MM.YYYY hh:mm:ss\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("", {"datetime","DD.MM.YYYY hh:mm:ss"} ), "2016-12-20T12:38:72Z");
+	};
+	tst.test("Validator.entime.ok1","ok") >> [](std::ostream &out) {
+		vtest(out, Object("tm",{ {"datetime","M:mm"},{"datetime","MM:mm"} })("",{{"suffix","am","tm"},{"suffix","pm"}}), "1:23am");
+	};
+	tst.test("Validator.entime.ok2","ok") >> [](std::ostream &out) {
+		vtest(out, Object("tm",{ {"datetime","M:mm"},{"datetime","MM:mm"} })("",{{"suffix","am","tm"},{"suffix","pm"}}), "11:45pm");
+	};
+	tst.test("Validator.entime.fail1","[[[],[\"datetime\",\"M:mm\"]],[[],[\"datetime\",\"MM:mm\"]],[[],\"tm\"],[[],[\"suffix\",\"pm\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("tm",{ {"datetime","M:mm"},{"datetime","MM:mm"} })("",{{"suffix","am","tm"},{"suffix","pm"}}), "13:23am");
+	};
+	tst.test("Validator.entime.fail2","[[[],[\"suffix\",\"am\",\"tm\"]],[[],[\"suffix\",\"pm\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("tm",{ {"datetime","M:mm"},{"datetime","MM:mm"} })("",{{"suffix","am","tm"},{"suffix","pm"}}), "2:45xa");
+	};
 	tst.test("Validator.selfValidate", "ok") >> [](std::ostream &out) {
 		std::ifstream fstr("src/immujson/validator.json", std::ios::binary);
 		Value def = Value::fromStream(fstr);

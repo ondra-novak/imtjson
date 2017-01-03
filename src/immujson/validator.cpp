@@ -5,6 +5,7 @@
  *      Author: ondra
  */
 
+#include <cstdarg>
 #include "validator.h"
 #include "array.h"
 #include "string.h"
@@ -44,6 +45,12 @@ StrViewA Validator::strLess = "<";
 StrViewA Validator::strLessEqual = "<=";
 StrViewA Validator::strAll = "all";
 StrViewA Validator::strNot = "not";
+StrViewA Validator::strDateTime = "datetime";
+StrViewA Validator::strDateTimeZ = "datetimez";
+StrViewA Validator::strDate = "date";
+StrViewA Validator::strTimeZ = "timez";
+StrViewA Validator::strTime = "time";
+
 char Validator::valueEscape = '\'';
 char Validator::commentEscape = '#';
 
@@ -210,6 +217,63 @@ static bool opIsInteger(const Value &v) {
 
 
 
+
+static bool checkDateTimeGen(const StrViewA &format, const StrViewA &text) {
+	if (format.length != text.length) return false;
+
+	unsigned int D = 0, //day
+	M = 0, //month
+	Y = 0, //year
+	h = 0, //hour
+	m = 0, //minute
+	s = 0, //second
+	c = 0, //milisec
+	O = 0, //offset hour
+	o = 0; //offset minute
+
+	bool hasD = false, hasM = false, hasY = false;
+
+	for (std::size_t cnt = format.length, i  = 0; i < cnt; i++) {
+		char c = format[i];
+		char d = text[i];
+		char ac = d - '0';
+		bool digit = true;
+		switch (c) {
+		case 'D': D = (D * 10) + ac; hasD = true;break;
+		case 'M': M = (M * 10) + ac; hasM = true;break;
+		case 'Y': Y = (Y * 10) + ac; hasY = true;break;
+		case 'h': h = (h * 10) + ac; break;
+		case 'm': m = (m * 10) + ac; break;
+		case 's': s = (s * 10) + ac; break;
+		case 'c': c = (c * 10) + ac; break;
+		case 'O': O = (O * 10) + ac; break;
+		case 'o': o = (O * 10) + ac; break;
+		case '+': if (d != '-' && d != '+') return false;
+				  digit = false;
+				  break;
+		default: if (d != c) return false;
+ 				  digit = false;
+			      break;
+
+		}
+		if (digit && !isdigit(d)) return false;
+	}
+
+	if (hasM && (M == 0 || M > 12)) return false;
+	if (hasD && hasM) {
+		const unsigned int days[2][12] = {
+				{31,28,31,30,31,30,31,31,30,31,30,31},
+				{31,29,31,30,31,30,31,31,30,31,30,31}
+				};
+		bool isleap = ((Y % 4 == 0 && Y % 100 != 0) || ( Y % 400 == 0));
+		const unsigned int *d = days[isleap?1:0];
+		if (D == 0 || D > d[M-1]) return false;
+	}
+	if (h>23 || m>59 || s>59) return false;
+	if (O>23 || o>59) return false;
+	return true;
+}
+
 bool Validator::validateInternal(const Value& subject, const StrViewA& rule) {
 
 
@@ -319,6 +383,9 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 			}
 			if ( token == strAll) {
 				return opRangeDef(subject, rule, 1);
+			}
+			if (token == strDateTime) {
+				return checkDateTimeGen(rule[1].getString(),subject.toString());
 			}
 			if (token == strNot) {
 				return !evalRuleAlternatives(subject, rule, 1);
@@ -447,6 +514,18 @@ bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	}
 	else if (name == strAlnum) {
 		return opAlnum(subject.toString());
+	}
+	else if (name == strDateTime || name == strDateTimeZ) {
+		return checkDateTimeGen("YYYY-MM-DDThh:mm:ssZ", subject.toString());
+	}
+	else if (name == strDate) {
+		return checkDateTimeGen("YYYY-MM-DD", subject.toString());
+	}
+	else if (name == strTime) {
+		return checkDateTimeGen("hh:mm:ss", subject.toString());
+	}
+	else if (name == strTimeZ) {
+		return checkDateTimeGen("hh:mm:ssZ", subject.toString());
 	}
 	else if (name == strDigits) {
 		return opDigits(subject.toString());
@@ -622,6 +701,9 @@ bool Validator::opSplit(const Value& subject, std::size_t at, const Value& left,
 	Value::TwoValues s = subject.splitAt((int)at);
 	return evalRule(s.first,left) && evalRule(s.second,right);
 }
+
+
+
 
 void Validator::addRejection(const Path& path, const Value& rule) {
 	if (rule == lastRejectedRule) return;

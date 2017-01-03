@@ -40,6 +40,10 @@ public:
 	static StrViewA strNative;
 	static StrViewA strNull;
 	static StrViewA strOptional;
+	static StrViewA strDateTimeZ;
+	static StrViewA strDate;
+	static StrViewA strTimeZ;
+	static StrViewA strTime;
 
 	static StrViewA strGreater;
 	static StrViewA strGreaterEqual;
@@ -55,6 +59,7 @@ public:
 	static StrViewA strSplit;
 	static StrViewA strAll;
 	static StrViewA strNot;
+	static StrViewA strDateTime;
 
 	static char valueEscape;
 	static char commentEscape;
