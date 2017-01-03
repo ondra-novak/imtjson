@@ -117,7 +117,7 @@ void runValidatorTests(TestSimple &tst) {
 	tst.test("Validator.range", "ok") >> [](std::ostream &out) {
 		vtest(out, Object("", { array, {">",0,"<",10} ,"string" } ), { "ahoj",4 });
 	};
-	tst.test("Validator.range.fail", "[[[0],[\">\",0,\"<\",10]],[[1],\"string\"]]") >> [](std::ostream &out) {
+	tst.test("Validator.range.fail", "[[[1],\"string\"]]") >> [](std::ostream &out) {
 		vtest(out, Object("", { array, {">",0,"<",10},"string" }), { "ahoj",15 });
 	};
 	tst.test("Validator.range.multiple", "ok") >> [](std::ostream &out) {
