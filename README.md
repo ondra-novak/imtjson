@@ -3,5 +3,5 @@ JSON library written in pure C++ with immutable structure only!
 
 Choose language
 
-* [Czech](navod.md)
+* [Czech](docs/navod.md)
 * English - sorry, not yet :(
