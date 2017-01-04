@@ -50,6 +50,8 @@ StrViewA Validator::strDateTimeZ = "datetimez";
 StrViewA Validator::strDate = "date";
 StrViewA Validator::strTimeZ = "timez";
 StrViewA Validator::strTime = "time";
+StrViewA Validator::strSetVar = "setvar";
+StrViewA Validator::strUseVar = "usevar";
 
 char Validator::valueEscape = '\'';
 char Validator::commentEscape = '#';
@@ -352,10 +354,10 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 		else if (fn.type() == string) {
 			StrViewA token = fn.getString();
 			if (token == strMinSize) {
-				return checkMinSize(subject, rule[1].getUInt());
+				return checkMinSize(subject, getVar(rule[1]).getUInt());
 			}
 			if (token == strMaxSize) {
-				return checkMaxSize(subject, rule[1].getUInt());
+				return checkMaxSize(subject, getVar(rule[1]).getUInt());
 			}
 			if (token == strKey) {
 				Value newSubj = subject.getKey();
@@ -376,7 +378,7 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 				return opSuffix(subject, rule);
 			}
 			if (token == strSplit) {
-				return opSplit(subject, rule[1].getUInt(),rule[2],rule[3]);
+				return opSplit(subject, getVar(rule[1]).getUInt(),rule[2],rule[3]);
 			}
 			if (token == strGreater || token == strGreaterEqual || token == strLess || token == strLessEqual ) {
 				return opRangeDef(subject, rule, 0);
@@ -385,10 +387,19 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 				return opRangeDef(subject, rule, 1);
 			}
 			if (token == strDateTime) {
-				return checkDateTimeGen(rule[1].getString(),subject.toString());
+				return checkDateTimeGen(getVar(rule[1]).getString(),subject.toString());
 			}
 			if (token == strNot) {
 				return !evalRuleAlternatives(subject, rule, 1);
+			}
+			if (token == strSetVar) {
+				return opSetVar(subject, rule);
+			}
+			if (token == strUseVar) {
+				return opUseVar(subject, rule);
+			}
+			if (findVar(token).defined()) {
+				return opCompareVar(subject,rule);
 			}
 			return evalRuleAlternatives(subject, rule, 0);
 			
@@ -409,19 +420,19 @@ bool Validator::opRangeDef(const Value& subject, const Value& rule, std::size_t 
 			if (name.substr(0, 1) == StrViewA(&commentEscape, 1)) 
 				continue;
 			if (name == strLess) {
-				Value p = rule[pos++];
+				Value p = getVar(rule[pos++]);
 				if (p.type() != subject.type() || !isLess(subject, p)) return false; // subject >= p
 			}
 			else if (name == strGreaterEqual) {
-				Value p = rule[pos++];
+				Value p = getVar(rule[pos++]);
 				if (p.type() != subject.type() || isLess(subject, p)) return false; //  subject < p
 			} 
 			else if (name == strGreater) {
-				Value p = rule[pos++];
+				Value p = getVar(rule[pos++]);
 				if (p.type() != subject.type() || !isLess(p, subject)) return false; // subject <= p
 			}
 			else if (name == strLessEqual) {
-				Value p = rule[pos++];
+				Value p = getVar(rule[pos++]);
 				if (p.type() != subject.type() || isLess(p, subject)) return false; //subject > p
 			} 
 			else {
@@ -657,7 +668,7 @@ bool Validator::checkClass(const Value& subject, StrViewA name) {
 
 }
 bool Validator::opPrefix(const Value& subject, const Value& args) {
-	Value pfix = args[1];
+	Value pfix = getVar(args[1]);
 	Value rule = args[2];
 	if (pfix.type() == array) {
 		auto spl = subject.splitAt((int)pfix.size());
@@ -676,7 +687,7 @@ bool Validator::opPrefix(const Value& subject, const Value& args) {
 }
 
 bool Validator::opSuffix(const Value& subject, const Value& args) {
-	Value sfix = args[1];
+	Value sfix = getVar(args[1]);
 	Value rule = args[2];
 	if (sfix.type() == array) {
 		auto spl = subject.splitAt(-(int)sfix.size());
@@ -792,6 +803,27 @@ Value Validator::getVar(const Value & path)
 	return path;
 }
 
+bool Validator::opSetVar(const Value& subject, const Value& args) {
+	Value var = args[1];
+	if (var.defined()) {
+		pushVar(var, subject);
+		bool res= evalRuleAlternatives(subject, args,2);
+		popVar();
+		return res;
+	} else {
+		return false;
+	}
+}
+
+bool Validator::opUseVar(const Value& subject, const Value& args) {
+	Value var = getVar(args[1]);
+	if (var.defined()) return evalRuleAlternatives(var, args, 2);
+	else return false;
+}
+
+bool Validator::opCompareVar(const Value &subject, const Value &rule) {
+	return subject == getVar(rule);
+}
 
 }
 

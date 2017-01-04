@@ -61,6 +61,8 @@ public:
 	static StrViewA strAll;
 	static StrViewA strNot;
 	static StrViewA strDateTime;
+	static StrViewA strSetVar;
+	static StrViewA strUseVar;
 
 	static char valueEscape;
 	static char commentEscape;
@@ -175,6 +177,9 @@ protected:
 	Value getVar(const Value &path);
 
 
+	bool opSetVar(const Value &subject, const Value &args);
+	bool opUseVar(const Value &subject, const Value &args);
+	bool opCompareVar(const Value &subject, const Value &rule);
 
 };
 

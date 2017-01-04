@@ -303,6 +303,24 @@ void runValidatorTests(TestSimple &tst) {
 	tst.test("Validator.entime.fail2","[[[],[\"suffix\",\"am\",\"tm\"]],[[],[\"suffix\",\"pm\"]]]") >> [](std::ostream &out) {
 		vtest(out, Object("tm",{ {"datetime","M:mm"},{"datetime","MM:mm"} })("",{{"suffix","am","tm"},{"suffix","pm"}}), "2:45xa");
 	};
+	tst.test("Validator.setvar1","ok") >> [](std::ostream &out) {
+		vtest(out, Object("",{"setvar","test",Object("aaa",{"test","bbb"})("bbb","number")}), Object("aaa",10)("bbb",10));
+	};
+	tst.test("Validator.setvar1.fail","[[[\"aaa\"],[\"test\",\"bbb\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("",{"setvar","test",Object("aaa",{"test","bbb"})("bbb","number")}), Object("aaa",20)("bbb",10));
+	};
+	tst.test("Validator.setvar2","ok") >> [](std::ostream &out) {
+		vtest(out, Object("",{"setvar","test",Object("aaa",{"<",{"test","bbb"}})("bbb","number")}), Object("aaa",10)("bbb",20));
+	};
+	tst.test("Validator.setvar2.fail","[[[\"aaa\"],[\"<\",[\"test\",\"bbb\"]]]]") >> [](std::ostream &out) {
+		vtest(out, Object("",{"setvar","test",Object("aaa",{"<",{"test","bbb"}})("bbb","number")}), Object("aaa",10)("bbb",5));
+	};
+	tst.test("Validator.setvar3","ok") >> [](std::ostream &out) {
+		vtest(out, Object("",{"setvar","test",Object("count","digits")("data",{"maxsize",{"test","count"}})}), Object("count",3)("data",{10,20,30}));
+	};
+	tst.test("Validator.setvar3.fail","[[[\"data\"],[\"maxsize\",[\"test\",\"count\"]]]]") >> [](std::ostream &out) {
+		vtest(out, Object("",{"setvar","test",Object("count","digits")("data",{"maxsize",{"test","count"}})}), Object("count",3)("data",{10,20,30,40}));
+	};
 	tst.test("Validator.selfValidate", "ok") >> [](std::ostream &out) {
 		std::ifstream fstr("src/immujson/validator.json", std::ios::binary);
 		Value def = Value::fromStream(fstr);
