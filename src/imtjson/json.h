@@ -1,4 +1,4 @@
-//include everything from immujson
+//include everything from imtjson
 #include "object.h"
 #include "array.h"
 #include "serializer.h"

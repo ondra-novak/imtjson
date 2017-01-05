@@ -5,8 +5,8 @@
 #endif
 #include <fcntl.h>
 #include <fstream>
-#include "../immujson/json.h"
-#include "../immujson/compress.tcc"
+#include "../imtjson/json.h"
+#include "../imtjson/compress.tcc"
 
 
 

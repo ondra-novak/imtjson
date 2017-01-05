@@ -162,7 +162,7 @@ namespace json {
 		 *
 		 * @note The instance of Object2Array refers to parent array by a reference. If you
 		 * chaining the instances you have to assure, that none of these instances will be destroyed
-		 * before the final instance is committed. The immujson library has some mechanism to detect such
+		 * before the final instance is committed. The imtjson library has some mechanism to detect such
 		 * situation and breaking the mentioned rule can cause an exception.
 		 */
 		Object2Array object(std::size_t pos);
@@ -177,7 +177,7 @@ namespace json {
 		 *
 		 * @note The instance of Array2Array refers to parent array by a reference. If you
 		 * chaining the instances you have to assure, that none of these instances will be destroyed
-		 * before the final instance is committed. The immujson library has some mechanism to detect such
+		 * before the final instance is committed. The imtjson library has some mechanism to detect such
 		 * situation and breaking the mentioned rule can cause an exception.
 		 */
 		Array2Array array(std::size_t pos);

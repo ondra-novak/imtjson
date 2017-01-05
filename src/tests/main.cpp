@@ -13,10 +13,10 @@
 
 #include <memory>
 #include <fstream>
-#include "../immujson/json.h"
-#include "../immujson/compress.tcc"
-#include "../immujson/basicValues.h"
-#include "../immujson/comments.h"
+#include "../imtjson/json.h"
+#include "../imtjson/compress.tcc"
+#include "../imtjson/basicValues.h"
+#include "../imtjson/comments.h"
 #include "testClass.h"
 
 using namespace json;
@@ -856,7 +856,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	tst.test("compress.utf-8","ok") >> [](std::ostream &out) {
 		if (compressTest("src/tests/test2.json")) out << "ok"; else out << "not same";
 	};
-#if 0 //removed because immujson is leaving allocated some objects which are deleted at-exit
+#if 0 //removed because imtjson is leaving allocated some objects which are deleted at-exit
 	{
 		//memory leaks
 		//out of test class, because it can affect the test

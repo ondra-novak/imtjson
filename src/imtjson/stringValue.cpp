@@ -13,7 +13,7 @@
 
 namespace json {
 
-static const StringView<char> magic("immujson");
+static const StringView<char> magic("imtjson");
 
 void *StringValue::putMagic(void *obj) {
 	StringValue *s = reinterpret_cast<StringValue *>(obj);

@@ -10,7 +10,7 @@ Od ostatních běžně dostupných knihoven se odlišuje zejména důrazem na im
 
 ## Immutabilita
 
-Immutabilita - neměnnost - se u JSONu projevuje zejména při práci s kontejnery. Týká se to hodnot typů **array** a **object**. Zatímco u jiných knihoven a v *javascriptu* se změna kteréhokoliv prvku pole nebo objektu projeví všude tam, kde je příslušný kontejner referencovaný, u knihovny **immujson** toto (záměrně) není možné. Příklad
+Immutabilita - neměnnost - se u JSONu projevuje zejména při práci s kontejnery. Týká se to hodnot typů **array** a **object**. Zatímco u jiných knihoven a v *javascriptu* se změna kteréhokoliv prvku pole nebo objektu projeví všude tam, kde je příslušný kontejner referencovaný, u knihovny **imtjson** toto (záměrně) není možné. Příklad
 
 ```
 var a = {"x":10,"y":20,"z":30}

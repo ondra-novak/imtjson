@@ -146,7 +146,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ProjectReference Include="..\immujson\immujson.vcxproj">
+    <ProjectReference Include="..\imtjson\imtjson.vcxproj">
       <Project>{1dbbbad5-8c68-4187-818b-9a09a449a166}</Project>
     </ProjectReference>
   </ItemGroup>

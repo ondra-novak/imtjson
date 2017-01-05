@@ -76,7 +76,7 @@ PPath Path::copy() const {
 	PPath out(copyRecurse(start,strbuff));
 
 	if (*cookie != StackProtected::cookieValue)
-		throw std::runtime_error("FATAL: immujson - Corrupted memory!");
+		throw std::runtime_error("FATAL: imtjson - Corrupted memory!");
 	return out;
 }
 

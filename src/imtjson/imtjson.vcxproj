@@ -67,7 +67,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1DBBBAD5-8C68-4187-818B-9A09A449A166}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>immujson</RootNamespace>
+    <RootNamespace>imtjson</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
