@@ -1,8 +1,8 @@
-#ImmuJSON - česká příručka
+#ImtJSON - česká příručka
 
-## Popis knihovny ImmuJSON
+## Popis knihovny ImtJSON
 
-Knihovna ImmuJSON zajišťuje parsování a serializaci formátu JSON, dále pak správu dat načtenych z JSON, úpravu dat a tvorbu nových dat ve objektech, které lze serializovat do formátu JSON.
+Knihovna ImtJSON zajišťuje parsování a serializaci formátu JSON, dále pak správu dat načtenych z JSON, úpravu dat a tvorbu nových dat ve objektech, které lze serializovat do formátu JSON.
 
 Knihovna je určena pro programovací jazyk C++ verze 11 a vyšší
 
@@ -19,7 +19,7 @@ b.x = 40;
 console.log(a.x); //< prints '40'
 ```
 
-Přepisem proměnné 'x' v objektu, který obsahuje proměnná 'b' se přepis projeví i v proměnné 'a'.Výše uvedená technika není v knihovně ImmuJSON přípustná. Knihovna ImmuJSON to řeší tak, že každá změna v obsahu kontejneru způsobí vytvoření nové instance kontejneru, původní kontejner se nezmění. Toto pravidlo může zdánlivě způsobovat zpomalení programu, nicméně přináší spoustu výhod, které mohou mít v celkovém souhrnu zjednodušení kódu a možná i zrychlení.
+Přepisem proměnné 'x' v objektu, který obsahuje proměnná 'b' se přepis projeví i v proměnné 'a'.Výše uvedená technika není v knihovně ImtJSON přípustná. Knihovna ImtJSON to řeší tak, že každá změna v obsahu kontejneru způsobí vytvoření nové instance kontejneru, původní kontejner se nezmění. Toto pravidlo může zdánlivě způsobovat zpomalení programu, nicméně přináší spoustu výhod, které mohou mít v celkovém souhrnu zjednodušení kódu a možná i zrychlení.
 
 ## Výhody a nevýhody immutability
 
@@ -40,7 +40,7 @@ Přepisem proměnné 'x' v objektu, který obsahuje proměnná 'b' se přepis pr
  
 ## Jak na změny v prostředí immutability?
 
-Každá změna znamená vytvoření nové instance kontejneru, ať je to pole nebo objekt. Aby během modifikace kontejneru nedocházelo k vytváření mnoho instancí, které jsou následně zahozeny při dalších modifikaci, nabízí knihovna ImmuJSON speciální objekty, tzv "buildery". To jsou objekty ve kterých dochází k dílčím úpravám v kontejneru. Tyto úpravy probíhájí pouze v rámci aktuální funkce, která změnu realizuje. V okamžiku, kdy je změna hotová, provede se operace "commit", která způsobí vytvoření nové instance JSON hodnoty, která je již plně immutabilní. Vnitřní obsah builderu přitom není možné sdílet, ani začlenit do struktury, jediná cesta vede přes commit.
+Každá změna znamená vytvoření nové instance kontejneru, ať je to pole nebo objekt. Aby během modifikace kontejneru nedocházelo k vytváření mnoho instancí, které jsou následně zahozeny při dalších modifikaci, nabízí knihovna ImtJSON speciální objekty, tzv "buildery". To jsou objekty ve kterých dochází k dílčím úpravám v kontejneru. Tyto úpravy probíhájí pouze v rámci aktuální funkce, která změnu realizuje. V okamžiku, kdy je změna hotová, provede se operace "commit", která způsobí vytvoření nové instance JSON hodnoty, která je již plně immutabilní. Vnitřní obsah builderu přitom není možné sdílet, ani začlenit do struktury, jediná cesta vede přes commit.
 
 K dispozici jsou dva základní buildery. **Array** a **Object**, podle typu kontejneru
 
@@ -71,7 +71,7 @@ Velice podobně se pracuje s **Array**.
 
 # Přehled možností knihovny 
 
-Detaily jednotlivých funkcí lze najít přímo v dokumentaci ve zdrojácích. V této části jsou uvedeny jen ty důležité části a aspekty práce s ImmuJSON, které nejsou při čtení referenčí příručky hned patrné
+Detaily jednotlivých funkcí lze najít přímo v dokumentaci ve zdrojácích. V této části jsou uvedeny jen ty důležité části a aspekty práce s ImtJSON, které nejsou při čtení referenčí příručky hned patrné
 
 ## Parsování formátu JSON
 
@@ -110,11 +110,11 @@ Výše uvedený příklad serializuje JSON do otevřeného soketu.
 ## Typy, které lze uložit v instanci třídy Value
 
  * **`number`** - jakékoliv číslo. Znamenková a neznamenková celá čísla využívají bitovou šířku aktuální platformy. Čísla s plovoucí čárkou a číslo s rozsahem mimo počet bitů platformy se ukládají jako **double**. Typ čísla nerozlišuje způsob uložení, nicméně rozhranní nabízí funkci, přes kterou lze získat informaci o způsobu uložení - viz **Value::flags()**
- * **`string`** - aktuální verze ImmuJSON podporuje pouze 8bitové znaky. Znaky mezinárodních abeced jsou kódované pomocí UTF-8. Pokud se v JSONu objevuje escape sekvence \uXXXX je při parsování převedena na UTF-8 sekvenci. Parser také normalizuje UTF-8 sekvence, pokud by byly prodloužené.
+ * **`string`** - aktuální verze ImtJSON podporuje pouze 8bitové znaky. Znaky mezinárodních abeced jsou kódované pomocí UTF-8. Pokud se v JSONu objevuje escape sekvence \uXXXX je při parsování převedena na UTF-8 sekvenci. Parser také normalizuje UTF-8 sekvence, pokud by byly prodloužené.
  * **`boolean`** - hodnota true nebo false
  * **`object`** - kontejner, kde lze hodnoty adresovat pomocí klíče. Objekty jsou vždy řazeny podle klíče (binární řazení). Na pořadí klíčů ve zdrojovém JSONu se nebere ohled.
  * **`array`** - kontejner hodnot adresovaných pomocí pořadí (pozice). Hodnoty jsou indexované od čísla 0 do čísla velikost-1
- * **`null`** - ImmuJSON považuje hodnotu **null** za běžnou hodnotu, kterou lze zapsat do libovolného kontejnetu 
+ * **`null`** - ImtJSON považuje hodnotu **null** za běžnou hodnotu, kterou lze zapsat do libovolného kontejnetu 
  * **`undefined`** - Hodnota tohoto typu představuje proměnnou bez hodnoty, tedy i bez hodnotu null. Nelze ji serializovat, nejde ji uložit do kontejneru. Naopak, pokud je hodnotou **undefined** přepsána jiná hodnota v kontejneru, je to považováno za smazání přepisované hodnoty. Tato hodnota se také objevuje v případě, že dojde k pokusu adresovat neexistující hodnotu v kontejneru. Pozor také, že **(undefined == undefined) == false**
  
 ## Přístupy k obsahu
@@ -207,7 +207,7 @@ Pokud je funkce getKey volána na hodnotu, která nebyla získána z objektu, pa
 
 ## Zápis jsonu v kódu
 
-Rozhraní ImmuJSON klade důraz na přehledný a přitom jednoznačný zápis JSONu přímo do kódu. V C++ není možné zapisovat JSON tak jak je zvykem u Javascriptu, přesto má C++ dost syntaxtických prostředků,jak se pohodlí javascriptu co nejvíce přiblížit
+Rozhraní ImtJSON klade důraz na přehledný a přitom jednoznačný zápis JSONu přímo do kódu. V C++ není možné zapisovat JSON tak jak je zvykem u Javascriptu, přesto má C++ dost syntaxtických prostředků,jak se pohodlí javascriptu co nejvíce přiblížit
 
 ### Zápis hodnot
 
@@ -364,7 +364,7 @@ Všechny změny provedené přes Array se nezapistují do původního objektu. J
 
 ### String
 
-Pro snažší manipulaci se stringem a také pro uložení výhradně řetězcových hodnot nabízí knihovna ImmuJSON třídu **String**. Využívá hodnotu typu string, kterou při kopírování sdílí stejně jako jakoukoliv jinou hodnotu. String v knihovně nelze měnit stejně jako ostatní objekty, pouze lze vytvořit změněnou kopii. Lze jej tedy použít pro
+Pro snažší manipulaci se stringem a také pro uložení výhradně řetězcových hodnot nabízí knihovna ImtJSON třídu **String**. Využívá hodnotu typu string, kterou při kopírování sdílí stejně jako jakoukoliv jinou hodnotu. String v knihovně nelze měnit stejně jako ostatní objekty, pouze lze vytvořit změněnou kopii. Lze jej tedy použít pro
 uložení řetězců v různých datových struktůrách, které se zároveň různě přesouvají nebo kopírují, přičemž samotný string se pouze po celou dobu
 sdílí.
 
@@ -394,7 +394,7 @@ Cestu lze také sestavit pomocí lomítek
 ```
 cout << v[Path::root/"abc"/2/"xyz"].toString()
 ```
-Pozor jen, že cesta sestavená pomocí lomitek **se nesmí uložit** do proměnné **Path**. Celé se to komplikuje tím, že překladač často nedokáže takové použití cesty podchytit a upozornit na chybu. Knihovna ImmuJSON implementuje jakýsi mechanismus detekce, kdy neplatné použití cesty způsobí výjimku
+Pozor jen, že cesta sestavená pomocí lomitek **se nesmí uložit** do proměnné **Path**. Celé se to komplikuje tím, že překladač často nedokáže takové použití cesty podchytit a upozornit na chybu. Knihovna ImtJSON implementuje jakýsi mechanismus detekce, kdy neplatné použití cesty způsobí výjimku
 
 ```
 //NESPRÁVNÝ ZPŮSOB (ale překladač ho přeloží)
