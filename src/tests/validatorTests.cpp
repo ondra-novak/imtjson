@@ -8,9 +8,9 @@
 #include <iostream>
 #include <fstream>
 #include "testClass.h"
-#include "../immujson/validator.h"
-#include "../immujson/object.h"
-#include "../immujson/string.h"
+#include "../imtjson/validator.h"
+#include "../imtjson/object.h"
+#include "../imtjson/string.h"
 
 using namespace json;
 
@@ -322,7 +322,7 @@ void runValidatorTests(TestSimple &tst) {
 		vtest(out, Object("",{"setvar","test",Object("count","digits")("data",{"maxsize",{"test","count"}})}), Object("count",3)("data",{10,20,30,40}));
 	};
 	tst.test("Validator.selfValidate", "ok") >> [](std::ostream &out) {
-		std::ifstream fstr("src/immujson/validator.json", std::ios::binary);
+		std::ifstream fstr("src/imtjson/validator.json", std::ios::binary);
 		Value def = Value::fromStream(fstr);
 		Validator vd(def);
 		if (vd.validate(def)) {

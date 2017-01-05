@@ -1,6 +1,6 @@
 #include <fstream>
-#include "../immujson/json.h"
-#include "../immujson/validator.h"
+#include "../imtjson/json.h"
+#include "../imtjson/validator.h"
 
 using namespace json;
 
