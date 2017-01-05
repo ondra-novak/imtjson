@@ -1,0 +1,17 @@
+{
+"":"Person",
+"Person":{
+      "name":"string",
+      "birthyear":[">=",1900,"<=",2020],
+      "sex":["optional","'male","'female"],
+      "children":["optional",[[],"Person"]],
+      "parents":[[2],"Parent","Parent"],
+      "properties":[[],"Property"]
+      },
+"Parent":[ "'unknown", "Person"],
+"Property":{
+        "name":"string",
+        "price":"number",
+        "flags":[[],"'movable","'wearable","'unique","'crafted","'eatable","'drinkable"] 
+       }
+}
