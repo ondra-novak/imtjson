@@ -21,7 +21,7 @@ void *StringValue::putMagic(void *obj) {
 	return obj;
 }
 
-json::StringValue::StringValue(const StringView<char>& str, bool isBinary):size(str.length),isBinary(isBinary) {
+json::StringValue::StringValue(const StringView<char>& str):size(str.length) {
 	char *trg = charbuff;
 	if (StringView<char>(trg,magic.length) != magic) throw std::runtime_error("StringView must be allocated by special new operator");
 	std::memcpy(trg, str.data, str.length);
@@ -72,10 +72,6 @@ double json::AbstractStringValue::getNumber() const {
 void json::StringValue::stringOverflow() {
 	std::cerr << "String buffer overflow, aborting" << std::endl << std::flush;
 	abort();
-}
-
-ValueTypeFlags StringValue::flags() const {
-	if (isBinary) return binaryString; else return 0;
 }
 
 

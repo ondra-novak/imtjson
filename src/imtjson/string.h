@@ -75,7 +75,7 @@ public:
 	 * The function returns count of written characters. Returned value must be
 	 * less or equal to initial size, otherwise the function abort() is called for security reasons
 	 */
-	String(std::size_t sz, std::function<std::size_t(char *)> fillFn, bool isBinary = false);
+	String(std::size_t sz, std::function<std::size_t(char *)> fillFn);
 
 
 	///Retrieve substring
@@ -164,9 +164,6 @@ public:
 	 * @retval false string is not defined.
 	 */
 	bool defined() const {return impl->type() == string;}
-
-	///returns true, if string is marked binary
-	bool isBinary() const {return impl->flags() & binaryString;}
 
 
 	PValue getHandle() const;

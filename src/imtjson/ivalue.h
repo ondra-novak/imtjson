@@ -72,12 +72,6 @@ namespace json {
 	 */
 	const ValueTypeFlags objectDiff = 16;
 
-	/// States that object is binary string
-	/** Binary string has been constructred through BinaryView and it is converted to Base64 during
-	 * serialization.
-	 */
-	const ValueTypeFlags binaryString = 32;
-
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;
 

@@ -16,12 +16,11 @@ namespace json {
 
 class StringValue: public AbstractStringValue {
 public:
-	StringValue(const StringView<char> &str, bool isBinary);
-	template<typename Fn> StringValue(std::size_t strSz, const Fn &fn, bool isBinary);
+	StringValue(const StringView<char> &str);
+	template<typename Fn> StringValue(std::size_t strSz, const Fn &fn);
 
 	virtual StringView<char> getString() const override;
 	virtual bool getBool() const override {return true;}
-	virtual ValueTypeFlags flags() const override;
 
 
 	void *operator new(std::size_t sz, const StringView<char> &str );
@@ -33,7 +32,6 @@ public:
 protected:
 	StringValue(StringValue &&) = delete;
 	std::size_t size;
-	bool isBinary;
 	char charbuff[65536];
 
 	static void *putMagic(void *obj);
@@ -43,16 +41,14 @@ protected:
 };
 
 template<typename Fn>
-inline StringValue::StringValue(std::size_t strSz, const Fn& fn, bool isBinary)
-	:size(strSz)
-	,isBinary(isBinary)
-{
+inline StringValue::StringValue(std::size_t strSz, const Fn& fn):size(strSz) {
 	charbuff[strSz] = 0;
 	std::size_t wrsz = fn(charbuff);
 	if (wrsz > strSz || charbuff[strSz] != 0) stringOverflow();
 	charbuff[wrsz] = 0;
 	size = wrsz;
 }
+
 
 }
 

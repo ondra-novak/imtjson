@@ -727,41 +727,7 @@ namespace json {
 			return v->unproxy() < other.v->unproxy();
 		}
 
-	public:
-
-		//Global configuration.
-		/* the most of following options should be changed at the beginning
-		 * of the program.
-		 */
-
-
-		///this global variable controls whether parser should detect binary or not.
-		/** default value is true. If the string contains only base64 charset and
-		 * it is well formated, it is converted to the binary type by performing base64 to
-		 * binary conversion. Serializez is able to convert binary string back to
-		 * the base64 representation
-		 *
-		 * this global option is applied only when Parser class is constructed by the
-		 * object Value during performing Value::parser
-		 */
-		static bool parserDetectBinary;
-
-		///Configures precision of floating numbers
-		/** The global variable specifies count of decimal digits of float numbers.
-		The default value is 4 for 16bit platform, 8 for 32bit platform and 9 for
-		64bit platform. It can be changed, however maximum digits is limited
-		to size of uintptr_t type. This limits count of digits max to 10digits on
-		32bit platform and 21 digits on 64bit platform
-		*/
-		static uintptr_t maxPrecisionDigits;
-		///Specifies default output format for unicode character during serialization
-		/** If output format is not specified by serialization function. Default
-		is emitEscaped*/
-		static UnicodeFormat defaultUnicodeFormat;
-
-
-
-	protected:
+protected:
 
 		PValue v;
 

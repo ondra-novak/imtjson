@@ -90,7 +90,7 @@ int main(int , char **) {
 	TestSimple tst;
 
 	//Normalize test across platforms
-	json::Value::maxPrecisionDigits = 4;
+	json::maxPrecisionDigits = 4;
 
 	tst.test("Parse.string","testing") >> [](std::ostream &out) {
 		out << Value::fromString("\"testing\"").getString();

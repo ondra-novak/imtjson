@@ -26,7 +26,7 @@ String::String():impl(AbstractStringValue::getEmptyString())
 String::String(Value v):impl(v.getHandle()) {
 }
 
-String::String(std::size_t sz, std::function<std::size_t(char *)> fillFn, bool isBinary):impl(new(sz) StringValue(sz, fillFn, isBinary)) {
+String::String(std::size_t sz, std::function<std::size_t(char *)> fillFn):impl(new(sz) StringValue(sz, fillFn)) {
 }
 
 
@@ -75,7 +75,7 @@ String::String(const std::initializer_list<StringView<char> >& strlist) {
 			buff+=item.length;
 		}
 		return cnt;
-	}, false);
+	});
 }
 
 
@@ -137,7 +137,7 @@ String String::insert(std::size_t pos, const StringView<char>& what) {
 		std::memcpy(trg+pos,what.data,what.length);
 		std::memcpy(trg+pos+what.length,a.data+pos,a.length-pos);
 		return sz;
-	}, isBinary()));
+	}));
 
 
 }
@@ -154,7 +154,7 @@ String String::replace(std::size_t pos, std::size_t size,
 		std::memcpy(buff+pos, what.data, what.length);
 		std::memcpy(buff+pos+what.length, a.data+pos+size, a.length-pos-size);
 		return needsz;
-	},isBinary()));
+	}));
 
 }
 
@@ -167,7 +167,6 @@ public:
 		return parent->getString().substr(pos,length);
 	}
 	virtual bool getBool() const override {return true;}
-	virtual ValueTypeFlags flags() const override {return parent->flags();}
 
 
 	PValue parent;
