@@ -6,18 +6,6 @@
 
 namespace json {
 
-	///Configures precision of floating numbers
-	/** Global variable specifies count of decimal digits of float numbers. 
-	The default value is 4 for 16bit platform, 8 for 32bit platform and 9 for
-	64bit platform. It can be changed, however, maximum digits is limited
-	to size of uintptr_t type. This limits count of digits max to 10digits on
-	32bit platform and 21 digits on 64bit platform 
-	*/
-	extern uintptr_t maxPrecisionDigits;
-	///Specifies default output format for unicode character during serialization
-	/** If output format is not specified by serialization function. Default
-	is emitEscaped*/
-	extern UnicodeFormat defaultUnicodeFormat;
 
 
 	template<typename Fn>
@@ -222,7 +210,7 @@ namespace json {
 			//put dot
 			target('.');
 
-			double fractMultiply = pow(10, maxPrecisionDigits);
+			double fractMultiply = pow(10, Value::maxPrecisionDigits);
 			//multiply fraction by maximum fit to integer
 			std::uintptr_t m = (std::uintptr_t)floor(frac * fractMultiply +0.5);
 			//remove any rightmost zeroes

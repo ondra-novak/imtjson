@@ -6,6 +6,8 @@
 
 namespace json {
 
+
+
 	template<typename Fn>
 	class Parser {
 	public:

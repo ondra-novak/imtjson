@@ -36,7 +36,7 @@ namespace json {
 	static const IValue *allocString(const StringView<char> &str) {
 		if (str.empty()) return AbstractStringValue::getEmptyString();
 		else {
-			return new(str) StringValue(str);
+			return new(str) StringValue(str,false);
 		}
 	}
 
@@ -305,8 +305,9 @@ namespace json {
 	{
 	}
 
-	uintptr_t maxPrecisionDigits = sizeof(uintptr_t) < 4 ? 4 : (sizeof(uintptr_t) < 8 ? 9 : 12);
-	UnicodeFormat defaultUnicodeFormat = emitEscaped;
+	uintptr_t Value::maxPrecisionDigits = sizeof(uintptr_t) < 4 ? 4 : (sizeof(uintptr_t) < 8 ? 9 : 12);
+	UnicodeFormat Value::defaultUnicodeFormat = emitEscaped;
+	bool Value::parserDetectBinary = true;
 
 	///const double maxMantisaMult = pow(10.0, floor(log10(std::uintptr_t(-1))));
 
