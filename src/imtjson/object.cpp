@@ -51,13 +51,13 @@ namespace json {
 
 	void *ObjectProxy::operator new(std::size_t sz, const StringView<char> &str ) {
 		std::size_t needsz = sz - sizeof(ObjectProxy::key) + str.length+1;
-		return ::operator new(needsz);
+		return Value::allocator->alloc(needsz);
 	}
 	void ObjectProxy::operator delete(void *ptr, const StringView<char> &) {
-		::operator delete (ptr);
+		Value::allocator->dealloc(ptr);
 	}
-	void ObjectProxy::operator delete(void *ptr, std::size_t) {
-		::operator delete (ptr);
+	void ObjectProxy::operator delete(void *ptr, std::size_t sz) {
+		Value::allocator->dealloc(ptr);
 	}
 
 

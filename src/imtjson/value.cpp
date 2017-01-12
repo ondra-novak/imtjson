@@ -491,6 +491,8 @@ namespace json {
 		v = s.getHandle();
 	}
 
+
+
 	static Allocator defaultAllocator = {
 		&::operator new,
 		&::operator delete
@@ -502,8 +504,8 @@ namespace json {
 	void *IValue::operator new(std::size_t sz) {
 		return Value::allocator->alloc(sz);
 	}
-	void IValue::operator delete(void *ptr, std::size_t sz) {
-		return Value::allocator->dealloc(ptr, sz);
+	void IValue::operator delete(void *ptr, std::size_t) {
+		return Value::allocator->dealloc(ptr);
 	}
 
 }

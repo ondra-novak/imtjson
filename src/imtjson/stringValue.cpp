@@ -44,24 +44,24 @@ std::uintptr_t json::AbstractStringValue::getUInt() const {
 
 void* json::StringValue::operator new(std::size_t sz, const StringView<char>& str) {
 	std::size_t needsz = sz - sizeof(StringValue::charbuff) + std::max(str.length+1,magic.length);
-	return putMagic(::operator new(needsz));
+	return putMagic(Value::allocator->alloc(needsz));
 }
 
-void json::StringValue::operator delete(void* ptr,const StringView<char>& str) {
-	::operator delete(ptr);
+void json::StringValue::operator delete(void* ptr,const StringView<char>& ) {
+	Value::allocator->dealloc(ptr);
 }
 
 void* json::StringValue::operator new(std::size_t sz, const std::size_t &strsz) {
 	std::size_t needsz = sz - sizeof(StringValue::charbuff) + std::max(strsz+1, magic.length);
-	return putMagic(::operator new(needsz));
+	return putMagic(Value::allocator->alloc(needsz));
 }
 
-void json::StringValue::operator delete(void* ptr, const std::size_t &sz) {
-	::operator delete(ptr);
+void json::StringValue::operator delete(void* ptr, const std::size_t &) {
+	Value::allocator->dealloc(ptr);
 }
 
-void json::StringValue::operator delete(void* ptr, std::size_t sz) {
-	::operator delete(ptr);
+void json::StringValue::operator delete(void* ptr, std::size_t ) {
+	Value::allocator->dealloc(ptr);
 }
 
 double json::AbstractStringValue::getNumber() const {

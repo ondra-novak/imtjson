@@ -142,7 +142,7 @@ namespace json {
 		/** @param pointer to memory to deallocate 
 		 *  @param size count of bytes to deallocate
 		 */
-		void (*dealloc)(void *ptr, std::size_t size);
+		void (*dealloc)(void *ptr);
 
 
 	};
