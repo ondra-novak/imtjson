@@ -50,6 +50,7 @@ public:
 	Path(const Path &parent, std::uintptr_t index):keyName(0), index(index),parent(parent) {}
 
 
+
 	///Retrieves key value
 	/**
 	 * @return key value. If element is index, returns empty string

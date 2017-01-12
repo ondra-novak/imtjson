@@ -1,6 +1,8 @@
 {
-	"": {
-		"%": "Rule"
+    "_version":1,
+	"_root": {
+	    "_version":[1,"optional"],
+		"%": [["setvar","keyname","Rule"],"'native"]
 	},
 
 	"Rule": ["SimpleRule",
@@ -17,7 +19,29 @@
 	],
 
 	"SimpleRule": [
-		"string",
+		["prefix","'"],
+        ["prefix","#"],
+		"'string",
+		"'number",
+		"'boolean",
+		"'any",
+		"'base64",
+		"'base64url",
+		"'hex",
+		"'uppercase",
+		"'lowercase",
+		"'alpha",
+		"'alnum",
+		"'digits",
+		"'integer",
+		"'null",
+		"'optional",
+		"'datetime",
+		"'datetimez",
+		"'date",
+		"'time",
+		"'timez",
+		["setvar","keytest",["usevar",["keyname",["keytest"]],"any"]],
 		"#Simple rules are all strings, including direct values and classes"
 	],
 
@@ -32,8 +56,7 @@
 		"Split",
 		"Not",
 		"Array",
-		"Tuple",
-		"# Each function has different rules"
+		"Tuple"		
 	],
 
 
@@ -90,14 +113,7 @@
 	},
 
 	"Array": [[1],[],"Rule","#Array is tuple, where first argument is [], and second is Rule, others are optional"],
-	"Tuple": [[2],[[1],"number"],"Rule","Rule","#Tuple is array with number specifying count of items"],
+	"Tuple": [[2],[[1],"number"],"Rule","Rule","#Tuple is array with number specifying count of items"]
 
-	"TestRule1":[],
-	"TestRule2":{},
-	"TestRule3":123,
-	"TestRule4":true,
-	"TestRule5":false,
-	"TestRule6":null,
-	"TestRule7":["<",10,">",30,["tostring",["<","1"]]]
 
 }

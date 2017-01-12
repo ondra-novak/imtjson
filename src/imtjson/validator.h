@@ -76,7 +76,7 @@ public:
 	 * @param args arguments if the rule. Array is always here
 	 * @param subject the item it is subject of validation
 	 */
-	virtual bool onNativeRule(const Value &subject, const StrViewA & ruleName) { return false; }
+	virtual bool onNativeRule(const Value &subject, const StrViewA & ruleName ) { return false; }
 
 
 
@@ -90,7 +90,7 @@ public:
 	 * @retval true validated
 	 * @retval false not valid
 	 */
-	bool validate(const Value &subject,const StrViewA &rule = StrViewA(), const Path &path = Path::root);
+	bool validate(const Value &subject,const StrViewA &rule = StrViewA("_root"), const Path &path = Path::root);
 
 
 	///Constructs validator above validator-definition (described above)

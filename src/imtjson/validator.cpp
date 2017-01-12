@@ -58,6 +58,13 @@ char Validator::commentEscape = '#';
 
 
 bool Validator::validate(const Value& subject, const StrViewA& rule, const Path &path) {
+
+	Value ver = def["_version"];
+	if (ver.defined() && ver.getNumber() != 1.0) {
+		addRejection(Path::root/"_version", ver);
+		return false;
+	}
+
 	rejections.clear();
 	curPath = &path;
 	return validateInternal(subject,rule);
