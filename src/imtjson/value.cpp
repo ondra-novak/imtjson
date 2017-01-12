@@ -342,9 +342,9 @@ namespace json {
 		unsigned char table[256];
 		Base64Table() {
 			for (std::size_t i = 0; i <256; i++) table[i] = 0xFF;
-			for (std::size_t i = 'A'; i <='Z'; i++) table[i] = i - 'A';
-			for (std::size_t i = 'a'; i <='z'; i++) table[i] = i - 'a' + 26;
-			for (std::size_t i = '0'; i <='9'; i++) table[i] = i - '0' + 52;
+			for (std::size_t i = 'A'; i <='Z'; i++) table[i] = (unsigned char)(i - 'A');
+			for (std::size_t i = 'a'; i <= 'z'; i++) table[i] = (unsigned char)(i - 'a' + 26);
+			for (std::size_t i = '0'; i <='9'; i++) table[i] = (unsigned char)(i - '0' + 52);
 			table['+'] = 63;
 			table['/'] = 64;
 		}
@@ -491,6 +491,20 @@ namespace json {
 		v = s.getHandle();
 	}
 
+	static Allocator defaultAllocator = {
+		&::operator new,
+		&::operator delete
+	};
+
+
+	const Allocator * Value::allocator = &defaultAllocator;
+
+	void *IValue::operator new(std::size_t sz) {
+		return Value::allocator->alloc(sz);
+	}
+	void IValue::operator delete(void *ptr, std::size_t sz) {
+		return Value::allocator->dealloc(ptr, sz);
+	}
 
 }
 

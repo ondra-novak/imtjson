@@ -109,6 +109,10 @@ namespace json {
 		virtual const IValue *unproxy() const = 0;
 
 		virtual bool equal(const IValue *other) const = 0;
+
+		void *operator new(std::size_t);
+		void operator delete(void *, std::size_t);
+
 	};
 
 	class IEnumFn {
@@ -126,6 +130,21 @@ namespace json {
 		}
 	protected:
 		mutable Fn fn;
+	};
+
+	///Declaration of a structure which configures allocator for JSON values.
+	struct Allocator {
+		///Pointer to allocator.
+		/** @param size size to allocate
+		*/
+		void *(*alloc)(std::size_t size);
+		///Pointer to deallocator
+		/** @param pointer to memory to deallocate 
+		 *  @param size count of bytes to deallocate
+		 */
+		void (*dealloc)(void *ptr, std::size_t size);
+
+
 	};
 
 }
