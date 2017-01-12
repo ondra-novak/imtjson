@@ -6,7 +6,7 @@
 #include "object.h"
 #include "parser.h"
 #include "serializer.h"
-#include "string.h"
+#include "binary.h"
 #include "stringValue.h"
 
 namespace json {
@@ -336,6 +336,160 @@ namespace json {
 	}
 
 
+
+	class Base64Table {
+	public:
+		unsigned char table[256];
+		Base64Table() {
+			for (std::size_t i = 0; i <256; i++) table[i] = 0xFF;
+			for (std::size_t i = 'A'; i <='Z'; i++) table[i] = i - 'A';
+			for (std::size_t i = 'a'; i <='z'; i++) table[i] = i - 'a' + 26;
+			for (std::size_t i = '0'; i <='9'; i++) table[i] = i - '0' + 52;
+			table['+'] = 63;
+			table['/'] = 64;
+		}
+	};
+
+	String decodeBase64(const StrViewA &str) {
+		static Base64Table t;
+		std::size_t len = str.length;
+		if ((len & 0x3) || len == 0) return String();
+		std::size_t finlen = (len / 4) * 3;
+		if (str[len-1] == '=') {
+			--finlen;
+			--len;
+		}
+		if (str[len-1] == '=') {
+			--finlen;
+			--len;
+		}
+		return String(finlen, [&] (char *buff) {
+
+			unsigned char *bbuf = reinterpret_cast<unsigned char *>(buff);
+
+			std::size_t rdpos = 0;
+			std::size_t wrpos = 0;
+			while (rdpos < len) {
+				char z = str[rdpos++];
+				unsigned char b = t.table[(unsigned char)z];
+				switch (rdpos & 0x3) {
+				case 0: bbuf[wrpos] = b << 2;break;
+				case 1: bbuf[wrpos]  |= b >> 4;
+						bbuf[++wrpos] = b << 4;
+						break;
+				case 2: bbuf[wrpos] |= b >> 2;
+						bbuf[++wrpos] = b << 6;
+						break;
+				case 3: bbuf[++wrpos] |= b;
+						break;
+				}
+			}
+			return finlen;
+		});
+	}
+
+	String encodeBase64(const BinaryView &data) {
+		std::size_t len = data.length;
+		if (len == 0) return String();
+		std::size_t finlen = (len+2)/3 * 4;
+		return String(finlen, [&](char *buff){
+
+			static char chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+								  "abcdefghijklmnopqrstuvwxyz"
+								  "0123456789"
+					              "+/";
+
+			std::size_t rdpos = 0;
+			std::size_t wrpos = 0;
+			unsigned char nx = 0;
+			while (rdpos < len) {
+				unsigned char c = data[rdpos++];
+				switch (rdpos % 3) {
+				case 0: buff[wrpos++] = chars[c >> 2];
+						nx = (c << 6) & 0x3F;
+						break;
+				case 1: buff[wrpos++] = chars[nx | (c>>4)];
+						nx = (c << 4) & 0x3F;
+						break;
+				case 2: buff[wrpos++] = chars[nx | (c>> 6)];
+						buff[wrpos++] = chars[c & 0x3F];
+						break;
+				}
+			}
+
+
+			while (wrpos < finlen)
+				buff[wrpos++] = '=';
+			return finlen;
+		});
+	}
+
+	String decodeQuotedPrintable(const StrViewA &str) {
+		std::size_t reqsize = 0;
+		for (std::size_t i = 0; i < str.length; i++) {
+			reqsize++;
+			if (str[i] == '=') i+=2;
+		}
+		return String(reqsize, [&](char *buff){
+			for (std::size_t i = 0; i < str.length; i++) {
+				if (str[i] == '=') {
+					char sbuff[3];
+					sbuff[0] = str[i+1];
+					sbuff[1] = str[i+2];
+					sbuff[0] = 0;
+					long l = strtol(sbuff,0,16);
+					*buff++ = (char)l;
+					i+=2;
+				} else {
+					*buff++ = str[i];
+				}
+			}
+
+			return reqsize;
+		});
+	}
+
+	String encodeQuotedPrintable(const BinaryView &data) {
+		std::size_t reqsize = 0;
+		for (std::size_t i = 0; i < data.length; i++) {
+			reqsize++;
+			if (data[i] < 32 || data[i] >127 ) reqsize+=2;
+		}
+		return String(reqsize, [&](char *buff){
+			static char hexs[] = "0123456789ABCDEF";
+			for (std::size_t i = 0; i < data.length; i++) {
+				if (data[i] < 32 || data[i] >127 ) {
+					*buff++='=';
+					*buff++=hexs[data[i] >> 4];
+					*buff++=hexs[data[i] & 0xF];
+				} else {
+					*buff++ = data[i];
+				}
+			}
+
+			return reqsize;
+		});
+	}
+
+	Binary Value::getBinary(BinaryEncoding be) const {
+		String s;
+		switch(be) {
+			case base64: s = decodeBase64(getString());break;
+			case quotedPrintable: s = decodeQuotedPrintable(getString());break;
+		}
+
+		return Binary(s);
+	}
+
+	Value::Value(const BinaryView& binary, BinaryEncoding enc) {
+		String s;
+		switch (enc) {
+			case base64: s = encodeBase64(binary); break;
+			case quotedPrintable: s = encodeQuotedPrintable(binary);break;
+
+		}
+		v = s.getHandle();
+	}
 
 
 }

@@ -93,6 +93,27 @@ namespace json {
 
 	typedef StringView<char> StrViewA;
 	typedef StringView<wchar_t> StrViewW;
-	typedef StringView<unsigned char> BinaryView;
+
+	class BinaryView: public StringView<unsigned char>{
+	public:
+		using StringView<unsigned char>::StringView;
+
+		///Explicit conversion from any view to binary view
+		/** it might be useful for simple serialization, however, T should be POD or flat object */
+		template<typename T>
+		explicit BinaryView(const StringView<T> &from)
+			:StringView<unsigned char>(reinterpret_cast<const unsigned char *>(from.data), from.length*sizeof(T))
+		{}
+
+
+		///Explicit conversion binary view to any view
+		/** it might be useful for simple deserialization, however, T should be POD or flat object */
+		template<typename T>
+		explicit operator StringView<T>() const {
+			return StringView<T>(reinterpret_cast<const T *>(data), length/sizeof(T));
+		}
+	};
+
+
 
 }

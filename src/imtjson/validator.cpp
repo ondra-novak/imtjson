@@ -719,7 +719,7 @@ bool Validator::opSplit(const Value& subject, std::size_t at, const Value& left,
 void Validator::addRejection(const Path& path, const Value& rule) {
 	if (rule == lastRejectedRule) return;
 	for (Value v : rule) {
-		if (v.same(lastRejectedRule)) {
+		if (v.isCopyOf(lastRejectedRule)) {
 			lastRejectedRule = rule;
 			return;
 		}
@@ -731,22 +731,6 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 		rejections.push_back({ vp, "undefined" });
 
 	lastRejectedRule = rule;
-
-	/*
-	if (!rejections.empty()) {
-		std::size_t e = rejections.size() - 1;
-		Value pvp = rejections[e][0];
-		Value pr = rejections[e][1];
-		if (pvp.size()>vp.size() && pvp.splitAt((int)vp.size()).first == vp) 
-			//path is part of previous path - we don't need to report this rejection
-			return;
-		else if (pvp == vp) {
-			for (Value v : rule) if (v == pr) 
-				//path are same, and rule contains the previous rule
-				//- we don't need to report this rejection
-				return;
-		}
-	}*/
 }
 
 void Validator::pushVar(String name, Value value)

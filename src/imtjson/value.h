@@ -11,6 +11,7 @@ namespace json {
 	class PPath;
 	class ValueIterator;
 	class String;
+	class Binary;
 	template<typename T> class ConvValueAs;
 	template<typename T> class ConvValueFrom;
 
@@ -161,6 +162,13 @@ namespace json {
 		 */
 		Value(const std::initializer_list<Value> &data);
 
+
+		///Create binary value
+		/** Binary values are not supported by JSON. They are emulated using base64 encoding
+		 *
+		 * @param binary binary content
+		 */
+		Value(const BinaryView &binary, BinaryEncoding enc = base64);
 		///Retrieves type of value
 		/**
 		 * @return type of value
@@ -217,6 +225,13 @@ namespace json {
 		 * need such automatic conversion, use toString()
 		 */
 		StringView<char> getString() const { return v->getString(); }
+
+		///Retrieves binary content encoded by specified method
+		/**
+		 * @param be specify binary encoding.
+		 * @return Function returns decoded binary string.
+		 */
+		Binary getBinary(BinaryEncoding be = base64) const;
 		///Retrieves count of items in the container (the array or the object)
 		/**
 		 * @return For arrays or objects, the function returns count of items inside. For
@@ -674,11 +689,11 @@ namespace json {
 		template<typename T>
 		static Value from(const T &v) {return ConvValueFrom<T>::convert(v);}
 
-		///Determines, whether two values are "same"
-		/** When values are copied, they are shared instead performing a deep copy.
+		///Determines, whether this value is copy of other value
+		/** When values are copied, they are shared instead performing the deep copy.
 		This function determines, whether the values has been created by copying one
-		from the other (so they are shared). In contrast to comparison operation, this
-		function just compares internal pointers without comparison of actual values
+		from the other (so they are shared). In contrast to comparison operator, this
+		function just compares internal pointers without comparing of actual values.
 
 		@code
 		Value a = 42;
@@ -688,8 +703,8 @@ namespace json {
 
 		bool b1 = a == b; // b1=true
 		bool b2 = a == c; // b2=true
-		bool b3 = a.same(b); // b3=false
-		bool b4 = a.same(c); // b4=true
+		bool b3 = a.isCopyOf(b); // b3=false
+		bool b4 = a.isCOpyOf(c); // b4=true
 		@endcode
 
 		@param other other object
@@ -700,15 +715,17 @@ namespace json {
 		@note Some values are statically allocated, so even if they are created separatedly,
 		the function can still return true. This is the case of following values:
 		 an empty array, an empty object, an empty string, boolean values, null, and number zero
+
+		 @note function is reflective. if a is copy of b, then b is copy of a
 		*/
-		bool same(const Value &other) const {
+		bool isCopyOf(const Value &other) const {
 			return v->unproxy() == other.v->unproxy();
 		}
 		
 		///Allows to order values by internal address
 		/**
 		 Every value has internal address. This function allows to make order of
-		 values by is internall address. Function can make storing some values in
+		 values by is internall address. Function can allow to store some values in
 		 sets easyier especially objects and array, where comparison of each value can
 		 be inefficient. However, ordering doesn't reflect the value.
 

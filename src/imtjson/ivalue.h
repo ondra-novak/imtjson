@@ -35,6 +35,14 @@ namespace json {
 	};
 
 
+	///Available binary encoders
+	enum BinaryEncoding {
+		///base64 encoding
+		base64,
+		///store binary in quoted printable form (so binary characters will be escaped)
+		quotedPrintable,
+	};
+
 	///Various flags tied with JSON's type
 	/**@see userDefined, numberInteger, numberUnsignedInteger, proxy
 	 *
