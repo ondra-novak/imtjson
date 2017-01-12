@@ -86,7 +86,7 @@ void subobject(Object &&obj) {
 }
 
 
-int main(int , char **) {
+int testMain() {
 	TestSimple tst;
 
 	//Normalize test across platforms
@@ -856,32 +856,16 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	tst.test("compress.utf-8","ok") >> [](std::ostream &out) {
 		if (compressTest("src/tests/test2.json")) out << "ok"; else out << "not same";
 	};
-#if 0 //removed because imtjson is leaving allocated some objects which are deleted at-exit
-	{
-		//memory leaks
-		//out of test class, because it can affect the test
-		bool win32detected = false;
-#ifdef _WIN32
-		if (_CrtDumpMemoryLeaks()) {
-			win32detected = true;
-		}
-#endif
-
-		Value x(10);
-#ifdef _WIN32
-		int lcounter = leakCounter - 1;
-		if (lcounter == 1) lcounter--; //< windows can allocates extra mem during test
-#else
-		int lcounter = leakCounter - 1;
-#endif
-		tst.test("MemoryLeaks", "0") >> [=](std::ostream &out) {
-			if (win32detected)
-				out << "Detected memory leaks!";
-			out << lcounter;
-		};
 
 
-	}
-#endif
 	return tst.didFail()?1:0;
+}
+
+int main(int, char **) {
+	int r = testMain();
+#ifdef _WIN32
+	_CrtDumpMemoryLeaks();
+#endif
+	return r;
+
 }
