@@ -68,6 +68,7 @@ public:
 	static char commentEscape;
 
 
+
 	///Evaluates the native rule
 	/**
 	 * Native rule is declared as "native" in class table. The function
@@ -113,6 +114,16 @@ public:
 	Value getRejections() const;
 
 
+	///Sets variables
+	/**
+	 *
+	 * @param varList container with variables (object).
+	 *
+	 * Function replaces current variables
+	 */
+	void setVariables(const Value &varList);
+
+
 protected:
 
 
@@ -147,14 +158,9 @@ protected:
 	///current path (for logging)
 	const Path *curPath;
 
-	struct VarDef {
-		String name;
-		Value value;
-		VarDef() {}
-		VarDef(const String &name, const Value &value) :name(name), value(value) {}
-	};
 
-	typedef std::vector<VarDef> VarList;
+
+	typedef std::vector<Value> VarList;
 	VarList varList;
 
 

@@ -645,9 +645,12 @@ bool Validator::evalRuleObject(const Value& subject, const Value& templateObj) {
 			//report unsuccess
 			return false;
 		//if extra rules are not defined
-		if (!extraRules.defined())
+		if (!extraRules.defined()) {
 			//succes only if extra is empty
-			return extra.empty();
+			if (extra.empty()) return true;
+			addRejection(*curPath/extra[0].getKey(),"undefined");
+			return false;
+		}
 		//for extra rules
 		for (Value v : extra) {
 			//process every extra field
@@ -742,7 +745,7 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 
 void Validator::pushVar(String name, Value value)
 {
-	varList.push_back(VarDef(name, value));
+	varList.push_back(value.setKey(name));
 }
 
 void Validator::popVar()
@@ -755,7 +758,7 @@ Value Validator::findVar(const StrViewA & name)
 	std::size_t cnt = varList.size();
 	while (cnt > 0) {
 		cnt--;
-		if (StrViewA(varList[cnt].name) == name) return varList[cnt].value;
+		if (varList[cnt].getKey() == name) return varList[cnt];
 	}
 	return undefined;
 }
@@ -810,6 +813,12 @@ bool Validator::opUseVar(const Value& subject, const Value& args) {
 	Value var = getVar(args[1]);
 	if (var.defined()) return evalRuleAlternatives(var, args, 2);
 	else return false;
+}
+
+void Validator::setVariables(const Value& varList) {
+	this->varList.clear();
+	this->varList.reserve(varList.size());
+	for (auto &&v : varList) this->varList.push_back(v);
 }
 
 bool Validator::opCompareVar(const Value &subject, const Value &rule) {

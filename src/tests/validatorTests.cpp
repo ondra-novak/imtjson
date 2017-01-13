@@ -89,7 +89,7 @@ void runValidatorTests(TestSimple &tst) {
 	tst.test("Validator.object", "ok") >> [](std::ostream &out) {
 		vtest(out, Object("_root", Object("aaa","number")("bbb","string")("ccc","boolean")), Object("aaa",12)("bbb","xyz")("ccc",true));
 	};
-	tst.test("Validator.object.failExtra", "[[[],{\"aaa\":\"number\",\"bbb\":\"string\",\"ccc\":\"boolean\"}]]") >> [](std::ostream &out) {
+	tst.test("Validator.object.failExtra", "[[[\"ddd\"],\"undefined\"],[[],{\"aaa\":\"number\",\"bbb\":\"string\",\"ccc\":\"boolean\"}]]") >> [](std::ostream &out) {
 		vtest(out, Object("_root", Object("aaa", "number")("bbb", "string")("ccc", "boolean")), Object("aaa", 12)("bbb", "xyz")("ccc", true)("ddd",12));
 	};
 	tst.test("Validator.object.failMissing", "[[[\"bbb\"],\"string\"]]") >> [](std::ostream &out) {
