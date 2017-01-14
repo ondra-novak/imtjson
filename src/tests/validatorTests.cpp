@@ -104,6 +104,9 @@ void runValidatorTests(TestSimple &tst) {
 	tst.test("Validator.object.okMissing", "ok") >> [](std::ostream &out) {
 		vtest(out, Object("_root", Object("aaa", "number")("bbb", {"string","optional"})("ccc", "boolean")("%","number")), Object("aaa", 12)("ccc", true));
 	};
+	tst.test("Validator.object.array", "ok") >> [](std::ostream &out) {
+		vtest(out, Object("_root", Object("_xxx", {array,"any"})), Object("_xxx", {10,20,30}));
+	};
 	tst.test("Validator.userClass", "ok") >> [](std::ostream &out) {
 		vtest(out, Object("test", { "string","number" })("_root", Object("aaa", "test")("bbb","test")), Object("aaa", 12)("bbb","ahoj"));
 	};

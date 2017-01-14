@@ -621,6 +621,7 @@ bool Validator::evalRuleObject(const Value& subject, const Value& templateObj) {
 			int b = 0;
 			if (!left.defined() && right.defined()) {
 				notMatch = !evalRuleSubObj(left, right, rk);
+				if (notMatch) addRejection(*curPath/rk,undefined);
 				return 1;
 			}
 			else if (left.defined() && !right.defined()) {
@@ -633,10 +634,12 @@ bool Validator::evalRuleObject(const Value& subject, const Value& templateObj) {
 			}
 			else if (lk > rk) {
 				notMatch = !evalRuleSubObj(undefined, right, rk);
+				if (notMatch) addRejection(*curPath/lk,undefined);
 				return 1;
 			}
 			else {
 				notMatch = !evalRuleSubObj(left, right, lk);
+				if (notMatch) addRejection(*curPath/lk,left);
 				return 0;
 			}
 		});
