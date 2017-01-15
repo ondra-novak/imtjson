@@ -44,7 +44,9 @@ StrViewA Validator::strGreaterEqual = ">=";
 StrViewA Validator::strLess = "<";
 StrViewA Validator::strLessEqual = "<=";
 StrViewA Validator::strAll = "all";
+StrViewA Validator::strAndSymb = "^";
 StrViewA Validator::strNot = "not";
+StrViewA Validator::strNotSymb = "!";
 StrViewA Validator::strDateTime = "datetime";
 StrViewA Validator::strDateTimeZ = "datetimez";
 StrViewA Validator::strDate = "date";
@@ -52,6 +54,7 @@ StrViewA Validator::strTimeZ = "timez";
 StrViewA Validator::strTime = "time";
 StrViewA Validator::strSetVar = "setvar";
 StrViewA Validator::strUseVar = "usevar";
+StrViewA Validator::strEmit = "emit";
 
 char Validator::valueEscape = '\'';
 char Validator::commentEscape = '#';
@@ -66,6 +69,7 @@ bool Validator::validate(const Value& subject, const StrViewA& rule, const Path 
 	}
 
 	rejections.clear();
+	emits.clear();
 	curPath = &path;
 	return validateInternal(subject,rule);
 }
@@ -361,10 +365,10 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 		else if (fn.type() == string) {
 			StrViewA token = fn.getString();
 			if (token == strMinSize) {
-				return checkMinSize(subject, getVar(rule[1]).getUInt());
+				return checkMinSize(subject, getVar(rule[1],subject).getUInt());
 			}
 			if (token == strMaxSize) {
-				return checkMaxSize(subject, getVar(rule[1]).getUInt());
+				return checkMaxSize(subject, getVar(rule[1],subject).getUInt());
 			}
 			if (token == strKey) {
 				Value newSubj = subject.getKey();
@@ -385,18 +389,18 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 				return opSuffix(subject, rule);
 			}
 			if (token == strSplit) {
-				return opSplit(subject, getVar(rule[1]).getUInt(),rule[2],rule[3]);
+				return opSplit(subject, getVar(rule[1],subject).getUInt(),rule[2],rule[3]);
 			}
 			if (token == strGreater || token == strGreaterEqual || token == strLess || token == strLessEqual ) {
 				return opRangeDef(subject, rule, 0);
 			}
-			if ( token == strAll) {
+			if ( token == strAll || token == strAndSymb) {
 				return opRangeDef(subject, rule, 1);
 			}
 			if (token == strDateTime) {
-				return checkDateTimeGen(getVar(rule[1]).getString(),subject.toString());
+				return checkDateTimeGen(getVar(rule[1],subject).getString(),subject.toString());
 			}
-			if (token == strNot) {
+			if (token == strNot || token == strNotSymb) {
 				return !evalRuleAlternatives(subject, rule, 1);
 			}
 			if (token == strSetVar) {
@@ -405,7 +409,10 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 			if (token == strUseVar) {
 				return opUseVar(subject, rule);
 			}
-			if (findVar(token).defined()) {
+			if (token == strEmit) {
+				return opEmit(subject, rule);
+			}
+			if (findVar(token,subject).defined()) {
 				return opCompareVar(subject,rule);
 			}
 			return evalRuleAlternatives(subject, rule, 0);
@@ -427,19 +434,19 @@ bool Validator::opRangeDef(const Value& subject, const Value& rule, std::size_t 
 			if (name.substr(0, 1) == StrViewA(&commentEscape, 1)) 
 				continue;
 			if (name == strLess) {
-				Value p = getVar(rule[pos++]);
+				Value p = getVar(rule[pos++],subject);
 				if (p.type() != subject.type() || !isLess(subject, p)) return false; // subject >= p
 			}
 			else if (name == strGreaterEqual) {
-				Value p = getVar(rule[pos++]);
+				Value p = getVar(rule[pos++],subject);
 				if (p.type() != subject.type() || isLess(subject, p)) return false; //  subject < p
 			} 
 			else if (name == strGreater) {
-				Value p = getVar(rule[pos++]);
+				Value p = getVar(rule[pos++],subject);
 				if (p.type() != subject.type() || !isLess(p, subject)) return false; // subject <= p
 			}
 			else if (name == strLessEqual) {
-				Value p = getVar(rule[pos++]);
+				Value p = getVar(rule[pos++],subject);
 				if (p.type() != subject.type() || isLess(p, subject)) return false; //subject > p
 			} 
 			else {
@@ -634,12 +641,12 @@ bool Validator::evalRuleObject(const Value& subject, const Value& templateObj) {
 			}
 			else if (lk > rk) {
 				notMatch = !evalRuleSubObj(undefined, right, rk);
-				if (notMatch) addRejection(*curPath/lk,undefined);
+				if (notMatch) addRejection(*curPath/rk,right);
 				return 1;
 			}
 			else {
 				notMatch = !evalRuleSubObj(left, right, lk);
-				if (notMatch) addRejection(*curPath/lk,left);
+				if (notMatch) addRejection(*curPath/lk,right);
 				return 0;
 			}
 		});
@@ -681,7 +688,7 @@ bool Validator::checkClass(const Value& subject, StrViewA name) {
 
 }
 bool Validator::opPrefix(const Value& subject, const Value& args) {
-	Value pfix = getVar(args[1]);
+	Value pfix = getVar(args[1],subject);
 	Value rule = args[2];
 	if (pfix.type() == array) {
 		auto spl = subject.splitAt((int)pfix.size());
@@ -700,7 +707,7 @@ bool Validator::opPrefix(const Value& subject, const Value& args) {
 }
 
 bool Validator::opSuffix(const Value& subject, const Value& args) {
-	Value sfix = getVar(args[1]);
+	Value sfix = getVar(args[1],subject);
 	Value rule = args[2];
 	if (sfix.type() == array) {
 		auto spl = subject.splitAt(-(int)sfix.size());
@@ -756,8 +763,9 @@ void Validator::popVar()
 	if (!varList.empty()) varList.pop_back();
 }
 
-Value Validator::findVar(const StrViewA & name)
+Value Validator::findVar(const StrViewA & name, const Value &thisVar)
 {
+	if (name == "$this") return thisVar;
 	std::size_t cnt = varList.size();
 	while (cnt > 0) {
 		cnt--;
@@ -766,13 +774,13 @@ Value Validator::findVar(const StrViewA & name)
 	return undefined;
 }
 
-Value Validator::getVar(const Value & path)
+Value Validator::getVar(const Value & path, const Value &thisVar)
 {
 	if (path.type() == array && !path.empty()) {
 		Value n = path[0];
 		if (n.type() == string) {
 
-			Value x = findVar(n.getString());
+			Value x = findVar(n.getString(),thisVar);
 			if (x.defined()) {
 
 				std::size_t cnt = path.size();
@@ -782,7 +790,7 @@ Value Validator::getVar(const Value & path)
 					case string: x = x[p.getString()]; break;
 					case number: x = x[p.getUInt()]; break;
 					case array: {
-						p = getVar(p);
+						p = getVar(p,thisVar);
 						switch (p.type()) {
 						case string: x = x[p.getString()]; break;
 						case number: x = x[p.getUInt()]; break;
@@ -802,7 +810,7 @@ Value Validator::getVar(const Value & path)
 
 bool Validator::opSetVar(const Value& subject, const Value& args) {
 	Value var = args[1];
-	if (var.defined()) {
+	if (var.getString().substr(0,1) == "$") {
 		pushVar(var, subject);
 		bool res= evalRuleAlternatives(subject, args,2);
 		popVar();
@@ -813,7 +821,8 @@ bool Validator::opSetVar(const Value& subject, const Value& args) {
 }
 
 bool Validator::opUseVar(const Value& subject, const Value& args) {
-	Value var = getVar(args[1]);
+	Value id = args[1];
+	Value var = id.type() == array?getVar(id,subject):findVar(id.getString(),subject);
 	if (var.defined()) return evalRuleAlternatives(var, args, 2);
 	else return false;
 }
@@ -825,7 +834,38 @@ void Validator::setVariables(const Value& varList) {
 }
 
 bool Validator::opCompareVar(const Value &subject, const Value &rule) {
-	return subject == getVar(rule);
+	return subject == getVar(rule,subject);
+}
+
+Value Validator::getEmits() const {
+	return StringView<Value>(emits);
+}
+
+Value Validator::walkObject(const Value &subject, const Value &v) {
+	switch (v.type()) {
+	case array: {
+		Value z = getVar(v,subject);
+		if (!z.isCopyOf(v)) return z;
+		Array o;
+		o.reserve(v.size());
+		for(Value x:v) o.push_back(walkObject(subject,x));
+		return o;
+	}
+	case object:{
+		Object o;
+		for(Value x:v) o.set(x.getKey(),walkObject(subject,x));
+		return o;
+	}
+	default: return v;
+	}
+}
+
+bool Validator::opEmit(const Value& subject, const Value& args) {
+	bool r = evalRule(subject, args[2]);
+	if (r) {
+		emits.push_back(walkObject(subject,args[1]));
+	}
+	return r;
 }
 
 }

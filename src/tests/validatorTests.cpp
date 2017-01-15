@@ -66,7 +66,7 @@ void runValidatorTests(TestSimple &tst) {
 		vtest(out,Object("_root",{{array,"number"},{"maxsize",3}}),{10,20,30});
 	};
 	tst.test("Validator.array.limit-fail","[[[],[\"maxsize\",3]]]") >> [](std::ostream &out) {
-		vtest(out,Object("_root",{"all",{array,"number"},{"maxsize",3}}),{10,20,30,40});
+		vtest(out,Object("_root",{"^",{array,"number"},{"maxsize",3}}),{10,20,30,40});
 	};
 	tst.test("Validator.tuple","ok") >> [](std::ostream &out) {
 		vtest(out, Object("_root", { {3},"number","string","string" }), { 12,"abc","cdf" });
@@ -130,13 +130,13 @@ void runValidatorTests(TestSimple &tst) {
 		vtest(out, Object("_root", { array, {">",0,"<",10},{">=","A","<=","Z" } }), { "a",5 });
 	};
 	tst.test("Validator.fnAll", "ok") >> [](std::ostream &out) {
-		vtest(out, Object("_root", { "all","hex",">=","0","<=","9", "#comment" } ), "01255");
+		vtest(out, Object("_root", { "^","hex",">=","0","<=","9", "#comment" } ), "01255");
 	};
-	tst.test("Validator.fnAll.fail", "[[[],[\"all\",\"hex\",\">=\",\"0\",\"<=\",\"9\",\"#comment\"]]]") >> [](std::ostream &out) {
-		vtest(out, Object("_root", { "all","hex", ">=","0","<=","9", "#comment"  }), "A589");
+	tst.test("Validator.fnAll.fail", "[[[],[\"^\",\"hex\",\">=\",\"0\",\"<=\",\"9\",\"#comment\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("_root", { "^","hex", ">=","0","<=","9", "#comment"  }), "A589");
 	};
 	tst.test("Validator.fnAll.fail2", "[[[],\"hex\"]]") >> [](std::ostream &out) {
-		vtest(out, Object("_root", { "all","hex",{ ">=","0","<=","9" } }), "lkoo");
+		vtest(out, Object("_root", { "^","hex",{ ">=","0","<=","9" } }), "lkoo");
 	};
 	tst.test("Validator.prefix.ok", "ok") >> [](std::ostream &out) {
 		vtest(out, Object("_root", { "prefix","abc." }), "abc.123");
@@ -220,10 +220,10 @@ void runValidatorTests(TestSimple &tst) {
 		vtest(out, Object("_root", { "suffix",{ "c","d" } }), { "a","c","b","d" });
 	};
 	tst.test("Validator.key.ok", "ok") >> [](std::ostream &out) {
-		vtest(out, Object("_root", Object("%", { "all",{ "key",{"all","lowercase",{"maxsize",2} } },"number" })), Object("ab", 123)("cx", 456));
+		vtest(out, Object("_root", Object("%", { "^",{ "key",{"^","lowercase",{"maxsize",2} } },"number" })), Object("ab", 123)("cx", 456));
 	};
 	tst.test("Validator.key.fail", "[[[\"abc\"],[\"maxsize\",2]]]") >> [](std::ostream &out) {
-		vtest(out, Object("_root", Object("%", { "all",{ "key",{ "all","lowercase",{ "maxsize",2 } } },"number" })), Object("abc", 123)("cx", 456));
+		vtest(out, Object("_root", Object("%", { "^",{ "key",{ "^","lowercase",{ "maxsize",2 } } },"number" })), Object("abc", 123)("cx", 456));
 	};
 	tst.test("Validator.base64.ok", "ok") >> [](std::ostream &out) {
 		vtest(out, Object("_root", "base64"), "flZhTGlEYVRvUn5+flRlc1R+fg==");
@@ -244,10 +244,10 @@ void runValidatorTests(TestSimple &tst) {
 		vtest(out, Object("_root", "base64url"), "flZhTGlEYVRvUn5+flRlc1R+fg==");
 	};
 	tst.test("Validator.not1", "ok") >> [](std::ostream &out) {
-		vtest(out, Object("_root", { array, {"not",1,2,3} }), { 10,20 });
+		vtest(out, Object("_root", { array, {"!",1,2,3} }), { 10,20 });
 	};
-	tst.test("Validator.not2", "[[[0],[\"not\",1,2,3]]]") >> [](std::ostream &out) {
-		vtest(out, Object("_root", { array,{ "not",1,2,3 } }), { 1,3 });
+	tst.test("Validator.not2", "[[[0],[\"!\",1,2,3]]]") >> [](std::ostream &out) {
+		vtest(out, Object("_root", { array,{ "!",1,2,3 } }), { 1,3 });
 	};
 	tst.test("Validator.datetime","ok") >> [](std::ostream &out) {
 		vtest(out, Object("_root", "datetime"), "2016-12-20T12:38:00Z");
@@ -307,22 +307,22 @@ void runValidatorTests(TestSimple &tst) {
 		vtest(out, Object("tm",{ {"datetime","M:mm"},{"datetime","MM:mm"} })("_root",{{"suffix","am","tm"},{"suffix","pm"}}), "2:45xa");
 	};
 	tst.test("Validator.setvar1","ok") >> [](std::ostream &out) {
-		vtest(out, Object("_root",{"setvar","test",Object("aaa",{"test","bbb"})("bbb","number")}), Object("aaa",10)("bbb",10));
+		vtest(out, Object("_root",{"setvar","$test",Object("aaa",{"$test","bbb"})("bbb","number")}), Object("aaa",10)("bbb",10));
 	};
-	tst.test("Validator.setvar1.fail","[[[\"aaa\"],[\"test\",\"bbb\"]]]") >> [](std::ostream &out) {
-		vtest(out, Object("_root",{"setvar","test",Object("aaa",{"test","bbb"})("bbb","number")}), Object("aaa",20)("bbb",10));
+	tst.test("Validator.setvar1.fail","[[[\"aaa\"],[\"$test\",\"bbb\"]]]") >> [](std::ostream &out) {
+		vtest(out, Object("_root",{"setvar","$test",Object("aaa",{"$test","bbb"})("bbb","number")}), Object("aaa",20)("bbb",10));
 	};
 	tst.test("Validator.setvar2","ok") >> [](std::ostream &out) {
-		vtest(out, Object("_root",{"setvar","test",Object("aaa",{"<",{"test","bbb"}})("bbb","number")}), Object("aaa",10)("bbb",20));
+		vtest(out, Object("_root",{"setvar","$test",Object("aaa",{"<",{"$test","bbb"}})("bbb","number")}), Object("aaa",10)("bbb",20));
 	};
-	tst.test("Validator.setvar2.fail","[[[\"aaa\"],[\"<\",[\"test\",\"bbb\"]]]]") >> [](std::ostream &out) {
-		vtest(out, Object("_root",{"setvar","test",Object("aaa",{"<",{"test","bbb"}})("bbb","number")}), Object("aaa",10)("bbb",5));
+	tst.test("Validator.setvar2.fail","[[[\"aaa\"],[\"<\",[\"$test\",\"bbb\"]]]]") >> [](std::ostream &out) {
+		vtest(out, Object("_root",{"setvar","$test",Object("aaa",{"<",{"$test","bbb"}})("bbb","number")}), Object("aaa",10)("bbb",5));
 	};
 	tst.test("Validator.setvar3","ok") >> [](std::ostream &out) {
-		vtest(out, Object("_root",{"setvar","test",Object("count","digits")("data",{"maxsize",{"test","count"}})}), Object("count",3)("data",{10,20,30}));
+		vtest(out, Object("_root",{"setvar","$test",Object("count","digits")("data",{"maxsize",{"$test","count"}})}), Object("count",3)("data",{10,20,30}));
 	};
-	tst.test("Validator.setvar3.fail","[[[\"data\"],[\"maxsize\",[\"test\",\"count\"]]]]") >> [](std::ostream &out) {
-		vtest(out, Object("_root",{"setvar","test",Object("count","digits")("data",{"maxsize",{"test","count"}})}), Object("count",3)("data",{10,20,30,40}));
+	tst.test("Validator.setvar3.fail","[[[\"data\"],[\"maxsize\",[\"$test\",\"count\"]]]]") >> [](std::ostream &out) {
+		vtest(out, Object("_root",{"setvar","$test",Object("count","digits")("data",{"maxsize",{"$test","count"}})}), Object("count",3)("data",{10,20,30,40}));
 	};
 	tst.test("Validator.version.fail","[[[\"_version\"],2]]") >> [](std::ostream &out) {
 		vtest(out, Object("_root","any")("_version",2.0), 42);

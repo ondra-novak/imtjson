@@ -2,7 +2,7 @@
     "_version":1,
 	"_root": {
 	    "_version":[1,"optional"],
-		"%": [["setvar","keyname","Rule"],"'native"]
+		"%": [["setvar","$keyname","Rule"],"'native"]
 	},
 
 	"Rule": ["SimpleRule",
@@ -41,7 +41,7 @@
 		"'date",
 		"'time",
 		"'timez",
-		["setvar","keytest",["usevar",["keyname",["keytest"]],"any"]],
+		["usevar",["$keyname",["$this"]],"any"],
 		"#Simple rules are all strings, including direct values and classes"
 	],
 
@@ -62,7 +62,7 @@
 
 	"EmptyArr": [],
 
-	"All": ["prefix", ["all"], "AllCont"],
+	"All": ["prefix", ["^"], "AllCont"],
 
 	"AllCont": ["EmptyArr", "Range", "AllItem"],
 

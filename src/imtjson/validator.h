@@ -59,10 +59,13 @@ public:
 	static StrViewA strSuffix;
 	static StrViewA strSplit;
 	static StrViewA strAll;
+	static StrViewA strAndSymb;
 	static StrViewA strNot;
+	static StrViewA strNotSymb;
 	static StrViewA strDateTime;
 	static StrViewA strSetVar;
 	static StrViewA strUseVar;
+	static StrViewA strEmit;
 
 	static char valueEscape;
 	static char commentEscape;
@@ -124,6 +127,8 @@ public:
 	void setVariables(const Value &varList);
 
 
+	Value getEmits() const;
+
 protected:
 
 
@@ -153,6 +158,8 @@ protected:
 
 
 	std::vector<Value> rejections;
+	std::vector<Value> emits;
+
 	Value lastRejectedRule;
 
 	///current path (for logging)
@@ -179,13 +186,15 @@ protected:
 	
 	void pushVar(String name, Value value);
 	void popVar();
-	Value findVar(const StrViewA &name);
-	Value getVar(const Value &path);
+	Value findVar(const StrViewA &name, const Value &thisVar);
+	Value getVar(const Value &path, const Value &thisVar);
 
 
 	bool opSetVar(const Value &subject, const Value &args);
 	bool opUseVar(const Value &subject, const Value &args);
 	bool opCompareVar(const Value &subject, const Value &rule);
+	bool opEmit(const Value &subject, const Value &args);
+	Value walkObject(const Value &subject,  const Value &v);
 
 };
 
