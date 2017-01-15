@@ -744,6 +744,18 @@ namespace json {
 			return v->unproxy() < other.v->unproxy();
 		}
 
+public:
+
+		///Pointer to custom allocator
+		/** You can change allocator to achieve better results with allocation 
+		   of values of the JSON. By default, standard new and delete is used.
+		   This variable is global. By changing it, your allocator must
+		   expect, that some objects are already allocated and will be deallocated
+		   through your deallocator.		   
+		*/
+		static const Allocator *allocator;
+
+
 protected:
 
 		PValue v;

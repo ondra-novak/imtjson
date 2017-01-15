@@ -61,7 +61,7 @@ PPath Path::copy() const {
 		if (p->isKey()) reqSize+=p->keyName.length+1;
 	}
 
-	void *buff = ::operator new(reqSize+sizeof(std::uintptr_t));
+	void *buff = Value::allocator->alloc(reqSize+sizeof(std::uintptr_t));
 
 	std::uintptr_t *cookie = reinterpret_cast<std::uintptr_t *>(
 			reinterpret_cast<char *>(buff)+reqSize);
@@ -118,10 +118,9 @@ void Path::operator delete(void *ptr) {
 	//because object is POD type, it has no destructor
 	//destructor is called when need to delete object
 	//because object is always allocated by copy()
-	//we can nout perform cleanup of whole path
+	//we cannot perform cleanup of whole path
 
-
-	::operator delete (ptr);
+	Value::allocator->dealloc(ptr);
 
 }
 void *Path::operator new(size_t , void *p) {
