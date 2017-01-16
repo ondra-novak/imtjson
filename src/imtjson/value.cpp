@@ -508,5 +508,57 @@ namespace json {
 		return Value::allocator->dealloc(ptr);
 	}
 
+	Value::Value(ValueType type, const StringView<Value>& values) {
+		std::vector<PValue> vp;
+		switch (type) {
+		case array:
+			vp.reserve(values.length);
+			for (const Value &v: values) {
+				vp.push_back(v.getHandle());
+			}
+			v = new ArrayValue(std::move(vp));
+			break;
+		case object: {
+			vp.reserve(values.length);
+			StrViewA lastKey;
+			bool ordered = true;
+			for (const Value &v: values) {
+				StrViewA k = v.getKey();
+				int c = lastKey.compare(k);
+				if (c > 0) {
+					ordered = false;
+				}
+				else if (c == 0) {
+					if (!vp.empty()) vp.pop_back();
+				}
+				vp.push_back(v.getHandle());
+				lastKey = k;
+			}
+			if (!ordered) {
+				std::sort(vp.begin(),vp.end(),[](const PValue &left, const PValue &right) {
+					return left->getMemberName().compare(right->getMemberName()) < 0;
+				});
+				lastKey = StrViewA();
+				std::size_t wrpos = 0;
+				for (const PValue &v: vp) {
+					StrViewA k = v->getMemberName();
+					if (k == lastKey && wrpos) {
+						wrpos--;
+					}
+					vp[wrpos] = v;
+					wrpos++;
+					lastKey = k;
+				}
+				vp.resize(wrpos);
+			}
+			v = new ObjectValue(std::move(vp));
+			break;
+		}
+		default:
+			 throw std::runtime_error("Invalid argument");
+
+		}
+	}
+
 }
 

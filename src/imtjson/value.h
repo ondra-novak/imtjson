@@ -151,6 +151,18 @@ namespace json {
 		 * @param value refernce to a string view containing values
 		 */
 		Value(const StringView<Value> &value);
+
+
+		///Initailize the variable from a container
+		/**
+		 * @param type type of value to construct. Only supported values are array and object. Other
+		 * values will construct undefined value
+		 * @param values container of values. If type is object, the values must be
+		 * associated with keys and the keys must be unique. Duplicated keys are removed
+		 * (there is no rule, which key=value pair is removed during this process)
+		 */
+		Value(ValueType type, const StringView<Value> &values);
+
 		///Initialize the variable using initializer list {....}
 		/**
 		 * This allows to use initializer list {...} to initialize the variable.

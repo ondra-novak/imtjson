@@ -21,6 +21,14 @@ namespace json {
 		StringView(const std::vector<T> &string) : data(string.data()), length(string.size()) {}
 		StringView(const std::initializer_list<T> &list) :data(list.begin()), length(list.size()) {}
 
+		StringView &operator=(const StringView &other) {
+			if (&other != this) {
+				this->~StringView();
+				new(this) StringView(other);
+			}
+			return *this;
+		}
+
 		operator std::basic_string<T>() const { return std::basic_string<T>(data, length); }
 
 		StringView substr(std::size_t index) const {

@@ -212,7 +212,7 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parseObject()
 	{
-		Object tmpobj;
+		std::size_t tmpArrPos = tmpArr.size();
 		char c = rd.nextWs();
 		if (c == '}') {
 			rd.commit();
@@ -235,7 +235,7 @@ namespace json {
 					throw ParseError("Expected ':'");
 				rd.commit();
 				Value v = parse();
-				tmpobj.set(name, v);
+				tmpArr.push_back(v.setKey(name));
 			}
 			catch (ParseError &e) {
 				e.addContext(name);
@@ -254,8 +254,10 @@ namespace json {
 				throw ParseError("Expected ',' or '}'");
 			}
 		} while (cont);		
-
-		return Value(tmpobj);
+		StringView<Value> data = tmpArr;
+		Value res(object, data.substr(tmpArrPos));
+		tmpArr.resize(tmpArrPos);
+		return res;
 	}
 
 	template<typename Fn>
