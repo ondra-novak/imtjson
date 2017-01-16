@@ -148,6 +148,9 @@ namespace json {
 
 		///Temporary string - to keep allocated memory
 		std::string tmpstr;
+
+		///Temporary array - to keep allocated memory
+		std::vector<Value> tmpArr;
 	};
 
 
@@ -219,7 +222,7 @@ namespace json {
 		bool cont;
 		do {
 			if (c != '"') 
-				throw ParseError("Expected a string");
+				throw ParseError("Expected a key (string)");
 			rd.commit();
 			try {
 				name = readString();
@@ -258,7 +261,7 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parseArray()
 	{
-		Array tmparr;
+		std::size_t tmpArrPos = tmpArr.size();
 		char c = rd.nextWs();
 		if (c == ']') {
 			rd.commit();
@@ -267,11 +270,11 @@ namespace json {
 		bool cont;
 		do {
 			try {
-				tmparr.add(parse());
+				tmpArr.push_back(parse());
 			}
 			catch (ParseError &e) {
 				std::ostringstream buff;
-				buff << "[" << tmparr.size() << "]";
+				buff << "[" << (tmpArr.size()-tmpArrPos) << "]";
 				e.addContext(buff.str());
 				throw;
 			}
@@ -290,12 +293,15 @@ namespace json {
 			}
 			catch (ParseError &e) {
 				std::ostringstream buff;
-				buff << "[" << tmparr.size() << "]";
+				buff << "[" << (tmpArr.size()-tmpArrPos) << "]";
 				e.addContext(buff.str());
 				throw;
 			}
 		} while (cont);
-		return Value(tmparr);
+		StringView<Value> arrView(tmpArr);
+		Value res(arrView.substr(tmpArrPos));
+		tmpArr.resize(tmpArrPos);
+		return res;
 		
 	}
 

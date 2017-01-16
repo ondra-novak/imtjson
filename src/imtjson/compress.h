@@ -22,8 +22,9 @@ public:
 	static const ChainCode maxCodeToEncode = ((extCodeMask ^ 0xFF)<<8) + 0xFF + extCodeMask;
 	static const ChainCode flushCode = maxCodeToEncode;
 	static const ChainCode optimizeCode = maxCodeToEncode-1;
-	static const ChainCode maxCode = maxCodeToEncode - 2;
+	static const ChainCode maxCode = maxCodeToEncode-2;
 	static const ChainCode maxCodeForOptimize = maxCode - 16;
+	static const unsigned int hashMapReserve = maxCode*4;
 
 
 													//key to db - current chain code and next char
@@ -39,14 +40,19 @@ public:
 	struct SeqInfo {
 		//next code for current key
 		ChainCode nextCode;
+		//new code assigned when key is used - it will be stored under this code in new dictionary
+		ChainCode newCode;
 		//true, if key has been used to compress data
 		bool used;
+
 		SeqInfo(ChainCode nextCode) :nextCode(nextCode), used(false) {}
 	};
 
 	typedef std::map<Sequence, SeqInfo> SeqDBOrdered;
 	// typedef SeqDBOrdered SeqDB;
 	typedef std::unordered_map<Sequence, SeqInfo, SequenceHash> SeqDB;
+
+
 
 
 };
@@ -64,7 +70,7 @@ public:
 	~Compress();
 
 protected:
-	Fn output;	
+	Fn output;
 
 	void compress(char c);
 
@@ -72,15 +78,59 @@ protected:
 
 	//database of all created codes
 	SeqDB seqdb;
-	//next unused code 
+	//next unused code
 	ChainCode nextCode;
 	//last sequence code - while we walk through the available sequencies
 	ChainCode lastSeq;
+	//new seq for optimizer
+	ChainCode lastNewSeq;
 
 	unsigned int utf8len;
 
 	void write(ChainCode code);
 
+
+	class Optimizer {
+		SeqDB newDb;
+		ChainCode newNextCode;
+	public:
+		Optimizer() {
+			reset();
+		}
+		///Adds code to new dictionary
+		/**
+		 * @param seqNewCode new code of current sequence or code of first char
+		 * @param rdChar next char in sequence
+		 * @param sqinfo current SeqInfo for this combination. sqinfo.used must be false
+		 */
+		void addCode(ChainCode seqNewCode, char rdChar, SeqInfo &sqinfo) {
+			if (newNextCode < maxCodeForOptimize) {
+				newDb.insert(std::make_pair(
+					Sequence(seqNewCode, rdChar),
+					SeqInfo(newNextCode)));
+
+				sqinfo.newCode = newNextCode;
+
+				sqinfo.used = true;
+				//increase code counter
+				newNextCode++;
+			}
+		}
+		ChainCode optimize(SeqDB &db) {
+			std::swap(db, newDb);
+			ChainCode ret = newNextCode;
+			reset();
+			return ret;
+		}
+
+		void reset() {
+			newDb.clear();
+			newNextCode = firstCode;
+		}
+	};
+
+
+	Optimizer optimizer;
 
 	void optimizeDB();
 };
@@ -105,10 +155,11 @@ protected:
 
 
 	//information about chain code - key is index in table
-	//because first code is always 128, index is shifted about 128 down
 	struct DecInfo {
-		//previous code - for codes below 128, it is interpreted as char
+		//previous code -
 		ChainCode prevCode;
+		//new code in next dictionary (is used)
+		ChainCode newCode;
 		//next character emited for this chain code
 		char outchar;
 		//true if code has been used to decompress
@@ -118,8 +169,9 @@ protected:
 			:prevCode(prevCode), outchar(outchar), used(used) {}
 	};
 
+	typedef std::vector<DecInfo> SeqDB;
 	//table of sequences
-	std::vector<DecInfo> seqdb;
+	SeqDB seqdb;
 	//stack of charactes ready to return
 	//because characters are generated in reverse order, stack is used to make order correct
 	std::stack<char> readychars;
@@ -130,7 +182,35 @@ protected:
 
 
 
+	class Optimizer {
+		SeqDB newDb;
+	public:
+		Optimizer() {
+			reset();
+		}
+		void addCode(DecInfo &sqinfo, ChainCode prevCodeTranslated) {
+			ChainCode newCode = newDb.size() + firstCode;
+			if (newCode < maxCodeForOptimize) {
+				sqinfo.used = true;
+				sqinfo.newCode = newCode;
+				newDb.push_back(DecInfo(prevCodeTranslated,sqinfo.outchar,false));
+			}
+		}
+		void optimize(SeqDB &db) {
+			std::swap(db, newDb);
+			reset();
+		}
+
+		void reset() {
+			newDb.clear();
+		}
+	};
+
+	Optimizer optimizer;
+
 	void optimizeDB();
+
+	ChainCode translatePrevCode(ChainCode p);
 
 	ChainCode read();
 

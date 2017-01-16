@@ -8,6 +8,7 @@ namespace json {
 
 template<typename Fn>
 Compress<Fn>::Compress(const Fn& output):output(output),nextCode(firstCode),lastSeq(initialChainCode), utf8len(0) {
+	seqdb.reserve(hashMapReserve);
 }
 
 template<typename Fn>
@@ -23,6 +24,7 @@ void Compress<Fn>::reset() {
 	nextCode = firstCode;
 	lastSeq = initialChainCode;
 	seqdb.clear();
+	seqdb.reserve(hashMapReserve);
 
 }
 
@@ -73,7 +75,7 @@ void Compress<Fn>::compress(char c) {
 	//for very first character...
 	if (lastSeq == initialChainCode) {
 		//initialize lastSeq
-		lastSeq = c;
+		lastNewSeq = lastSeq = c;
 	} else {
 		//search for pair <lastSeq, c> if we able to compress it
 		auto iter = seqdb.find(Sequence(lastSeq, c));
@@ -87,7 +89,7 @@ void Compress<Fn>::compress(char c) {
 			//increase next code
 			++nextCode;
 			//store lastSeq as c - we starting accumulate next sequence
-			lastSeq = c;
+			lastNewSeq = lastSeq = c;
 		} else if (iter->second.nextCode >= maxCode) {
 
 			write(lastSeq);
@@ -96,13 +98,16 @@ void Compress<Fn>::compress(char c) {
 
 			optimizeDB();
 
-			lastSeq = c;
+			lastNewSeq = lastSeq = c;
 		} else {
 			//in case that pair has been found
 			//mark the pair used
-			iter->second.used = true;
+			if (!iter->second.used) {
+				optimizer.addCode(lastNewSeq, c, iter->second);
+			}
 			//and advence current sequence
 			lastSeq = iter->second.nextCode;
+			lastNewSeq = iter->second.newCode;
 		}
 	}
 }
@@ -127,6 +132,7 @@ inline void Compress<Fn>::write(ChainCode code) {
 template<typename Fn>
 void Compress<Fn>::optimizeDB()
 {
+#if 0
 	//this table converts old chain code into new chain code
 	//optimization strips unused sequences.
 	//all sequences that are part of other sequences are also used
@@ -135,6 +141,7 @@ void Compress<Fn>::optimizeDB()
 	for (unsigned int i = 0; i < firstCode; i++) translateTable[i] = i;
 	SeqDBOrdered seqdbo(seqdb.begin(), seqdb.end());
 	SeqDB newdb;
+	newdb.reserve(hashMapReserve);
 	//we starting here
 	ChainCode newNextCode = firstCode;
 	for (auto &&x : seqdbo) {
@@ -154,6 +161,8 @@ void Compress<Fn>::optimizeDB()
 	newdb.swap(seqdb);
 	//update nextCode
 	nextCode = newNextCode;
+#endif
+	nextCode = optimizer.optimize(seqdb);
 }
 
 template<typename Fn>
@@ -232,6 +241,7 @@ char Decompress<Fn>::decompress() {
 			p = prevCode;
 			//new sequence is also immediately used
 			used = true;
+
 		}
 		//if p is above nextCode, this is sync error
 		else if (p > nextCode) {
@@ -245,14 +255,21 @@ char Decompress<Fn>::decompress() {
 			readychars.push(nfo.outchar);
 			p = nfo.prevCode;
 			//mark every code as used
-			nfo.used = true;
+			if (nfo.used == false) {
+				ChainCode pt = translatePrevCode(p);
+				optimizer.addCode(nfo, pt);
+			}
 		}
 
 		//remaining code is firstChar
 		firstChar = (char)p;
 		//register new code which is pair of prevCode and firstChar of current code
-		if (prevCode != initialChainCode)
-			seqdb.push_back(DecInfo(prevCode, firstChar, used));
+		if (prevCode != initialChainCode) {
+			seqdb.push_back(DecInfo(prevCode, firstChar, false));
+			if (used) {
+				translatePrevCode(nextCode);
+			}
+		}
 		//make current code as prev code
 		prevCode = cc;
 		//first char is returned as result
@@ -261,6 +278,18 @@ char Decompress<Fn>::decompress() {
 	
 }
 
+template<typename Fn>
+typename Decompress<Fn>::ChainCode Decompress<Fn>::translatePrevCode(ChainCode p) {
+	if (p < firstCode) return p;
+	DecInfo &sq = seqdb[p - firstCode];
+	if (!sq.used) {
+		ChainCode prev = translatePrevCode(sq.prevCode);
+		optimizer.addCode(sq,prev);
+	}
+	return sq.newCode;
+
+
+}
 template<typename Fn>
 void Decompress<Fn>::reset()
 {
@@ -276,6 +305,7 @@ Decompress<Fn>::~Decompress()
 template<typename Fn>
 void Decompress<Fn>::optimizeDB()
 {
+#if 0
 	ChainCode translateTable[maxCode];
 	decltype(seqdb) newdb;
 	ChainCode oldcc = firstCode;
@@ -294,6 +324,8 @@ void Decompress<Fn>::optimizeDB()
 	}
 	prevCode = firstChar;
 	seqdb.swap(newdb);
+#endif
+	optimizer.optimize(seqdb);
 }
 
 template<typename Fn>
