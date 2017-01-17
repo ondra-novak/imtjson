@@ -86,7 +86,7 @@ namespace json {
 
 void Object::set_internal(const Value& v) {
 	StringView<char> curName = v.getKey();
-	lastIterSnapshot = nullptr;
+	lastIterSnapshot = Value();
 	if (changes.empty()) {
 		changes.reserve(16);
 		changes.push_back(v);
@@ -101,7 +101,7 @@ void Object::set_internal(const Value& v) {
 		}
 		if (prevName < curName) {
 			orderedPart++;
-			return;
+
 		}
 	}
 
