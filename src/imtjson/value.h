@@ -782,11 +782,22 @@ protected:
 		Value operator *() const {return v[index];}
 		ValueIterator &operator++() {++index;return *this;}
 		ValueIterator operator++(int) {++index;return ValueIterator(v,index-1);}
+		ValueIterator &operator--() {--index;return *this;}
+		ValueIterator operator--(int) {--index;return ValueIterator(v,index+1);}
+
 		bool operator==(const ValueIterator &other) const {
-			return index == other.index && v.getHandle() == other.v.getHandle();
+			return (other.atEnd() && atEnd())
+					|| (index == other.index && v.isCopyOf(other.v));
 		}
 		bool operator!=(const ValueIterator &other) const {
 			return !operator==(other);
+		}
+		///Returns whether iterator points to the end
+		bool atEnd() const {
+			return index >= v.size();
+		}
+		bool atBegin() const {
+			return index == 0;
 		}
 	};
 

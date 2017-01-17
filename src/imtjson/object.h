@@ -9,6 +9,9 @@
 namespace json {
 
 
+
+
+
 	class ObjectIterator;
 
 	///The class helps to build JSON object
@@ -20,6 +23,8 @@ namespace json {
 
 	class Object : public StackProtected {
 	public:
+
+
 		///Create instance from existing object
 		/** 
 		@param value instance of Value, which should have type equal to object. The value
@@ -104,6 +109,17 @@ namespace json {
 		Object2Object object(const StringView<char> &name);
 		Array2Object array(const StringView<char> &name);
 
+		///Optimize current object
+		/** By default, items added to the object are not ordered. It is
+		 * not necesery when the items are only put to it. However, if
+		 * you need to lookup for items, the object must be optimized
+		 *
+		 * Optimization is taken often performed automatically.
+		 *
+		 * Complexity is N.log(N)
+		 */
+		void optimize() const;
+
 		///clears the object
 		void clear();
 
@@ -129,29 +145,6 @@ namespace json {
 		Object &merge(Value object);
 
 
-		///Merges two objects
-		/** Function inserts items from the object specified by the first argument to this
-		 * object. Duplicated keys are resolved using conflictResolver specified as second argument
-		 *
-		 * @param object object to merge
-		 * @param conflictResolver function called for conflict.
-		 * @return reference to this
-		 *
-		 * The function has following prototype
-		 * @code
-		 * Value conflictResolver(const Value &origValue, const Value &newValue)
-		 * @endcode
-		 * 		 *
-		 * The function returns value which is then inserted to the object. Function may return "undefined"
-		 * which marks current field as removed.
-		 *
-		 * @note This function is slower in compare to function without conflictResolver, even if the
-		 * conflictResolver simply returns newValue, because the function must pick the original value for each
-		 * field to merge
-		 *
-		 */
-		template<typename Fn>
-		Object &merge(Value object, const Fn &conflictResolver);
 
 		///Creates iterator to walk through all changes
 		/**@note Iterator walks through changed object. Note that processing changes for iteration
@@ -160,8 +153,8 @@ namespace json {
 		 * and apply all of them to make iteration-able set
 		 *
 		 */
-		ObjectIterator begin() const;
-		ObjectIterator end() const;
+		ValueIterator begin() const;
+		ValueIterator end() const;
 
 		///Allows to change the base object
 		/** This helps to modify multiple objects using the same change-set. Just create
@@ -178,13 +171,8 @@ namespace json {
 		/**
 		 * @param oldObject source object
 		 * @param newObject target object
-		 * @param recursive if set to true, the function also creates diffs for inner objects.
-		 *   These diffs are stored as objects, however, they are currently
-		 *   undocumented and should not be used elsewhere. They just only
-		 *   allows to apply changes to sub-objects as well. The argument specifies depth
-		 *   of recursion (use -1 to maximum recursion). Default value is zero = no recursion
-		 *
-		 * @note this function is experimental and untested yet!
+		 * @param recursive specifies how deep the recursion must go. Objects beyond the limit
+		 * are not stored as diff, but they are stored as one replaces other complete
 		 */
 		void createDiff(const Value oldObject, Value newObject, unsigned int recursive = 0);
 
@@ -245,15 +233,14 @@ namespace json {
 		 * */
 		static StringView<PValue> getItems(const Value &v);
 	protected:
+
 		Value base;
-		typedef std::map<StringView<char>, Value> Changes;
+		typedef std::vector<Value> Changes;
 		
-		Changes changes;
+		mutable Changes changes;
+		mutable std::size_t orderedPart = 0;
 		friend class ObjectIterator;
 
-		///Creates vector of PValues containing set of items after applying the changes
-		/** function is used to create iterator */
-		std::vector<PValue> commitToVector() const;
 
 		///Creates special object which is used to store a difference between two objects
 		/**
@@ -285,39 +272,10 @@ namespace json {
 		class NameValueIter;
 
 private:
-	void set_internal(const PValue& v);
+	void set_internal(const Value& v);
+	mutable Value lastIterSnapshot;
 };
 
-
-	class ObjectIterator {
-	public:
-		std::vector<PValue> dataToIterate;
-		std::uintptr_t index;
-
-		ObjectIterator(std::vector<PValue> &&dataToIterate, std::uintptr_t index = 0):dataToIterate(std::move(dataToIterate)),index(index) {}
-		ObjectIterator(const std::vector<PValue> &dataToIterate, std::uintptr_t index = 0):dataToIterate(std::move(dataToIterate)),index(index) {}
-		Value operator *() const {return Value(dataToIterate[index]);}
-		ObjectIterator &operator++() {++index;return *this;}
-		ObjectIterator operator++(int) {++index;return ObjectIterator(dataToIterate,index-1);}
-		bool operator==(const ObjectIterator &other) const {
-			return dataToIterate.size()-index == other.dataToIterate.size()-other.index;
-		}
-		bool operator!=(const ObjectIterator &other) const {
-			return !operator==(other);
-		}
-	};
-
-
-	template<typename Fn>
-	inline Object& json::Object::merge(Value object, const Fn& conflictResolver) {
-			object.forEach([&](Value v) {
-				Value origVal = operator [](v.getKey());
-				if (origVal.type() == undefined) set(v);
-				else set(v.getKey(),conflictResolver(origVal, v));
-				return true;
-			});
-			return *this;
-	}
 
 }
 
