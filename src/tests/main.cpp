@@ -716,18 +716,6 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		v.toStream(out);
 	};
 
-	tst.test("Operation.merge_objects","{\"aaa\":42,\"bbb\":\"foo\",\"ccc\":true}") >> [](std::ostream &out) {
-		Object obj;
-		Value({Object("aaa",10),Object("bbb","foo"),Object("ccc",true),Object("aaa",32)})
-				.reduce([](Object *obj, const Value &v){
-			obj->merge(v,[](Value orig, Value newV) {
-				return orig.getNumber()+newV.getNumber();
-			});
-			return obj;
-		},&obj);
-		Value(obj).toStream(out);
-	};
-
 	tst.test("Operation.sort","[-33,3,8,11,11,21,43,87,90,97]") >> [](std::ostream &out) {
 		Value v = {21,87,11,-33,43,90,11,8,3,97};
 		Value w = v.sort([](const Value &a, const Value &b){

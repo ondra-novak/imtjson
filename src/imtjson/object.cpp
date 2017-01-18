@@ -63,7 +63,7 @@ namespace json {
 
 	class ObjectDiff: public ObjectValue {
 	public:
-		ObjectDiff(const std::vector<PValue> &value):ObjectValue(value) {}
+		ObjectDiff(std::vector<PValue> &&value):ObjectValue(std::move(value)) {}
 		virtual ValueTypeFlags flags() const override { return objectDiff;}
 	};
 
@@ -84,10 +84,28 @@ namespace json {
 	{
 	}
 
-void Object::set_internal(const PValue& v) {
-	StringView<char> curName = v->getMemberName();
-	changes.erase(curName);
-	changes.insert(std::make_pair(curName, v));
+void Object::set_internal(const Value& v) {
+	StringView<char> curName = v.getKey();
+	lastIterSnapshot = Value();
+	if (changes.empty()) {
+		changes.reserve(16);
+		changes.push_back(v);
+		orderedPart = 1;
+		return;
+	}
+	StringView<char> prevName = changes[orderedPart-1].getKey();
+	if (orderedPart == changes.size()) {
+		if (prevName == curName) {
+			changes[orderedPart-1] = v;
+			return;
+		}
+		if (prevName < curName) {
+			orderedPart++;
+
+		}
+	}
+
+	changes.push_back(v);
 }
 
 	Object & Object::set(const StringView<char>& name, const Value & value)
@@ -96,7 +114,7 @@ void Object::set_internal(const PValue& v) {
 		if (v->flags() & proxy ) {
 			StringView<char> curName = v->getMemberName();
 			if (curName == name) {
-				changes[curName] = v;
+				set_internal(v);
 				return *this;
 			} else {
 				v = v->unproxy();
@@ -120,13 +138,36 @@ void Object::set_internal(const PValue& v) {
 	}
 
 	Value Object::operator[](const StringView<char> &name) const {
-		Changes::const_iterator it = changes.find(name);
-		if (it == changes.end()) {
-			return base[name];
+
+		//determine whether optimize is needed
+		if (changes.size()>16 && changes.size() - orderedPart > orderedPart / 2) {
+			optimize();
 		}
-		else {
-			return Value(it->second);
+
+		//search for the item in unordered part
+		PValue f;
+		for (std::size_t i = changes.size(); i > orderedPart; i--) {
+			const Value &z = changes[i-1];
+			if (z.getKey() == name) return z;
 		}
+		//search for the item in ordered part
+		std::size_t l = 0;
+		std::size_t h = orderedPart;
+		while (l < h) {
+			std::size_t m = (l+h)/2;
+			const Value &z = changes[m];
+			StringView<char> n = z.getKey();
+			if (name < n) {
+				h = m;
+			} else if (name > n) {
+				l = m+1;
+			} else {
+				return z;
+			}
+		}
+
+		//search for the item in original object
+		return base[name];
 	}
 
 	Object &Object::operator()(const StringView<char> &name, const Value &value) {
@@ -138,50 +179,82 @@ void Object::set_internal(const PValue& v) {
 	}
 	
 
+	void Object::optimize() const {
+
+		if (orderedPart < changes.size()) {
+			//perform ordering of unordered area
+			std::sort(changes.begin()+orderedPart, changes.end(), [](const Value &l, const Value &r) {
+				return l.getKey() < r.getKey();
+			});
+
+			//remove duplicated items
+			std::size_t wrpos = orderedPart+1;
+			for (std::size_t i = orderedPart+1, cnt = changes.size(); i < cnt; ++i) {
+				if (changes[wrpos-1].getKey() != changes[i].getKey()) {
+					changes[wrpos] = changes[i];
+					wrpos++;
+				} else {
+					changes[wrpos-1] = changes[i];
+				}
+			}
+			//adjutst size if necesery
+			changes.resize(wrpos);
+
+			//we will store ordered changes here
+			Changes newChanges;
+			//reserve space
+			newChanges.reserve(wrpos);
+
+			//we have two ordered lists inside of changes
+			//we will merge these two lists
+			//when conflict detected, right item is used
+			//result is stored to the newChanges
+			//it will store also undefined, because result is still diff
+			mergeDiffsImpl(changes.begin(), changes.begin()+orderedPart, changes.begin()+orderedPart, changes.end(),
+					[](const Path &, const Value &, const Value &right) {
+							return right;
+					},Path::root,[&newChanges](const StringView<char> &, const Value &v) {
+						newChanges.push_back(v);
+					});
+			//all done - now swap containers
+			std::swap(changes,newChanges);
+			//update ordered part (everything is ordered)
+			orderedPart = wrpos;
+		}
+	}
+
 	PValue Object::commit() const {
 		if (base.empty() && changes.empty()) {
 			return AbstractObjectValue::getEmptyObject();
 		}
-		if (changes.empty()) {
+		else if (changes.empty()) {
 			return base.v;
 		}
-		std::vector<PValue> merged = commitToVector();
-		return new ObjectValue(std::move(merged));
-	}
+		else if (base.empty()) {
+			std::vector<PValue> merged;
+			optimize();
+			merged.reserve(changes.size());
+			for (const Value &v: changes) {
+				merged.push_back(v.getHandle());
+			}
+			return new ObjectValue(std::move(merged));
+		} else {
+			optimize();
+			std::vector<PValue> merged;
+			merged.reserve(base.size()+changes.size());
+			mergeDiffsImpl(base.begin(), base.end(), changes.begin(), changes.end(),
+					[](const Path &, const Value &left, const Value &right) {
+							return right;
+					},Path::root,[&merged](const StringView<char> &, const Value &v) {
+						append(merged, v.getHandle());
+					});
+			return new ObjectValue(std::move(merged));
 
-	class Object::NameValueIter: public Changes::const_iterator {
-	public:
-		NameValueIter(const Changes::const_iterator &iter):Changes::const_iterator(iter) {}
 
-		struct FakeValue:public std::pair<StringView<char>, Value> {
-			FakeValue(const std::pair<StringView<char>, Value> &p)
-					:std::pair<StringView<char>, Value>(p) {}
-			const StringView<char> getKey() const {return first;}
-			ValueType type() const {return second.type();}
-			ValueTypeFlags flags() const {return second.flags();}
-			operator const Value &() const {return second;}
-		};
-
-		FakeValue operator *() const {
-			return FakeValue(Changes::const_iterator::operator *());
 		}
-	};
-
-	std::vector<PValue> Object::commitToVector() const {
-
-		std::vector<PValue> merged;
-		merged.reserve(base.size()+changes.size());
-		NameValueIter chbeg(changes.begin());
-		NameValueIter chend(changes.end());
-		mergeDiffsImpl(base.begin(), base.end(), chbeg, chend,
-				[](const Path &, const Value &left, const Value &right) {
-						return right;
-				},Path::root,[&merged](const StringView<char> &, const Value &v) {
-					append(merged, v.getHandle());
-				});
-
-		return std::move(merged);
 	}
+
+
 	Object2Object Object::object(const StringView<char>& name)
 	{
 		return Object2Object((*this)[name],*this,name);
@@ -212,12 +285,13 @@ void Object::set_internal(const PValue& v) {
 		changes.clear();
 	}
 
-	ObjectIterator Object::begin() const {
-		return ObjectIterator(std::move(commitToVector()));
+	ValueIterator Object::begin() const {
+		if (!lastIterSnapshot.defined()) lastIterSnapshot = commit();
+		return lastIterSnapshot.begin();
 	}
 
-	ObjectIterator Object::end() const {
-		return ObjectIterator(std::vector<PValue>());
+	ValueIterator Object::end() const {
+		return lastIterSnapshot.end();
 	}
 
 
@@ -271,10 +345,11 @@ void Object::createDiff(const Value oldObject, Value newObject, unsigned int rec
 }
 
 Value Object::commitAsDiff() const {
-	std::vector<PValue> chvect;
-	chvect.reserve(changes.size());
-	for(auto &&item: changes) chvect.push_back(item.second.getHandle());
-	return new ObjectDiff(std::move(chvect));
+	optimize();
+	std::vector<PValue> vect;
+	vect.reserve(changes.size());
+	for(const Value &x: changes) vect.push_back(x.getHandle());
+	return new ObjectDiff(std::move(vect));
 }
 
 Value json::Object::applyDiff(const Value& baseObject, const Value& diffObject) {
