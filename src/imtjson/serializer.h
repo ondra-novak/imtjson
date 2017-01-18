@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <cmath>
 #include <vector>
 #include "value.h"
 
