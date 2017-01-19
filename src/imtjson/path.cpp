@@ -8,6 +8,8 @@
 #define _SCL_SECURE_NO_WARNINGS
 #include "path.h"
 #include "array.h"
+#include "allocator.h"
+
 namespace json {
 
 

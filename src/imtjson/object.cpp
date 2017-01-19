@@ -2,7 +2,9 @@
 #include "object.h"
 #include "objectValue.h"
 #include "array.h"
+#include "allocator.h"
 #include <time.h>
+#include "operations.h"
 
 #include "path.h"
 
@@ -63,8 +65,14 @@ namespace json {
 
 	class ObjectDiff: public ObjectValue {
 	public:
-		ObjectDiff(std::vector<PValue> &&value):ObjectValue(std::move(value)) {}
+		ObjectDiff(AllocInfo &nfo):ObjectValue(nfo) {}
 		virtual ValueTypeFlags flags() const override { return objectDiff;}
+
+		static RefCntPtr<ObjectDiff> create(std::size_t capacity) {
+			AllocInfo nfo(capacity);
+			return new(nfo) ObjectDiff(nfo);
+
+		}
 	};
 
 	Object::Object(Value value):base(value)
@@ -174,9 +182,10 @@ void Object::set_internal(const Value& v) {
 		return set(name, value);		
 	}
 
-	static void append(std::vector<PValue> &merged, const PValue &v) {
-		if (v->type() != undefined) merged.push_back(v);
+	static const Value &defaultConflictResolv(const Path &, const Value &, const Value &right) {
+		return right;
 	}
+
 	
 
 	void Object::optimize() const {
@@ -211,9 +220,8 @@ void Object::set_internal(const Value& v) {
 			//result is stored to the newChanges
 			//it will store also undefined, because result is still diff
 			mergeDiffsImpl(changes.begin(), changes.begin()+orderedPart, changes.begin()+orderedPart, changes.end(),
-					[](const Path &, const Value &, const Value &right) {
-							return right;
-					},Path::root,[&newChanges](const StringView<char> &, const Value &v) {
+					defaultConflictResolv,Path::root,
+					[&newChanges](const StringView<char> &, const Value &v) {
 						newChanges.push_back(v);
 					});
 			//all done - now swap containers
@@ -223,6 +231,7 @@ void Object::set_internal(const Value& v) {
 		}
 	}
 
+
 	PValue Object::commit() const {
 		if (base.empty() && changes.empty()) {
 			return AbstractObjectValue::getEmptyObject();
@@ -231,24 +240,29 @@ void Object::set_internal(const Value& v) {
 			return base.v;
 		}
 		else if (base.empty()) {
-			std::vector<PValue> merged;
+			RefCntPtr<ObjectValue> merged = ObjectValue::create(changes.size());
 			optimize();
-			merged.reserve(changes.size());
 			for (const Value &v: changes) {
-				merged.push_back(v.getHandle());
+				merged->push_back(v.getHandle());
 			}
-			return new ObjectValue(std::move(merged));
+			return PValue::staticCast(merged);
 		} else {
+			std::size_t needsz = 0;
 			optimize();
-			std::vector<PValue> merged;
-			merged.reserve(base.size()+changes.size());
+
 			mergeDiffsImpl(base.begin(), base.end(), changes.begin(), changes.end(),
-					[](const Path &, const Value &left, const Value &right) {
-							return right;
-					},Path::root,[&merged](const StringView<char> &, const Value &v) {
-						append(merged, v.getHandle());
+					defaultConflictResolv,Path::root,
+					[&] (const StringView<char> &, const Value &v) {
+					    if (v.defined()) needsz++;
+			});
+			RefCntPtr<ObjectValue> merged = ObjectValue::create(needsz);
+
+			mergeDiffsImpl(base.begin(), base.end(), changes.begin(), changes.end(),
+					defaultConflictResolv,Path::root,
+					[&merged](const StringView<char> &n, const Value &v) {
+						if (v.defined()) merged->push_back(v.setKey(n).getHandle());
 					});
-			return new ObjectValue(std::move(merged));
+			return PValue::staticCast(merged);
 
 
 		}
@@ -299,104 +313,57 @@ void Object::set_internal(const Value& v) {
 
 void Object::createDiff(const Value oldObject, Value newObject, unsigned int recursive) {
 
-	auto oldIt = oldObject.begin();
-	auto newIt = newObject.begin();
-	auto oldEnd = oldObject.end();
-	auto newEnd = newObject.end();
-	while (oldIt != oldEnd && newIt != newEnd) {
-
-		Value oldV = *oldIt;
-		Value newV = *newIt;
-
-
-		StringView<char> oldName = oldV.getKey();
-		StringView<char> newName = newV.getKey();
-		int cmp = oldName.compare(newName);
-
-		if (cmp < 0) {
-			unset(oldName);
-			++oldIt;
-		} else if (cmp > 0) {
-			set(newName, newV);
-			++newIt;
+	oldObject.merge(newObject,[&](const Value &oldO, const Value &newO){
+		if (!oldO.defined()) {
+			set_internal(newO);
+			return 0;
+		} else if (!newO.defined()) {
+			set(oldO.getKey(),undefined);
+			return 0;
+		} else if (oldO.getKey() < newO.getKey()) {
+			set(oldO.getKey(),undefined);
+			return -1;
+		} else if (oldO.getKey() > newO.getKey()) {
+			set_internal(newO);
+			return -1;
 		} else {
-			if (oldV != newV) {
-				if (recursive && oldV.type() == ::json::object && newV.type() == ::json::object) {
-					Object tmp;
-					tmp.createDiff(oldV,newV,recursive-1);
-					set(newName, tmp.commitAsDiff());
-				} else {
-					set(newV);
-				}
+			if (oldO.type() == json::object && newO.type() == json::object && recursive) {
+				Object tmp;
+				tmp.createDiff(oldO,newO,recursive-1);
+				set(oldO.getKey(), tmp.commitAsDiff());
+			} else {
+				set_internal(newO);
 			}
-			++oldIt;
-			++newIt;
 		}
-	}
-	while (oldIt != oldEnd) {
-		unset((*oldIt).getKey());
-		++oldIt;
-	}
-	while (newIt != newEnd) {
-		set(*newIt);
-		++oldIt;
-	}
-
+	});
 }
 
 Value Object::commitAsDiff() const {
+	RefCntPtr<ObjectDiff> res = ObjectDiff::create(changes.size());
 	optimize();
-	std::vector<PValue> vect;
-	vect.reserve(changes.size());
-	for(const Value &x: changes) vect.push_back(x.getHandle());
-	return new ObjectDiff(std::move(vect));
+	for(const Value &x: changes) res->push_back(x.getHandle());
+	return PValue::staticCast(res);
 }
 
 Value json::Object::applyDiff(const Value& baseObject, const Value& diffObject) {
-	auto oldIt = baseObject.begin();
-	auto newIt = diffObject.begin();
-	auto oldEnd = baseObject.end();
-	auto newEnd = diffObject.end();
-	std::vector<PValue> merged;
-	merged.reserve(baseObject.size()+diffObject.size());
 
-	while (oldIt != oldEnd && newIt != newEnd) {
+	std::size_t needsz = 0;
 
-		Value oldV = *oldIt;
-		Value newV = *newIt;
+	mergeDiffsImpl(baseObject.begin(), baseObject.end(), diffObject.begin(), diffObject.end(),
+			defaultConflictResolv,Path::root,
+			[&needsz](const StrViewA &, const Value &v) {
+		if (v.defined()) needsz++;
+	});
 
-		StringView<char> oldName = oldV.getKey();
-		StringView<char> newName = newV.getKey();
-		const PValue &olditem = oldV.getHandle();
-		const PValue &newitem = newV.getHandle();
+	RefCntPtr<ObjectValue> res = ObjectValue::create(needsz);
 
-		int cmp = oldName.compare(newName);
+	mergeDiffsImpl(baseObject.begin(), baseObject.end(), diffObject.begin(), diffObject.end(),
+			defaultConflictResolv,Path::root,
+			[&res](const StrViewA &n, const Value &v) {
+		if (v.defined()) res->push_back(v.setKey(n).getHandle());
+	});
 
-		if (cmp < 0) {
-			append(merged,olditem);
-			++oldIt;
-		} else if (cmp > 0) {
-			append(merged,newitem);
-			++newIt;
-		} else {
-			if (newitem->flags() & objectDiff) {
-				append(merged, applyDiff(olditem,newitem).getHandle());
-			} else {
-				append(merged, newitem);
-			}
-			++oldIt;
-			++newIt;
-		}
-	}
-	while (oldIt != oldEnd) {
-		append(merged,(*oldIt).getHandle());
-		++oldIt;
-	}
-	while (newIt != newEnd) {
-		append(merged,(*newIt).getHandle());
-		++newIt;
-	}
-	return new ObjectValue(std::move(merged));
+	return PValue::staticCast(res);
 
 }
 
@@ -460,15 +427,18 @@ void Object::mergeDiffs(const Object& left, const Object& right, const ConflictR
 
 Value Object::mergeDiffsObjs(const Value& lv, const Value& rv,
 		const ConflictResolver& resolver, const Path& path) {
-	std::vector<PValue> out;
-	out.reserve(lv.size()+rv.size());
-	const StringView<char> name = lv.getKey();
-	mergeDiffsImpl(lv.begin(),lv.end(),rv.begin(),rv.end(),resolver,Path(path,name),
-			[&out](const StringView<char> &name, const Value &v){
-		if (v.getKey() == name) out.push_back(v.getHandle());
-		else out.push_back(new(name) ObjectProxy(name,v.getHandle()->unproxy()));
+
+	std::size_t needsz = 0;
+	mergeDiffsImpl(lv.begin(),lv.end(),rv.begin(),rv.end(),
+			defaultConflictResolv,Path::root,[&](const StringView<char> &, const Value &){
+		needsz++;
 	});
-	return (new ObjectValue(std::move(out)));
+	RefCntPtr<ObjectDiff> obj = ObjectDiff::create(needsz);
+	mergeDiffsImpl(lv.begin(),lv.end(),rv.begin(),rv.end(),resolver,Path(path,lv.getKey()),
+			[&](const StringView<char> &name, const Value &v){
+		obj->push_back(v.setKey(name).getHandle());
+	});
+	return PValue::staticCast(obj);
 }
 
 Value Value::setKey(const StringView<char> &key) const {

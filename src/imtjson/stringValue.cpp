@@ -10,6 +10,7 @@
 #include "stringValue.h"
 
 #include "parser.h"
+#include "allocator.h"
 
 namespace json {
 

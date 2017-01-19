@@ -12,6 +12,7 @@ namespace json {
 	class ValueIterator;
 	class String;
 	class Binary;
+	class Allocator;
 	template<typename T> class ConvValueAs;
 	template<typename T> class ConvValueFrom;
 
@@ -775,7 +776,7 @@ protected:
 		friend class Object;
 		friend class Array;
 
-		std::vector<PValue> prepareValues(const std::initializer_list<Value>& data);
+		//std::vector<PValue> prepareValues(const std::initializer_list<Value>& data);
 	};
 
 	inline static std::istream &operator >> (std::istream &stream, Value &v) {

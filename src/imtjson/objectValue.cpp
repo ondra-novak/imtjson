@@ -4,26 +4,21 @@ namespace json {
 
 
 
-	ObjectValue::ObjectValue(const std::vector<PValue>& value)
-		:v(value)
-	{
-	}
-
 
 	std::size_t ObjectValue::size() const
 	{
-		return v.size();
+		return curSize;
 	}
 
 	const IValue * ObjectValue::itemAtIndex(std::size_t index) const
 	{
-		if (index < v.size()) return (const IValue *)(v[index]);
+		if (index < curSize) return (const IValue *)((*this)[index]);
 		return getUndefined();
 	}
 
 	bool ObjectValue::enumItems(const IEnumFn &fn) const
 	{
-		for (auto &&x : v) {
+		for (auto &&x : *this) {
 			if (!fn(x)) return false;
 		}
 		return true;
@@ -32,10 +27,10 @@ namespace json {
 	const IValue * ObjectValue::member(const StringView<char>& name) const
 	{
 		std::size_t l = 0;
-		std::size_t r = v.size();
+		std::size_t r = size();
 		while (l < r) {
 			std::size_t m = (l + r) / 2;
-			int c = name.compare(v[m]->getMemberName());
+			int c = name.compare(operator[](m)->getMemberName());
 			if (c > 0) {
 				l = m + 1;
 			}
@@ -43,13 +38,36 @@ namespace json {
 				r = m;
 			}
 			else {
-				return v[m];
+				return operator[](m);
 			}
 		}
 		return getUndefined();
 	}
 
-	ObjectValue::ObjectValue(std::vector<PValue>&& value):v(std::move(value)) {
+
+	void ObjectValue::sort() {
+		std::sort(begin(),end(),[](const PValue &left, const PValue &right) {
+			return left->getMemberName().compare(right->getMemberName()) < 0;
+		});
+		StrViewA lastKey;
+		std::size_t wrpos = 0;
+		for (const PValue &v: *this) {
+			StrViewA k = v->getMemberName();
+			if (k == lastKey && wrpos) {
+				wrpos--;
+			}
+			operator[](wrpos) = v;
+			wrpos++;
+			lastKey = k;
+		}
+		while (curSize > wrpos)
+			pop_back();
+
+	}
+
+	RefCntPtr<ObjectValue> ObjectValue::create(std::size_t capacity) {
+		AllocInfo nfo(capacity);
+		return new(nfo) ObjectValue(nfo);
 	}
 
 }

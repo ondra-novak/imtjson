@@ -132,19 +132,5 @@ namespace json {
 		mutable Fn fn;
 	};
 
-	///Declaration of a structure which configures allocator for JSON values.
-	struct Allocator {
-		///Pointer to allocator.
-		/** @param size size to allocate
-		*/
-		void *(*alloc)(std::size_t size);
-		///Pointer to deallocator
-		/** @param pointer to memory to deallocate 
-		 *  @param size count of bytes to deallocate
-		 */
-		void (*dealloc)(void *ptr);
-
-
-	};
 
 }

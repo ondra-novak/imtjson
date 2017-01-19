@@ -139,15 +139,16 @@ namespace json {
 		if (empty()) return AbstractArrayValue::getEmptyArray();
 		if (!dirty()) return base.getHandle();
 
-		std::vector<PValue> result;
-		result.reserve(changes.offset + changes.size());
+		std::size_t needSz = changes.offset + changes.size();
+		RefCntPtr<ArrayValue> result = ArrayValue::create(needSz);
+
 		for (std::size_t x = 0; x < changes.offset; ++x) {
-			result.push_back(base[x].getHandle());
+			result->push_back(base[x].getHandle());
 		}
 		for (auto &&x : changes) {
-			if (x->type() != undefined) result.push_back(x);
+			if (x->type() != undefined) result->push_back(x);
 		}
-		return new ArrayValue(std::move(result));
+		return PValue::staticCast(result);
 
 
 	}

@@ -4,29 +4,33 @@ namespace json {
 
 
 
+	ArrayValue::ArrayValue(AllocInfo &info):Container<PValue>(info) {}
 
-	ArrayValue::ArrayValue(std::vector<PValue>&& value)
-		:v(std::move(value))
-	{
-	}
+
 
 	std::size_t ArrayValue::size() const
 	{
-		return v.size();
+		return curSize;
 	}
 
 	const IValue * ArrayValue::itemAtIndex(std::size_t index) const
 	{
-		if (index < v.size()) return (const IValue *)(v[index]);
+		if (index < curSize) return (const IValue *)((*this)[index]);
 		return getUndefined();
 	}
 
 	bool ArrayValue::enumItems(const IEnumFn &fn) const
 	{
-		for (auto &&x : v) {
+		for (auto &&x : *this) {
 			if (!fn(x)) return false;
 		}
 		return true;
 	}
 
+	RefCntPtr<ArrayValue> ArrayValue::create(std::size_t capacity) {
+		AllocInfo req(capacity);
+		return new(req) ArrayValue(req);
+	}
+
 }
+

@@ -53,10 +53,9 @@ namespace json {
 	}
 	Value::Value(const StringView<Value>& value)
 	{
-		std::vector<PValue> pvs;
-		pvs.reserve(value.length);
-		for (Value z: value) pvs.push_back(z.getHandle());
-		v = new ArrayValue(std::move(pvs));
+		RefCntPtr<ArrayValue> res = ArrayValue::create(value.length);
+		for (Value z: value) res->push_back(z.getHandle());
+		v = PValue::staticCast(res);
 	}
 
 	String Value::toString() const
@@ -243,17 +242,16 @@ namespace json {
 		}
 	}
 
-	std::vector<PValue> Value::prepareValues(const std::initializer_list<Value>& data) {
-		std::vector<PValue> out;
-		out.reserve(data.size());
-		for (auto &&x : data) out.push_back(x.v);
-		return std::vector<PValue>(std::move(out));
+	RefCntPtr<ArrayValue> prepareValues(const std::initializer_list<Value>& data) {
+		RefCntPtr<ArrayValue> out = ArrayValue::create(data.size());
+		for (auto &&x : data) out->push_back(x.getHandle());
+		return out;
 	}
 
 	Value::Value(const std::initializer_list<Value>& data)
 		:v(data.size() == 0?
-			AbstractArrayValue::getEmptyArray()
-			:new ArrayValue(prepareValues(data)))
+			PValue(AbstractArrayValue::getEmptyArray())
+			:PValue::staticCast(prepareValues(data)))
 	{
 
 	}
@@ -493,6 +491,7 @@ namespace json {
 
 
 
+
 	static Allocator defaultAllocator = {
 		&::operator new,
 		&::operator delete
@@ -508,18 +507,23 @@ namespace json {
 		return Value::allocator->dealloc(ptr);
 	}
 
+	const Allocator *Allocator::getInstance() {
+		return Value::allocator;
+	}
+
 	Value::Value(ValueType type, const StringView<Value>& values) {
 		std::vector<PValue> vp;
 		switch (type) {
-		case array:
-			vp.reserve(values.length);
+		case array: {
+			RefCntPtr<ArrayValue> vp = ArrayValue::create(values.length);
 			for (const Value &v: values) {
-				vp.push_back(v.getHandle());
+				vp->push_back(v.getHandle());
 			}
-			v = new ArrayValue(std::move(vp));
+			v = PValue::staticCast(vp);
 			break;
+		}
 		case object: {
-			vp.reserve(values.length);
+			RefCntPtr<ObjectValue> vp = ObjectValue::create(values.length);
 			StrViewA lastKey;
 			bool ordered = true;
 			for (const Value &v: values) {
@@ -529,29 +533,15 @@ namespace json {
 					ordered = false;
 				}
 				else if (c == 0) {
-					if (!vp.empty()) vp.pop_back();
+					if (!vp->empty()) vp->pop_back();
 				}
-				vp.push_back(v.getHandle());
+				vp->push_back(v.getHandle());
 				lastKey = k;
 			}
 			if (!ordered) {
-				std::sort(vp.begin(),vp.end(),[](const PValue &left, const PValue &right) {
-					return left->getMemberName().compare(right->getMemberName()) < 0;
-				});
-				lastKey = StrViewA();
-				std::size_t wrpos = 0;
-				for (const PValue &v: vp) {
-					StrViewA k = v->getMemberName();
-					if (k == lastKey && wrpos) {
-						wrpos--;
-					}
-					vp[wrpos] = v;
-					wrpos++;
-					lastKey = k;
-				}
-				vp.resize(wrpos);
+				vp->sort();
 			}
-			v = new ObjectValue(std::move(vp));
+			v = PValue::staticCast(vp);
 			break;
 		}
 		default:
