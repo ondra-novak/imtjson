@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sstream>
+#include <cmath>
 #include "object.h"
 #include "array.h"
 
