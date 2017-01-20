@@ -203,9 +203,7 @@ void Object::set_internal(const Value& v) {
 					defaultConflictResolv,
 					Path::root,
 					[&](const StringView<char> &name, const Value &v) {
-						if (v.type() != undefined) {
 							newdiff->push_back(v.setKey(name).getHandle());
-						}
 					});
 
 			ordered = newdiff;

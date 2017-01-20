@@ -299,6 +299,31 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		out << o["5000"].getString() << o["test"].toString();
 
 	};
+	tst.test("Object.huge.search-delete","hit{\"aaa\":10}10<undefined><undefined><undefined><undefined><undefined><undefined>") >> [](std::ostream &out) {
+		Value base = Object("aaa",10);
+		Object o(base);
+		o.set("test",o);
+		for (int i = 0; i < 300; i++) {
+			String k = Value(rand()).toString();
+			o.set(k,i);
+		}
+		o.set("120","hit");
+		out << o["120"].toString();
+		out << o["test"].toString();
+		out << o["aaa"].toString();
+		o.unset("aaa");
+		o.unset("120");
+		o.unset("test");
+		out << o["120"].toString();
+		out << o["test"].toString();
+		out << o["aaa"].toString();
+		Value der = o;
+		out << der["120"].toString();
+		out << der["test"].toString();
+		out << der["aaa"].toString();
+
+
+	};
 	tst.test("Array.create","[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]") >> [](std::ostream &out){
 		Array a;
 		a.add("hi").add("hola");
