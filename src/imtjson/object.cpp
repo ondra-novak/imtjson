@@ -75,45 +75,47 @@ namespace json {
 		}
 	};
 
-	Object::Object(Value value):base(value)
+	Object::Object(Value value):base(value),unordered(&local)
 	{
 	}
 
-	Object::Object(): base(AbstractObjectValue::getEmptyObject())
+	Object::Object(): base(AbstractObjectValue::getEmptyObject()),unordered(&local)
 	{
 	}
 
-	Object::Object(const StringView<char>& name, const Value & value): base(AbstractObjectValue::getEmptyObject())
+	Object::Object(const StringView<char>& name, const Value & value): base(AbstractObjectValue::getEmptyObject()),unordered(&local)
 	{
 		set(name, value);
 	}
 
 	Object::~Object()
 	{
+		delete ordered;
+		if (unordered != &local) delete unordered;
 	}
+
+	Object::Object(const Object &other):base(AbstractObjectValue::getEmptyObject()),unordered(&local) {
+		ordered = other.commitAsDiffObject();
+	}
+
+	Object &Object::operator=(const Object &other) {
+		clear();
+		ordered = other.commitAsDiffObject();
+	}
+
 
 void Object::set_internal(const Value& v) {
 	StringView<char> curName = v.getKey();
 	lastIterSnapshot = Value();
-	if (changes.empty()) {
-		changes.reserve(16);
-		changes.push_back(v);
-		orderedPart = 1;
-		return;
-	}
-	StringView<char> prevName = changes[orderedPart-1].getKey();
-	if (orderedPart == changes.size()) {
-		if (prevName == curName) {
-			changes[orderedPart-1] = v;
-			return;
-		}
-		if (prevName < curName) {
-			orderedPart++;
 
-		}
+	bool ok = unordered->push_back(v);
+	if (!ok) {
+		optimize();
+		ObjectValue *newcont = unordered->create(unordered->size()*2);
+		delete unordered;
+		unordered = newcont;
+		unordered->push_back(v);
 	}
-
-	changes.push_back(v);
 }
 
 	Object & Object::set(const StringView<char>& name, const Value & value)
@@ -147,34 +149,20 @@ void Object::set_internal(const Value& v) {
 
 	Value Object::operator[](const StringView<char> &name) const {
 
-		//determine whether optimize is needed
-		if (changes.size()>16 && changes.size() - orderedPart > orderedPart / 2) {
+		std::size_t usz = unordered->size();
+		if (usz>16 && usz > ordered->size()/2) {
 			optimize();
 		}
-
-		//search for the item in unordered part
-		PValue f;
-		for (std::size_t i = changes.size(); i > orderedPart; i--) {
-			const Value &z = changes[i-1];
+		for (std::size_t i = usz; i>0; i--) {
+			const PValue &z = (*unordered)[i-1];
 			if (z.getKey() == name) return z;
 		}
-		//search for the item in ordered part
-		std::size_t l = 0;
-		std::size_t h = orderedPart;
-		while (l < h) {
-			std::size_t m = (l+h)/2;
-			const Value &z = changes[m];
-			StringView<char> n = z.getKey();
-			if (name < n) {
-				h = m;
-			} else if (name > n) {
-				l = m+1;
-			} else {
-				return z;
-			}
+
+		if (ordered != nullptr) {
+			const IValue *f = ordered->findSorted(name);
+			if (f) return f;
 		}
 
-		//search for the item in original object
 		return base[name];
 	}
 
@@ -189,6 +177,12 @@ void Object::set_internal(const Value& v) {
 	
 
 	void Object::optimize() const {
+
+		if (unordered->size() == 0) return;
+		unordered->sort();
+
+
+
 
 		if (orderedPart < changes.size()) {
 			//perform ordering of unordered area

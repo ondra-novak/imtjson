@@ -22,8 +22,10 @@ namespace json {
 		virtual bool getBool() const override {return true;}
 
 		void sort();
+		const IValue *findSorted(const StringView<char> &name) const;
 
 		static RefCntPtr<ObjectValue> create(std::size_t capacity);
+		static RefCntPtr<ObjectValue> merge(const ObjectValue *oldObj, const ObjectValue *newObj);
 
 		using Container<PValue>::operator new;
 		using Container<PValue>::operator delete;
