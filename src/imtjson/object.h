@@ -5,6 +5,7 @@
 #include "value.h"
 #include "stackProtection.h"
 #include "edit.h"
+#include "container.h"
 
 namespace json {
 
@@ -13,6 +14,7 @@ namespace json {
 
 
 	class ObjectValue;
+	class ObjectDiff;
 
 	///The class helps to build JSON object
 	/** To build or modify JSON object, construct this class. Then you can add, remove
@@ -137,6 +139,15 @@ namespace json {
 		*/
 		bool dirty() const;
 
+		///Returns count of items in the object
+		/**
+		 * @note function can be inaccurate because it counts duplicated items and
+		 * items to remove. Use this value as a hint
+		 *
+		 * @return count of items in the container
+		 */
+		std::size_t size() const;
+
 		///Merges two objects
 		/** Function inserts items from the object specified by the argument to this object
 		which can replace existing items or add some new ones. The result is merge
@@ -246,14 +257,12 @@ namespace json {
 		/** for large objects, this contains already ordered items for faster lookup
 		 * The container is created when first lookup is requested
 		 */
-		ObjectValue *ordered = nullptr;
+		mutable RefCntPtr<ObjectValue> ordered;
 		///Unordered part of container
 		/** contains item just added for append to replace original items
 		 * The container is not ordered and can contain duplicates.
 		 */
-		ObjectValue *unordered;
-		///For small count of changes, unordered container is implemented here
-		LocalContainer<PValue,16> local;
+		mutable RefCntPtr<ObjectValue> unordered;
 		
 
 		///Creates special object which is used to store a difference between two objects
@@ -289,7 +298,6 @@ namespace json {
 
 private:
 	void set_internal(const Value& v);
-	mutable Value lastIterSnapshot;
 };
 
 

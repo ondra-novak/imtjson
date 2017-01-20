@@ -95,7 +95,7 @@ protected:
 	unsigned char buffer[sizeof(T)*capacity];
 
 	static AllocInfo getAllocInfo(unsigned char *buffer) {
-		return AllocInfo(buffer,capacity);
+		return AllocInfo(reinterpret_cast<T *>(buffer),capacity);
 	}
 
 };

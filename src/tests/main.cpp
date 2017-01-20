@@ -288,6 +288,17 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		v = o;
 		v.toStream(out);
 	};
+	tst.test("Object.huge","hit{}") >> [](std::ostream &out) {
+		Object o;
+		o.set("test",o);
+		for (int i = 0; i < 1000; i++) {
+			String k = Value(rand()).toString();
+			o.set(k,i);
+		}
+		o.set("5000","hit");
+		out << o["5000"].getString() << o["test"].toString();
+
+	};
 	tst.test("Array.create","[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]") >> [](std::ostream &out){
 		Array a;
 		a.add("hi").add("hola");

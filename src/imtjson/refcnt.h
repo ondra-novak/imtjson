@@ -19,6 +19,10 @@ namespace json {
 
 		RefCntObj():counter(0) {}
 
+		bool isShared() const {
+			return counter > 1;
+		}
+
 
 	protected:
 		mutable std::atomic_int counter;

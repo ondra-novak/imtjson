@@ -256,7 +256,8 @@ inline T Object::reduce(const ReduceFn& reduceFn, T init) const {
 
 template<typename Cmp>
 inline Array Object::sort(const Cmp& cmp) const {
-	return genSort(cmp,*this, this->base.size() + this->changes.size());
+	optimize();
+	return genSort(cmp,*this, this->size());
 }
 
 
