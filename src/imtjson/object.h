@@ -55,6 +55,8 @@ namespace json {
 
 		Object(const Object &other);
 
+		Object(Object &&other);
+
 		Object &operator=(const Object &other);
 
 		///Sets member to value
@@ -82,7 +84,7 @@ namespace json {
 		the modified version. Modified version has priority. If the key doesn't exists or
 		has been deleter, the function returns undefined
 		*/
-		Value operator[](const StringView<char> &name) const;
+		const Value operator[](const StringView<char> &name) const;
 
 		///Removes key
 		/** Function removes already inserted key as well as the key that was defined on
@@ -247,6 +249,7 @@ namespace json {
 		 *
 		 * */
 		static StringView<PValue> getItems(const Value &v);
+
 	protected:
 
 		///Base object which contains an original items
@@ -275,7 +278,7 @@ namespace json {
 		 */
 		Value commitAsDiff() const;
 
-		ObjectValue *commitAsDiffObject() const;
+		const ObjectValue *commitAsDiffObject() const;
 
 		///Applies the diff-object to some other object and returns object with applied diff
 		/**

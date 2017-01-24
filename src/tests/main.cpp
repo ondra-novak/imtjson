@@ -234,6 +234,18 @@ int testMain() {
 		).toStream(out);
 	};
 
+	tst.test("Object.edit.move", "{\"age\":19,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":289,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
+		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
+		Object o1(v);
+			o1("kabrt", 289)
+				("arte", undefined)
+				("age",19);
+		Object o2(std::move(o1));
+		o1("aaa",10);
+		o1.optimize();
+		Value(o2).toStream(out);
+	};
+
 tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:Azaxe,") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
 		Object obj(v);

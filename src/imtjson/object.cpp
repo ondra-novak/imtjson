@@ -95,7 +95,7 @@ namespace json {
 		unordered = nullptr;
 	}
 
-	Object::Object(const Object &other):base(AbstractObjectValue::getEmptyObject()){
+	Object::Object(const Object &other):base(other.base) {
 		ordered = other.commitAsDiffObject();
 		unordered = ObjectValue::create(ordered->size());;
 	}
@@ -153,7 +153,7 @@ void Object::set_internal(const Value& v) {
 		return set(name, AbstractValue::getUndefined());
 	}
 
-	Value Object::operator[](const StringView<char> &name) const {
+	const Value Object::operator[](const StringView<char> &name) const {
 
 		if (unordered != nullptr) {
 			std::size_t usz = unordered->size();
@@ -219,15 +219,6 @@ void Object::set_internal(const Value& v) {
 		}
 		else if (ordered == nullptr) {
 			return base.v;
-		}
-		else if (base.empty()) {
-			if (ordered->isDiff) {
-				 if (ordered->isShared()) {
-					 ordered = ordered->clone();
-				 }
-				ordered->isDiff = false;
-			}
-			return PValue::staticCast(ordered);
 		} else {
 			std::size_t needsz = 0;
 
@@ -247,8 +238,6 @@ void Object::set_internal(const Value& v) {
 						if (v.type() != undefined) merged->push_back(v.setKey(n).getHandle());
 					});
 			return PValue::staticCast(merged);
-
-
 		}
 	}
 
@@ -453,15 +442,19 @@ std::size_t Object::size() const {
 	return base.size() + (ordered == nullptr?0:ordered->size())+unordered->size();
 }
 
-ObjectValue *Object::commitAsDiffObject() const {
+const ObjectValue *Object::commitAsDiffObject() const {
+	if (ordered == nullptr) return static_cast<const ObjectValue *>(AbstractObjectValue::getEmptyObject());
 	optimize();
-	if (!ordered->isDiff) {
-		if (ordered->isShared()) {
-			ordered = ordered->clone();
-		}
-		ordered->isDiff = true;
-	}
 	return ordered;
 }
+
+Object::Object(Object &&other)
+	:base(std::move(other.base))
+	,ordered(std::move(other.ordered))
+	,unordered(std::move(other.unordered)) {
+
+}
+
+
 }
 
