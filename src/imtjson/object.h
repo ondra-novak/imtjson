@@ -278,7 +278,7 @@ namespace json {
 		 */
 		Value commitAsDiff() const;
 
-		const ObjectValue *commitAsDiffObject() const;
+		ObjectValue *commitAsDiffObject() const;
 
 		///Applies the diff-object to some other object and returns object with applied diff
 		/**

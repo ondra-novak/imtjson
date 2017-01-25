@@ -97,7 +97,7 @@ namespace json {
 
 	Object::Object(const Object &other):base(other.base) {
 		ordered = other.commitAsDiffObject();
-		unordered = ObjectValue::create(ordered->size());;
+		unordered = ordered != nullptr?ObjectValue::create(ordered->size()):nullptr;
 	}
 
 	Object &Object::operator=(const Object &other) {
@@ -313,7 +313,9 @@ void Object::createDiff(const Value oldObject, Value newObject, unsigned int rec
 }
 
 Value Object::commitAsDiff() const {
-	Value(commitAsDiffObject());
+	ObjectValue *obj = commitAsDiffObject();
+	if (obj == nullptr) return json::object;
+	else Value(obj);
 }
 
 Value json::Object::applyDiff(const Value& baseObject, const Value& diffObject) {
@@ -442,8 +444,7 @@ std::size_t Object::size() const {
 	return base.size() + (ordered == nullptr?0:ordered->size())+unordered->size();
 }
 
-const ObjectValue *Object::commitAsDiffObject() const {
-	if (ordered == nullptr) return static_cast<const ObjectValue *>(AbstractObjectValue::getEmptyObject());
+ObjectValue *Object::commitAsDiffObject() const {
 	optimize();
 	return ordered;
 }
