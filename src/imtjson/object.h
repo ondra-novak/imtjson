@@ -58,6 +58,7 @@ namespace json {
 		Object(Object &&other);
 
 		Object &operator=(const Object &other);
+		Object &operator=(Object &&other);
 
 		///Sets member to value
 		/**

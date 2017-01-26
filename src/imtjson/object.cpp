@@ -102,8 +102,18 @@ namespace json {
 
 	Object &Object::operator=(const Object &other) {
 		clear();
+		base = other.base;
 		ordered = other.commitAsDiffObject();
-		unordered = ObjectValue::create(ordered->size());;
+		unordered = ordered != nullptr?ObjectValue::create(ordered->size()):nullptr;
+		return *this;
+	}
+
+	Object &Object::operator=(Object &&other) {
+		clear();
+		base = std::move(other.base);
+		ordered = std::move(other.ordered);
+		unordered = std::move(other.unordered);
+		return *this;
 	}
 
 
