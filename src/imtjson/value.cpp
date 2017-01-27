@@ -218,7 +218,7 @@ namespace json {
 	Value::TwoValues Value::splitAt(int pos) const
 	{
 		if (type() == string) {
-			String s = *this;
+			String s( *this);
 			return s.splitAt(pos);
 		}
 		else {

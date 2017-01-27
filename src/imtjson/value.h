@@ -298,17 +298,36 @@ namespace json {
 
 
 		///Binds a key-name to the item
-		/** The function is used by objects, however you can use it to immitate
-		 * that the value is bound with some key-name.
+		/** The function is used by objects, however you can freely bind any value to a specified key outside of the object.
 		 * @param key-name which is bind to the value
 		 * @return new value with bound key.
 		 *
-		 * @note due immutable nature of the  value, you cannot change or set
+		 * @note due the immutable nature of the  value, you cannot change or set
 		 * the key-name to the existing value. A new value is always created.
 		 *
 		 * @see getKey
+		 *
+		 * @note function allocates a space for the key. It is faster than converting to the String and bind that object
+		 *
 		 */
 		Value setKey(const StringView<char> &key) const;
+		Value setKey(const char *k) const {return setKey(StrViewA(k));}
+		Value setKey(const std::string &k) const {return setKey(StrViewA(k));}
+
+
+		///Binds a key-name to the item
+		/** The function is used by objects, however you can freely bind any value to a specified key outside of the object.
+		 * @param key-name which is bind to the value.
+		 * @return new value with bound key.
+		 *
+		 * @note due the immutable nature of the  value, you cannot change or set
+		 * the key-name to the existing value. A new value is always created.
+		 *
+		 * @see getKey
+		 *
+		 * @note function shares the object String. It is faster if you already have the key represented as String
+		 */
+		Value setKey(const String &key) const;
 
 		///Converts the value to string
 		/**

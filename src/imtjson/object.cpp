@@ -5,62 +5,11 @@
 #include "allocator.h"
 #include <time.h>
 #include "operations.h"
-
+#include "key.h"
 #include "path.h"
 
 namespace json {
 
-	class ObjectProxy : public AbstractValue {
-	public:
-
-		ObjectProxy(const StringView<char> &name, const PValue &value);
-		
-		virtual ValueType type() const override { return value->type(); }
-		virtual ValueTypeFlags flags() const override { return value->flags() | proxy; }
-
-		virtual std::uintptr_t getUInt() const override { return value->getUInt(); }
-		virtual std::intptr_t getInt() const override { return value->getInt(); }
-		virtual double getNumber() const override { return value->getNumber(); }
-		virtual bool getBool() const override { return value->getBool(); }
-		virtual StringView<char> getString() const override { return value->getString(); }
-		virtual std::size_t size() const override { return value->size(); }
-		virtual const IValue *itemAtIndex(std::size_t index) const override { return value->itemAtIndex(index); }
-		virtual const IValue *member(const StringView<char> &name) const override { return value->member(name); }
-		virtual bool enumItems(const IEnumFn &fn) const override { return value->enumItems(fn); }
-		virtual StringView<char> getMemberName() const override { return StringView<char>(key,keysize); }
-		virtual const IValue *unproxy() const override { return value->unproxy(); }
-		virtual bool equal(const IValue *other) const override {
-				return value->equal(other->unproxy());
-		}
-
-		void *operator new(std::size_t sz, const StringView<char> &str );
-		void operator delete(void *ptr, const StringView<char> &str);
-		void operator delete(void *ptr, std::size_t sz);
-
-	protected:
-		ObjectProxy(ObjectProxy &&) = delete;
-		PValue value;
-		std::size_t keysize;
-		char key[256];
-
-	};
-
-	ObjectProxy::ObjectProxy(const StringView<char> &name, const PValue &value):value(value),keysize(name.length) {
-		std::memcpy(key,name.data,name.length);
-		key[name.length] = 0;
-	}
-
-
-	void *ObjectProxy::operator new(std::size_t sz, const StringView<char> &str ) {
-		std::size_t needsz = sz - sizeof(ObjectProxy::key) + str.length+1;
-		return Value::allocator->alloc(needsz);
-	}
-	void ObjectProxy::operator delete(void *ptr, const StringView<char> &) {
-		Value::allocator->dealloc(ptr);
-	}
-	void ObjectProxy::operator delete(void *ptr, std::size_t sz) {
-		Value::allocator->dealloc(ptr);
-	}
 
 
 	class ObjectDiff: public ObjectValue {
@@ -442,6 +391,11 @@ Value Value::setKey(const StringView<char> &key) const {
 	if (getKey() == key) return *this;
 	if (key.empty()) return Value(v->unproxy());
 	return Value(new(key) ObjectProxy(key,v->unproxy()));
+}
+Value Value::setKey(const String &key) const {
+	if (getKey() == key) return *this;
+	if (key.empty()) return Value(v->unproxy());
+	return Value(new ObjectProxyString(key,v->unproxy()));
 }
 
 StringView<PValue> Object::getItems(const Value& v) {

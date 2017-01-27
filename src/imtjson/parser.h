@@ -22,7 +22,7 @@ namespace json {
 		Value parseNumber();
 		Value parseString();
 
-		std::string readString();
+		StrViewA readString();
 		void checkString(const StringView<char> &str);
 
 	
@@ -226,7 +226,9 @@ namespace json {
 				throw ParseError("Expected a key (string)");
 			rd.commit();
 			try {
-				name = readString();
+				StrViewA n = readString();
+				name.clear();
+				name.append(n.data,n.length);
 			}
 			catch (ParseError &e) {
 				e.addContext(name);
@@ -466,12 +468,11 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parseString()
 	{
-		std::string s = readString();
-		return Value(s);
+		return Value(readString());
 	}
 
 	template<typename Fn>
-	inline std::string Parser<Fn>::readString()
+	inline StrViewA Parser<Fn>::readString()
 	{
 		tmpstr.clear();
 		char c = rd.nextCommit();

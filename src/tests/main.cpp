@@ -16,6 +16,7 @@
 #include "../imtjson/json.h"
 #include "../imtjson/compress.tcc"
 #include "../imtjson/basicValues.h"
+#include "../imtjson/key.h"
 #include "../imtjson/comments.h"
 #include "testClass.h"
 
@@ -867,6 +868,16 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value testset = "Hello world";
 		Value::TwoValues v = testset.splitAt(5);
 		out << v.first.toString() << "," << v.second.toString();
+	};
+	tst.test("Value.setKey", "Hello world") >> [](std::ostream &out) {
+		Value v = "world";
+		v = v.setKey("Hello");
+		out << v.getKey() << " " << v.getString();
+	};
+	tst.test("Value.setKey2", "Hello world") >> [](std::ostream &out) {
+		Value v = "world";
+		v = v.setKey(String("Hello"));
+		out << v.getKey() << " " << v.getString();
 	};
 	tst.test("Parser.commented", "{\"blockComment\\/*not here*\\/\":\"here\\\"\\r\\n\",\"lineComment\\/\\/not here\":\"here\"}") >> [](std::ostream &out) {
 		StrViewA str = "{\r\n"
