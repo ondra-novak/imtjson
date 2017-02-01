@@ -41,6 +41,7 @@ namespace json {
 
 	extern BinaryEncoding base64;
 	extern BinaryEncoding directEncoding;
+	extern BinaryEncoding defaultBinaryEncoding;
 
 	///Various flags tied with JSON's type
 	/**@see userDefined, numberInteger, numberUnsignedInteger, proxy

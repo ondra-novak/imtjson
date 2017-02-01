@@ -364,7 +364,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		out << der["aaa"].toString();
 	};
 
-	tst.test("Object.diff","") >> [](std::ostream &out) {
+	tst.test("Object.diff","{\"a\":\"undefined\",\"b\":5,\"d\":4}") >> [](std::ostream &out) {
 		Value v1 = Value::fromString("{\"a\":1,\"b\":2,\"c\":3}");
 		Value v2 = Value::fromString("{\"d\":4,\"b\":5,\"c\":3}");
 		Object o;

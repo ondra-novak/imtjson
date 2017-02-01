@@ -181,7 +181,7 @@ namespace json {
 		 *
 		 * @param binary binary content
 		 */
-		Value(const BinaryView &binary, BinaryEncoding enc = base64);
+		Value(const BinaryView &binary, BinaryEncoding enc = defaultBinaryEncoding);
 
 
 		///Create binary value
@@ -794,6 +794,11 @@ namespace json {
 		 * or localhost)
 		 *
 		 * @param fn function which returns next byte in the stream
+		 * @param enc specifies encoding for binary items. Original encoding is not stored in
+		 * binary format, so the parser must know, which encoding need to be assigned to
+		 * binary items. If not specified, then defaultBinaryEncoding is used. This value
+		 * defaults to base64
+		 *
 		 * @return value reconstructed value
 		 *
 		 * @code
@@ -805,7 +810,8 @@ namespace json {
 		 * supported.
 		 */
 		template<typename Fn>
-		static Value parseBinary(const Fn &fn);
+		static Value parseBinary(const Fn &fn, BinaryEncoding enc = defaultBinaryEncoding);
+
 
 
 		///Writes values to the binary stream
@@ -817,13 +823,16 @@ namespace json {
 		 *
 		 *
 		 * @param fn function which receives a byte to write to the output stream
+		 * @param compressKeys enable key compression. Compression will store repeating keys
+		 * in reduced form. This feature is limited up to recent 127 keys. For larger repeating
+		 * objects this feature is inefficient and may harm the performance.
 		 * @code
 		 * void fn(unsigned char c);
 		 * @endcode
 		 */
 
 		template<typename Fn>
-		void serializeBinary(const Fn &fn);
+		void serializeBinary(const Fn &fn, bool compressKeys = true);
 
 public:
 

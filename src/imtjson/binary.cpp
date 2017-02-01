@@ -149,5 +149,6 @@ public:
 
 static Base64Encoding base64Var;
 BinaryEncoding base64 = &base64Var;
+BinaryEncoding defaultBinaryEncoding = &base64Var;
 
 }

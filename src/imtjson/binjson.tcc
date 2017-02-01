@@ -9,23 +9,27 @@
 #include <cstring>
 #include "objectValue.h"
 #include "arrayValue.h"
+#include "stringValue.h"
 
 namespace json {
 
 namespace opcode {
 
+///padding - value 0 is ignored and can be used to define padding
+static const unsigned char padding = 0;
 ///null value
-static const unsigned char null = 0;
-///boolean true
-static const unsigned char booltrue = 0x01;
-///boolean false
-static const unsigned char boolfalse = 0x02;
+static const unsigned char null = 1;
 ///undefined value
-static const unsigned char undefined = 0x03;
+static const unsigned char undefined = 2;
+///boolean true
+static const unsigned char booltrue = 3;
+///boolean false
+static const unsigned char boolfalse = 4;
 ///number float 32bit (currently not used)
-static const unsigned char numberFloat = 0x04;
+static const unsigned char numberFloat = 5;
 ///number float 64bit (double)
-static const unsigned char numberDouble = 0x05;
+static const unsigned char numberDouble = 6;
+
 ///tag item as diff
 /** it appears before object or array and tags that item as diff
  *
@@ -33,9 +37,9 @@ static const unsigned char numberDouble = 0x05;
  * 0x0F 0x55 - diff object with 5 items
  * */
 static const unsigned char diff = 0x0F;
-///unsigned integer
-static const unsigned char uint = 0x10;
-///signed integer positive number
+///binary string
+static const unsigned char binstring = 0x10;
+///unsigned or signed integer positive number
 static const unsigned char posint = 0x20;
 ///signed integer negative number
 static const unsigned char negint = 0x30;
@@ -55,6 +59,8 @@ static const unsigned char key= 0x70;
 
 template<typename Fn>
 void BinarySerializer<Fn>::serialize(const Value &v) {
+	keyMap.clear();
+	nextKeyId = 256;
 	serialize((const IValue *)v.getHandle());
 
 }
@@ -125,10 +131,10 @@ void BinarySerializer<Fn>::serializeNumber(const IValue *v) {
 		else serializeInteger((std::size_t)(n), opcode::posint);
 	} else if (flags & numberUnsignedInteger) {
 		std::size_t n = v->getUInt();
-		serializeInteger(n, opcode::uint);
+		serializeInteger(n, opcode::posint);
 	} else {
 		double d = v->getNumber();
-		writePOD(d,opcode::number|0xD);
+		writePOD(d,opcode::numberDouble);
 	}
 
 }
@@ -151,7 +157,7 @@ void BinarySerializer<Fn>::serializeUndefined(const IValue *) {
 
 
 template<typename Fn>
-BinaryParser<Fn>::BinaryParser(const Fn &fn):fn(fn) {}
+BinaryParser<Fn>::BinaryParser(const Fn &fn, BinaryEncoding binaryEncoding):fn(fn),curBinaryEncoding(binaryEncoding) {}
 
 template<typename Fn>
 Value json::BinaryParser<Fn>::parseKey(unsigned char tag) {
@@ -163,7 +169,7 @@ Value json::BinaryParser<Fn>::parseKey(unsigned char tag) {
 }
 
 template<typename Fn>
-Value json::BinaryParser<Fn>::parseArray(unsigned char tag) {
+Value json::BinaryParser<Fn>::parseArray(unsigned char tag, bool ) {
 	std::size_t sz = parseInteger(tag);
 	auto arr = ArrayValue::create(sz);
 	for (std::size_t i = 0; i < sz; i++) {
@@ -173,9 +179,10 @@ Value json::BinaryParser<Fn>::parseArray(unsigned char tag) {
 }
 
 template<typename Fn>
-Value json::BinaryParser<Fn>::parseObject(unsigned char tag) {
+Value json::BinaryParser<Fn>::parseObject(unsigned char tag, bool diff) {
 	std::size_t sz = parseInteger(tag);
 	auto arr = ObjectValue::create(sz);
+	arr->isDiff = diff;
 	for (std::size_t i = 0; i < sz; i++) {
 		arr->push_back(parseItem().getHandle());
 	}
@@ -183,13 +190,13 @@ Value json::BinaryParser<Fn>::parseObject(unsigned char tag) {
 }
 
 template<typename Fn>
-Value json::BinaryParser<Fn>::parseString(unsigned char tag) {
+Value json::BinaryParser<Fn>::parseString(unsigned char tag, BinaryEncoding encoding) {
 	std::size_t sz = parseInteger(tag);
-	String s(sz, [&](char *buff) {
+	RefCntPtr<StringValue> s = new(sz) StringValue(encoding, sz, [&](char *buff) {
 		for (std::size_t i = 0; i < sz; i++) buff[i] = fn();
 		return sz;
 	});
-	return s;
+	return PValue::staticCast(s);
 }
 
 template<typename Fn>
@@ -230,15 +237,6 @@ std::size_t json::BinaryParser<Fn>::parseInteger(unsigned char tag) {
 	}
 }
 
-template<typename Fn>
-Value json::BinaryParser<Fn>::parseNumber(unsigned char tag) {
-	if (0xD != (tag & 0xF)) {
-		throw std::runtime_error("Unsupported double size");
-	}
-	double d;
-	readPOD(d);
-	return d;
-}
 
 
 
@@ -260,33 +258,32 @@ Value BinaryParser<Fn>::parseItem() {
 	unsigned char tag;
 	tag = (unsigned char)fn();
 	switch (tag & 0xF0) {
-	case opcode::null: return json::null;
-	case opcode::boolfalse: return false;
-	case opcode::booltrue: return true;
-	case opcode::undefined: return json::undefined;
+	case 0: switch (tag) {
+		case opcode::null: return json::null;
+		case opcode::boolfalse: return false;
+		case opcode::booltrue: return true;
+		case opcode::undefined: return json::undefined;
+		case opcode::numberDouble: return parseNumberDouble();
+		case opcode::numberFloat: return parseNumberFloat();
+		case opcode::diff: return parseDiff();
+		default: throw std::runtime_error("Found unknown byte");
+	};
 	case opcode::array:
-		return parseArray(tag);
+		return parseArray(tag,false);
 	case opcode::object:
-		return parseObject(tag);
+		return parseObject(tag,false);
 	case opcode::string:
-		return parseString(tag);
-	case opcode::uint:
-		return Value((std::uintptr_t)parseInteger(tag));
+		return parseString(tag,nullptr);
+	case opcode::binstring:
+		return parseString(tag,curBinaryEncoding);
 	case opcode::posint:
 		return Value((std::intptr_t)parseInteger(tag));
 	case opcode::negint:
 		return Value(-(std::intptr_t)parseInteger(tag));
-	case opcode::number:
-		return parseNumber(tag);
 	case opcode::key: {
-		String s = parseString(tag);
+		String s(parseString(tag, nullptr));
 		Value v = parseItem();
 		return v.setKey(s);
-	}
-	case opcode::padding: {
-		std::size_t sz = tag & 0xF;
-		for (std::size_t i = 0; i < sz; i++) fn();
-		return parseItem();
 	}
 	default:
 		throw std::runtime_error("Found unknown byte");
@@ -305,6 +302,39 @@ template<typename T>
 void BinarySerializer<Fn>::writePOD(const T &val, unsigned char type) {
 	fn(type);
 	writePOD(val);
+}
+
+template<typename Fn>
+inline Value BinaryParser<Fn>::parseNumberDouble() {
+	double d;
+	readPOD(d);
+	return d;
+}
+
+template<typename Fn>
+inline Value BinaryParser<Fn>::parseNumberFloat() {
+	float d;
+	readPOD(d);
+	return d;
+}
+
+template<typename Fn>
+inline Value BinaryParser<Fn>::parseDiff() {
+	unsigned char opcode = fn();
+	switch (opcode & 0xF0) {
+		case opcode::object: return parseObject(opcode,true);
+		default: throw std::runtime_error("undefined opcode sequence");
+	}
+}
+
+template<typename Fn>
+inline int BinarySerializer<Fn>::tryCompressKey(const StrViewA &key){
+	ZeroID id = keyMap[key];
+	unsigned int dist = nextKeyId - id;
+	if (dist < 128) return dist;
+	else {
+
+	}
 }
 
 
