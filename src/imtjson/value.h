@@ -757,6 +757,46 @@ namespace json {
 			return v->unproxy() < other.v->unproxy();
 		}
 
+
+		///Parse binary format
+		/** Parses and reconstructs JSON-Value from binary stream. The binary stream is
+		 * not standardised. You can use binary format to transfer values through  various
+		 * IPC tools, such a pipes, shared memory or sockets. Binary format is optimized for
+		 * speed, so it is not ideal to be transfered through the network (except fast local area network,
+		 * or localhost)
+		 *
+		 * @param fn function which returns next byte in the stream
+		 * @return value reconstructed value
+		 *
+		 * @code
+		 * unsigned char fn();
+		 * #endcode
+		 *
+		 * @note the function is able to transfer all value types including "undefined" It also
+		 * supports arrays where values are bound with a key. However, only the string keys are
+		 * supported.
+		 */
+		template<typename Fn>
+		static Value parseBinary(const Fn &fn);
+
+
+		///Writes values to the binary stream
+		/** result binary stream is not by any standard. It is only recoginzed by the function parseBinary().
+		 * You can use binary format to transfer values through  various
+		 * IPC tools, such a pipes, shared memory or sockets. Binary format is optimized for
+		 * speed, so it is not ideal to be transfered through the network (except fast local area network,
+		 * or localhost)
+		 *
+		 *
+		 * @param fn function which receives a byte to write to the output stream
+		 * @code
+		 * void fn(unsigned char c);
+		 * @endcode
+		 */
+
+		template<typename Fn>
+		void serializeBinary(const Fn &fn);
+
 public:
 
 		///Pointer to custom allocator
@@ -767,6 +807,7 @@ public:
 		   through your deallocator.		   
 		*/
 		static const Allocator *allocator;
+
 
 
 protected:

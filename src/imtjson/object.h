@@ -247,6 +247,16 @@ namespace json {
 		 *
 		 * */
 		static StringView<PValue> getItems(const Value &v);
+
+
+		///Creates diff object
+		/**
+		 * @return Retuned a diff object. The object is using "named undefines" to express deletion
+		 * of the key
+		 */
+		Value commitAsDiff() const;
+
+
 	protected:
 
 		///Base object which contains an original items
@@ -264,16 +274,6 @@ namespace json {
 		 */
 		mutable RefCntPtr<ObjectValue> unordered;
 		
-
-		///Creates special object which is used to store a difference between two objects
-		/**
-		 * @return Retuned object is standard object however it can contain "undefined"
-		 * fields. These fields are exists and they have name, but undefined value. They
-		 * will appear while iteration, so this is the reason, why this method is protected.
-		 *
-		 * You can determine, whether the object is a diff using the function isObjectDiff()
-		 */
-		Value commitAsDiff() const;
 
 		ObjectValue *commitAsDiffObject() const;
 

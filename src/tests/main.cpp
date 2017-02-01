@@ -17,6 +17,7 @@
 #include "../imtjson/compress.tcc"
 #include "../imtjson/basicValues.h"
 #include "../imtjson/comments.h"
+#include "../imtjson/binjson.tcc"
 #include "testClass.h"
 
 using namespace json;
@@ -79,6 +80,25 @@ bool compressTest(std::string file) {
 	}*/
 	return input == compressed;
 }
+
+
+bool binTest(std::string file)  {
+	Value input,binloaded;
+	{
+		std::ifstream infile(file, std::ifstream::binary);
+		input = Value::fromStream(infile);
+	}
+	{
+		std::ofstream outfile(file + ".bin", std::ifstream::binary);
+		input.serializeBinary([&](unsigned char b) {outfile.put(b);});
+	}
+	{
+		std::ifstream infile(file + ".bin", std::ifstream::binary);
+		binloaded = Value::parseBinary([&] {return (unsigned char)(infile.get()); });
+	}
+	return input == binloaded;
+}
+
 
 void subobject(Object &&obj) {
 	obj("outbreak", 19)
@@ -321,9 +341,17 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		out << der["120"].toString();
 		out << der["test"].toString();
 		out << der["aaa"].toString();
-
-
 	};
+
+	tst.test("Object.diff","") >> [](std::ostream &out) {
+		Value v1 = Value::fromString("{\"a\":1,\"b\":2,\"c\":3}");
+		Value v2 = Value::fromString("{\"d\":4,\"b\":5,\"c\":3}");
+		Object o;
+		o.createDiff(v1,v2);
+		Value v = o.commitAsDiff();
+		out << v.toString();
+	};
+
 	tst.test("Array.create","[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]") >> [](std::ostream &out){
 		Array a;
 		a.add("hi").add("hola");
@@ -874,6 +902,13 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 
 	runValidatorTests(tst);
 
+
+	tst.test("binary.basic", "ok") >> [](std::ostream &out) {
+		if (binTest("src/tests/test.json")) out << "ok"; else out << "not same";
+	};
+	tst.test("binary.utf-8","ok") >> [](std::ostream &out) {
+		if (binTest("src/tests/test2.json")) out << "ok"; else out << "not same";
+	};
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
 		if (compressTest("src/tests/test.json")) out << "ok"; else out << "not same";
 	};
