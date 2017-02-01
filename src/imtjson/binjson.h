@@ -44,6 +44,8 @@ protected:
 	BinaryEncoding curBinaryEncoding;
 
 	std::vector<char> keybuffer;
+	String keyHistory[128];
+	unsigned int keyIndex = 0;
 };
 
 
@@ -56,7 +58,7 @@ protected:
 template<typename Fn>
 class BinarySerializer {
 public:
-	BinarySerializer(const Fn &fn, bool compressKeys):fn(fn),compressKeys(compressKeys) {}
+	BinarySerializer(const Fn &fn, BinarySerializeFlags flags):fn(fn), flags(flags) {}
 
 	void serialize(const Value &v);
 
@@ -72,7 +74,7 @@ protected:
 	typedef std::map<StrViewA, ZeroID> KeyMap;
 	KeyMap keyMap;
 	unsigned int nextKeyId;
-	bool compressKeys;
+	BinarySerializeFlags flags;
 
 	template<typename T>
 	void writePOD(const T &val);
@@ -95,8 +97,8 @@ protected:
 };
 
 template<typename Fn>
-inline void Value::serializeBinary(const Fn &fn , bool compressKeys) {
-	BinarySerializer<Fn> ser(fn);
+inline void Value::serializeBinary(const Fn &fn , BinarySerializeFlags flags) {
+	BinarySerializer<Fn> ser(fn, flags);
 	ser.serialize(*this);
 }
 

@@ -30,6 +30,12 @@ static const unsigned char numberFloat = 5;
 ///number float 64bit (double)
 static const unsigned char numberDouble = 6;
 
+
+static const unsigned char size8bit = 0xA;
+static const unsigned char size16bit = 0xB;
+static const unsigned char size32bit = 0xC;
+static const unsigned char size64bit = 0xD;
+
 ///tag item as diff
 /** it appears before object or array and tags that item as diff
  *
@@ -59,9 +65,9 @@ static const unsigned char key= 0x70;
 
 template<typename Fn>
 void BinarySerializer<Fn>::serialize(const Value &v) {
-	keyMap.clear();
 	nextKeyId = 256;
 	serialize((const IValue *)v.getHandle());
+	keyMap.clear();
 
 }
 
@@ -69,7 +75,14 @@ template<typename Fn>
 void BinarySerializer<Fn>::serialize(const IValue *v) {
 	StrViewA key = v->getMemberName();
 	if (!key.empty()) {
-		serializeString(key,opcode::key);
+		if (flags & compressKeys) {
+			int code = tryCompressKey(key);
+			if (code == -1) serializeString(key, opcode::key);
+			else fn(0x80 | (unsigned char)code);
+		}
+		else {
+			serializeString(key, opcode::key);
+		}
 	}
 	switch(v->type()) {
 	case object: serializeContainer(v,opcode::object);break;
@@ -107,16 +120,20 @@ void BinarySerializer<Fn>::serializeInteger(std::size_t n, unsigned char type) {
 	}
 	else if (n <= 0xFF) {
 		std::uint8_t v = (std::uint8_t)n;
-		writePOD(v, type | 0xA);
+		writePOD(v, type | opcode::size8bit);
 	} else if (n <= 0xFFFF) {
 		std::uint16_t v = (std::uint16_t)n;
-		writePOD(v, type | 0xB);
+		writePOD(v, type | opcode::size16bit);
 	} else if (n <= 0xFFFFFFFFF) {
 		std::uint32_t v = (std::uint32_t)n;
-		writePOD(v, type | 0xC);
+		writePOD(v, type | opcode::size32bit);
+	}
+	else if (flags & maintain32BitComp) {
+		double v = (double)n;
+		writePOD(v, opcode::numberDouble);
 	} else {
 		std::uint64_t v = (std::uint64_t)n;
-		writePOD(v, type | 0xD);
+		writePOD(v, type | opcode::size64bit);
 	}
 
 }
@@ -202,38 +219,33 @@ Value json::BinaryParser<Fn>::parseString(unsigned char tag, BinaryEncoding enco
 template<typename Fn>
 std::size_t json::BinaryParser<Fn>::parseInteger(unsigned char tag) {
 	switch (tag & 0xF) {
-	case 0: return 0;
-	case 1: return 1;
-	case 2: return 2;
-	case 3: return 3;
-	case 4: return 4;
-	case 5: return 5;
-	case 6: return 6;
-	case 7: return 7;
-	case 8: return 8;
-	case 9: return 9;
-	case 0xA: {
+	case opcode::size8bit: {
 		std::uint8_t x;
 		readPOD(x);
 		return x;
 	}
-	case 0xB : {
+	case opcode::size16bit: {
 		std::uint16_t x;
 		readPOD(x);
 		return x;
 	}
-	case 0xC : {
+	case opcode::size32bit: {
 		std::uint32_t x;
 		readPOD(x);
 		return x;
 	}
-	case 0xD : {
-		std::uint64_t x;
-		readPOD(x);
-		return x;
+	case opcode::size64bit : {
+		if (sizeof(std::size_t) == sizeof(std::uint64_t)) {
+			std::uint64_t x;
+			readPOD(x);
+			return (std::size_t) x;
+		}
+		else {
+			throw std::runtime_error("Too large integer for this platform");
+		}
 	}
 	default:
-		throw std::runtime_error("Unsupported integer size");
+		return tag & 0xF;
 	}
 }
 
@@ -249,7 +261,7 @@ void BinaryParser<Fn>::readPOD(T &x) {
 }
 
 template<typename Fn>
-Value BinaryParser<Fn>::parse() {
+Value BinaryParser<Fn>::parse() {	
 	return parseItem();
  }
 
@@ -282,11 +294,18 @@ Value BinaryParser<Fn>::parseItem() {
 		return Value(-(std::intptr_t)parseInteger(tag));
 	case opcode::key: {
 		String s(parseString(tag, nullptr));
+		keyHistory[keyIndex & 0x7F] = s;
+		keyIndex++;
 		Value v = parseItem();
 		return v.setKey(s);
 	}
-	default:
-		throw std::runtime_error("Found unknown byte");
+	default: {
+		unsigned int p = (keyIndex - 1 - tag) & 0x7F;
+		String s = keyHistory[p];
+		Value v = parseItem();
+		return v.setKey(s);
+	}
+		
 	}
 }
 
@@ -329,11 +348,15 @@ inline Value BinaryParser<Fn>::parseDiff() {
 
 template<typename Fn>
 inline int BinarySerializer<Fn>::tryCompressKey(const StrViewA &key){
-	ZeroID id = keyMap[key];
-	unsigned int dist = nextKeyId - id;
-	if (dist < 128) return dist;
+	ZeroID &id = keyMap[key];
+	unsigned int dist = (nextKeyId - id.value) - 1;
+	if (dist < 128) {
+		return dist;
+	}
 	else {
-
+		id.value = nextKeyId;
+		++nextKeyId;
+		return -1;
 	}
 }
 

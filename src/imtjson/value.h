@@ -823,16 +823,14 @@ namespace json {
 		 *
 		 *
 		 * @param fn function which receives a byte to write to the output stream
-		 * @param compressKeys enable key compression. Compression will store repeating keys
-		 * in reduced form. This feature is limited up to recent 127 keys. For larger repeating
-		 * objects this feature is inefficient and may harm the performance.
+		 * @param flags combination of flags: compressKeys and  maintain32BitComp
 		 * @code
 		 * void fn(unsigned char c);
 		 * @endcode
 		 */
 
 		template<typename Fn>
-		void serializeBinary(const Fn &fn, bool compressKeys = true);
+		void serializeBinary(const Fn &fn, BinarySerializeFlags flags = compressKeys);
 
 public:
 

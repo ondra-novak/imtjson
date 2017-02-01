@@ -23,6 +23,7 @@
     <ClCompile Include="array.cpp" />
     <ClCompile Include="arrayValue.cpp" />
     <ClCompile Include="basicValues.cpp" />
+    <ClCompile Include="binary.cpp" />
     <ClCompile Include="key.cpp" />
     <ClCompile Include="object.cpp" />
     <ClCompile Include="objectValue.cpp" />
@@ -40,6 +41,7 @@
     <ClInclude Include="arrayValue.h" />
     <ClInclude Include="basicValues.h" />
     <ClInclude Include="binary.h" />
+    <ClInclude Include="binjson.h" />
     <ClInclude Include="comments.h" />
     <ClInclude Include="compress.h" />
     <ClInclude Include="container.h" />
@@ -66,6 +68,7 @@
     <Text Include="CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="binjson.tcc" />
     <None Include="compress.tcc" />
     <None Include="validator.json" />
   </ItemGroup>

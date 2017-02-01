@@ -88,6 +88,27 @@ namespace json {
 	 */
 	const ValueTypeFlags binaryString = 32;
 
+
+	typedef int BinarySerializeFlags;
+
+	///This flag allowes compression of the key
+	/**  Compressed keys takes less space, On other hand,
+		serializer must lookup for each key in dictionary and this can
+		harm the performance. There is also limit up to 127 keys
+		that can be effectively compressed. For larger objects,
+		with many keys this feature can be less efficient */	     
+	
+	const BinarySerializeFlags compressKeys = 0x1;
+	/// Binary serialize will maintain 32bit compatibility.
+	/** This allows to parse the binary format under 32bit system. The
+	    flag causes, that numbers with more then 32bits will be transfered
+		as floating point number. 
+
+		This flag has no effect on 32bit system
+	*/
+	    
+	const BinarySerializeFlags maintain32BitComp = 0x2;
+
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;
 
