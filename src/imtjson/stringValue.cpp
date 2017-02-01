@@ -11,6 +11,7 @@
 
 #include "parser.h"
 #include "allocator.h"
+#include "binary.h"
 
 namespace json {
 
@@ -22,7 +23,7 @@ void *StringValue::putMagic(void *obj) {
 	return obj;
 }
 
-json::StringValue::StringValue(const StringView<char>& str):size(str.length) {
+json::StringValue::StringValue(BinaryEncoding enc, const StringView<char>& str):size(str.length),encoding(enc) {
 	char *trg = charbuff;
 	if (StringView<char>(trg,magic.length) != magic) throw std::runtime_error("StringView must be allocated by special new operator");
 	std::memcpy(trg, str.data, str.length);
@@ -43,17 +44,10 @@ std::uintptr_t json::AbstractStringValue::getUInt() const {
 	return Value::fromString(getString()).getUInt();
 }
 
-void* json::StringValue::operator new(std::size_t sz, const StringView<char>& str) {
-	std::size_t needsz = sz - sizeof(StringValue::charbuff) + std::max(str.length+1,magic.length);
-	return putMagic(Value::allocator->alloc(needsz));
-}
-
-void json::StringValue::operator delete(void* ptr,const StringView<char>& ) {
-	Value::allocator->dealloc(ptr);
-}
 
 void* json::StringValue::operator new(std::size_t sz, const std::size_t &strsz) {
-	std::size_t needsz = sz - sizeof(StringValue::charbuff) + std::max(strsz+1, magic.length);
+	std::size_t objsz = sz - sizeof(StringValue::charbuff);
+	std::size_t needsz = objsz + std::max(strsz+1, magic.length);
 	return putMagic(Value::allocator->alloc(needsz));
 }
 
@@ -70,11 +64,30 @@ double json::AbstractStringValue::getNumber() const {
 	return Value::fromString(getString()).getNumber();
 }
 
+PValue StringValue::create(const StringView<char>& str) {
+	if (str.empty()) return AbstractStringValue::getEmptyString();
+	else return new(str.length) StringValue(nullptr,str);
+}
+
 void json::StringValue::stringOverflow() {
 	std::cerr << "String buffer overflow, aborting" << std::endl << std::flush;
 	abort();
 }
 
 
+PValue StringValue::create(const BinaryView& str, BinaryEncoding enc) {
+	StringValue *v = new(str.length) StringValue(enc,StrViewA(str));
+	IValue *iv = v;
+	return iv;
 }
 
+BinaryEncoding StringValue::getEncoding(const IValue* v) {
+	if (v->type() == string && v->flags() & binaryString) {
+		const StringValue *bv = static_cast<const StringValue *>(v);
+		return bv->encoding;
+	} else {
+		return directEncoding;
+	}
+}
+
+}

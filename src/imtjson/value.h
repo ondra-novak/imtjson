@@ -177,11 +177,20 @@ namespace json {
 
 
 		///Create binary value
-		/** Binary values are not supported by JSON. They are emulated using base64 encoding
+		/** Binary values are not supported by JSON. They are emulated through encoding
 		 *
 		 * @param binary binary content
 		 */
 		Value(const BinaryView &binary, BinaryEncoding enc = base64);
+
+
+		///Create binary value
+		/** Binary values are not supported by JSON. They are emulated through encoding
+		 *
+		 * @param binary binary content
+		 */
+		Value(const Binary &binary);
+
 		///Retrieves type of value
 		/**
 		 * @return type of value
@@ -244,7 +253,7 @@ namespace json {
 		 * @param be specify binary encoding.
 		 * @return Function returns decoded binary string.
 		 */
-		Binary getBinary(BinaryEncoding be = base64) const;
+		Binary getBinary(BinaryEncoding enc = base64) const;
 		///Retrieves count of items in the container (the array or the object)
 		/**
 		 * @return For arrays or objects, the function returns count of items inside. For
@@ -298,17 +307,36 @@ namespace json {
 
 
 		///Binds a key-name to the item
-		/** The function is used by objects, however you can use it to immitate
-		 * that the value is bound with some key-name.
+		/** The function is used by objects, however you can freely bind any value to a specified key outside of the object.
 		 * @param key-name which is bind to the value
 		 * @return new value with bound key.
 		 *
-		 * @note due immutable nature of the  value, you cannot change or set
+		 * @note due the immutable nature of the  value, you cannot change or set
 		 * the key-name to the existing value. A new value is always created.
 		 *
 		 * @see getKey
+		 *
+		 * @note function allocates a space for the key. It is faster than converting to the String and bind that object
+		 *
 		 */
 		Value setKey(const StringView<char> &key) const;
+		Value setKey(const char *k) const {return setKey(StrViewA(k));}
+		Value setKey(const std::string &k) const {return setKey(StrViewA(k));}
+
+
+		///Binds a key-name to the item
+		/** The function is used by objects, however you can freely bind any value to a specified key outside of the object.
+		 * @param key-name which is bind to the value.
+		 * @return new value with bound key.
+		 *
+		 * @note due the immutable nature of the  value, you cannot change or set
+		 * the key-name to the existing value. A new value is always created.
+		 *
+		 * @see getKey
+		 *
+		 * @note function shares the object String. It is faster if you already have the key represented as String
+		 */
+		Value setKey(const String &key) const;
 
 		///Converts the value to string
 		/**

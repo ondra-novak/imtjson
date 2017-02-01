@@ -811,7 +811,7 @@ Value Validator::getVar(const Value & path, const Value &thisVar)
 bool Validator::opSetVar(const Value& subject, const Value& args) {
 	Value var = args[1];
 	if (var.getString().substr(0,1) == "$") {
-		pushVar(var, subject);
+		pushVar(String(var), subject);
 		bool res= evalRuleAlternatives(subject, args,2);
 		popVar();
 		return res;

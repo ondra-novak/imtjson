@@ -33,22 +33,15 @@ namespace json {
 	{
 	}
 
-	static const IValue *allocString(const StringView<char> &str) {
-		if (str.empty()) return AbstractStringValue::getEmptyString();
-		else {
-			return new(str) StringValue(str);
-		}
-	}
-
-	Value::Value(const char * value):v(allocString(value))
+	Value::Value(const char * value):v(StringValue::create(value))
 	{
 	}
 
-	Value::Value(const std::string & value):v(allocString(value))
+	Value::Value(const std::string & value):v(StringValue::create(value))
 	{
 	}
 
-	Value::Value(const StringView<char>& value):v(allocString(value))
+	Value::Value(const StringView<char>& value):v(StringValue::create(value))
 	{
 	}
 	Value::Value(const StringView<Value>& value)
@@ -218,7 +211,7 @@ namespace json {
 	Value::TwoValues Value::splitAt(int pos) const
 	{
 		if (type() == string) {
-			String s = *this;
+			String s( *this);
 			return s.splitAt(pos);
 		}
 		else {
@@ -404,10 +397,10 @@ namespace json {
 				unsigned char c = data[rdpos++];
 				switch (rdpos % 3) {
 				case 0: buff[wrpos++] = chars[c >> 2];
-						nx = (c << 6) & 0x3F;
+						nx = (c << 4) & 0x3F;
 						break;
 				case 1: buff[wrpos++] = chars[nx | (c>>4)];
-						nx = (c << 4) & 0x3F;
+						nx = (c << 2) & 0x3F;
 						break;
 				case 2: buff[wrpos++] = chars[nx | (c>> 6)];
 						buff[wrpos++] = chars[c & 0x3F];
@@ -470,24 +463,13 @@ namespace json {
 	}
 
 	Binary Value::getBinary(BinaryEncoding be) const {
-		String s;
-		switch(be) {
-			case base64: s = decodeBase64(getString());break;
-			case quotedPrintable: s = decodeQuotedPrintable(getString());break;
-		}
-
-		return Binary(s);
+		return Binary::decodeBinaryValue(*this,be);
 	}
 
-	Value::Value(const BinaryView& binary, BinaryEncoding enc) {
-		String s;
-		switch (enc) {
-			case base64: s = encodeBase64(binary); break;
-			case quotedPrintable: s = encodeQuotedPrintable(binary);break;
+	Value::Value(const BinaryView& binary, BinaryEncoding enc):v(StringValue::create(binary,enc)) {}
 
-		}
-		v = s.getHandle();
-	}
+	Value::Value(const Binary& binary):v(binary.getHandle()) {}
+
 
 
 

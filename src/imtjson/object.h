@@ -55,7 +55,10 @@ namespace json {
 
 		Object(const Object &other);
 
+		Object(Object &&other);
+
 		Object &operator=(const Object &other);
+		Object &operator=(Object &&other);
 
 		///Sets member to value
 		/**
@@ -82,7 +85,7 @@ namespace json {
 		the modified version. Modified version has priority. If the key doesn't exists or
 		has been deleter, the function returns undefined
 		*/
-		Value operator[](const StringView<char> &name) const;
+		const Value operator[](const StringView<char> &name) const;
 
 		///Removes key
 		/** Function removes already inserted key as well as the key that was defined on
@@ -255,7 +258,6 @@ namespace json {
 		 * of the key
 		 */
 		Value commitAsDiff() const;
-
 
 	protected:
 

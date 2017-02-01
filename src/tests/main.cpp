@@ -16,6 +16,7 @@
 #include "../imtjson/json.h"
 #include "../imtjson/compress.tcc"
 #include "../imtjson/basicValues.h"
+#include "../imtjson/key.h"
 #include "../imtjson/comments.h"
 #include "../imtjson/binjson.tcc"
 #include "testClass.h"
@@ -224,6 +225,14 @@ int testMain() {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
 		v.toStream(out);
 	};
+	tst.test("Serialize.binary","[\"\",\"Zg==\",\"Zm8=\",\"Zm9v\",\"Zm9vYg==\",\"Zm9vYmE=\",\"Zm9vYmFy\"]") >> [](std::ostream &out) {
+		StrViewA v[] = {"","f","fo","foo","foob","fooba","foobar"};
+		Array res;
+		for (auto x : v) {
+			res.push_back(Value(BinaryView(x),json::base64));
+		}
+		Value(res).toStream(out);
+	};
 	tst.test("Object.create", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
 		Object o;
 		o.set("kabrt", 123);
@@ -252,6 +261,18 @@ int testMain() {
 				("arte", undefined)
 				("age",19)
 		).toStream(out);
+	};
+
+	tst.test("Object.edit.move", "{\"age\":19,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":289,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
+		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
+		Object o1(v);
+			o1("kabrt", 289)
+				("arte", undefined)
+				("age",19);
+		Object o2(std::move(o1));
+		o1("aaa",10);
+		o1.optimize();
+		Value(o2).toStream(out);
 	};
 
 tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:Azaxe,") >> [](std::ostream &out) {
@@ -883,6 +904,16 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value testset = "Hello world";
 		Value::TwoValues v = testset.splitAt(5);
 		out << v.first.toString() << "," << v.second.toString();
+	};
+	tst.test("Value.setKey", "Hello world") >> [](std::ostream &out) {
+		Value v = "world";
+		v = v.setKey("Hello");
+		out << v.getKey() << " " << v.getString();
+	};
+	tst.test("Value.setKey2", "Hello world") >> [](std::ostream &out) {
+		Value v = "world";
+		v = v.setKey(String("Hello"));
+		out << v.getKey() << " " << v.getString();
 	};
 	tst.test("Parser.commented", "{\"blockComment\\/*not here*\\/\":\"here\\\"\\r\\n\",\"lineComment\\/\\/not here\":\"here\"}") >> [](std::ostream &out) {
 		StrViewA str = "{\r\n"
