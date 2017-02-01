@@ -177,11 +177,20 @@ namespace json {
 
 
 		///Create binary value
-		/** Binary values are not supported by JSON. They are emulated using base64 encoding
+		/** Binary values are not supported by JSON. They are emulated through encoding
 		 *
 		 * @param binary binary content
 		 */
 		Value(const BinaryView &binary, BinaryEncoding enc = base64);
+
+
+		///Create binary value
+		/** Binary values are not supported by JSON. They are emulated through encoding
+		 *
+		 * @param binary binary content
+		 */
+		Value(const Binary &binary);
+
 		///Retrieves type of value
 		/**
 		 * @return type of value
@@ -244,7 +253,7 @@ namespace json {
 		 * @param be specify binary encoding.
 		 * @return Function returns decoded binary string.
 		 */
-		Binary getBinary(BinaryEncoding be = base64) const;
+		Binary getBinary(BinaryEncoding enc = base64) const;
 		///Retrieves count of items in the container (the array or the object)
 		/**
 		 * @return For arrays or objects, the function returns count of items inside. For

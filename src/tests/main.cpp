@@ -205,6 +205,14 @@ int testMain() {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
 		v.toStream(out);
 	};
+	tst.test("Serialize.binary","[\"\",\"Zg==\",\"Zm8=\",\"Zm9v\",\"Zm9vYg==\",\"Zm9vYmE=\",\"Zm9vYmFy\"]") >> [](std::ostream &out) {
+		StrViewA v[] = {"","f","fo","foo","foob","fooba","foobar"};
+		Array res;
+		for (auto x : v) {
+			res.push_back(Value(BinaryView(x),json::base64));
+		}
+		Value(res).toStream(out);
+	};
 	tst.test("Object.create", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
 		Object o;
 		o.set("kabrt", 123);

@@ -13,26 +13,32 @@
 #include "basicValues.h"
 
 namespace json {
-
 class StringValue: public AbstractStringValue {
 public:
-	StringValue(const StringView<char> &str);
-	template<typename Fn> StringValue(std::size_t strSz, const Fn &fn);
+	StringValue(BinaryEncoding encoding, const StringView<char> &str);
+	template<typename Fn> StringValue(BinaryEncoding encoding,std::size_t strSz, const Fn &fn);
 
 	virtual StringView<char> getString() const override;
 	virtual bool getBool() const override {return true;}
+	virtual ValueTypeFlags flags() const override {return encoding != 0?binaryString:0;}
 
 
-	void *operator new(std::size_t sz, const StringView<char> &str );
-	void operator delete(void *ptr, const StringView<char> &str);
 	void *operator new(std::size_t sz, const std::size_t &strsz );
 	void operator delete(void *ptr, const std::size_t &sz);
 	void operator delete(void *ptr, std::size_t sz);
 
+
+	static PValue create(const StringView<char> &str);
+	static PValue create(const BinaryView &str, BinaryEncoding enc);
+
+	static BinaryEncoding getEncoding(const IValue *v);
+
 protected:
 	StringValue(StringValue &&) = delete;
+	StringValue(const StringValue &) = delete;
 	std::size_t size;
-	char charbuff[65536];
+	BinaryEncoding encoding;
+	char charbuff[100]; ///< the string can be larger than 100 bytes - this is for preview in the debugger
 
 	static void *putMagic(void *obj);
 	void stringOverflow();
@@ -41,7 +47,9 @@ protected:
 };
 
 template<typename Fn>
-inline StringValue::StringValue(std::size_t strSz, const Fn& fn):size(strSz) {
+inline StringValue::StringValue(BinaryEncoding encoding, std::size_t strSz, const Fn& fn)
+	:size(strSz)
+	,encoding(encoding) {
 	charbuff[strSz] = 0;
 	std::size_t wrsz = fn(charbuff);
 	if (wrsz > strSz || charbuff[strSz] != 0) stringOverflow();
@@ -49,8 +57,5 @@ inline StringValue::StringValue(std::size_t strSz, const Fn& fn):size(strSz) {
 	size = wrsz;
 }
 
-
 }
-
-
 #endif /* SRC_IMMUJSON_STRINGVALUE_H_ */
