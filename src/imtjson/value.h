@@ -12,7 +12,7 @@ namespace json {
 	class ValueIterator;
 	class String;
 	class Binary;
-	class Allocator;
+	struct Allocator;
 	template<typename T> class ConvValueAs;
 	template<typename T> class ConvValueFrom;
 

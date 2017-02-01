@@ -267,6 +267,7 @@ void Object::createDiff(const Value oldObject, Value newObject, unsigned int rec
 			} else {
 				set_internal(newO);
 			}
+			return 0;
 		}
 	});
 }
@@ -274,7 +275,7 @@ void Object::createDiff(const Value oldObject, Value newObject, unsigned int rec
 Value Object::commitAsDiff() const {
 	ObjectValue *obj = commitAsDiffObject();
 	if (obj == nullptr) return json::object;
-	else Value(obj);
+	else return Value(obj);
 }
 
 Value json::Object::applyDiff(const Value& baseObject, const Value& diffObject) {

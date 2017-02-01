@@ -76,30 +76,6 @@ protected:
 
 };
 
-template<typename T, std::size_t capacity>
-class LocalContainer: public Container<T> {
-public:
-	typedef typename Container<T>::AllocInfo AllocInfo;
-	LocalContainer():Container<T>(getAllocInfo(buffer)) {}
-
-	LocalContainer(const Container<T> &other):Container<T>(getAllocInfo(buffer)) {
-		operator=(other);
-	}
-	LocalContainer &operator=(const Container<T> &other) {
-		Container<T>::operator=(other);
-		return *this;
-	}
-
-
-protected:
-	unsigned char buffer[sizeof(T)*capacity];
-
-	static AllocInfo getAllocInfo(unsigned char *buffer) {
-		return AllocInfo(reinterpret_cast<T *>(buffer),capacity);
-	}
-
-};
-
 
 template<typename T>
 inline Container<T>::Container(const AllocInfo &allocInfo)
@@ -120,6 +96,7 @@ inline Container<T>& Container<T>::operator =(const Container& other) {
 	clear();
 	for ( const T &v : other )
 		push_back(v);
+	return *this;
 }
 
 template<typename T>

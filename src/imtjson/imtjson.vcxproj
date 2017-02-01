@@ -23,6 +23,7 @@
     <ClCompile Include="array.cpp" />
     <ClCompile Include="arrayValue.cpp" />
     <ClCompile Include="basicValues.cpp" />
+    <ClCompile Include="key.cpp" />
     <ClCompile Include="object.cpp" />
     <ClCompile Include="objectValue.cpp" />
     <ClCompile Include="path.cpp" />
@@ -34,15 +35,19 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="abstractValue.h" />
+    <ClInclude Include="allocator.h" />
     <ClInclude Include="array.h" />
     <ClInclude Include="arrayValue.h" />
     <ClInclude Include="basicValues.h" />
+    <ClInclude Include="binary.h" />
     <ClInclude Include="comments.h" />
     <ClInclude Include="compress.h" />
+    <ClInclude Include="container.h" />
     <ClInclude Include="conv.h" />
     <ClInclude Include="edit.h" />
     <ClInclude Include="ivalue.h" />
     <ClInclude Include="json.h" />
+    <ClInclude Include="key.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="objectValue.h" />
     <ClInclude Include="operations.h" />
