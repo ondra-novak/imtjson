@@ -35,13 +35,13 @@ namespace json {
 	};
 
 
-	///Available binary encoders
-	enum BinaryEncoding {
-		///base64 encoding
-		base64,
-		///store binary in quoted printable form (so binary characters will be escaped)
-		quotedPrintable,
-	};
+	///Holds type of binary encoding
+	class IBinaryEncoder;
+	typedef const IBinaryEncoder *BinaryEncoding;
+
+	extern BinaryEncoding base64;
+	extern BinaryEncoding directEncoding;
+	extern BinaryEncoding defaultBinaryEncoding;
 
 	///Various flags tied with JSON's type
 	/**@see userDefined, numberInteger, numberUnsignedInteger, proxy
@@ -79,6 +79,14 @@ namespace json {
 	 *  contains differences
 	 */
 	const ValueTypeFlags objectDiff = 16;
+
+	/// States that object is binary string
+	/** This flag appears with a string only. It causes, that content of the string will be encoded
+	 * using encoding specified during creation of this object. Parser cannot create binary strings. However
+	 * you can use function Value::getBinary() to decode the parsed string as well as to receive content
+	 * of binary string without decoding.
+	 */
+	const ValueTypeFlags binaryString = 32;
 
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;

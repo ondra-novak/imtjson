@@ -263,9 +263,10 @@ void Object::createDiff(const Value oldObject, Value newObject, unsigned int rec
 			if (oldO.type() == json::object && newO.type() == json::object && recursive) {
 				Object tmp;
 				tmp.createDiff(oldO,newO,recursive-1);
-				set(oldO.getKey(), tmp.commitAsDiff());
+				Value d = tmp.commitAsDiff();
+				if (!d.empty()) set(oldO.getKey(), d);
 			} else {
-				set_internal(newO);
+				if (oldO != newO) set_internal(newO);
 			}
 			return 0;
 		}
@@ -275,7 +276,7 @@ void Object::createDiff(const Value oldObject, Value newObject, unsigned int rec
 Value Object::commitAsDiff() const {
 	ObjectValue *obj = commitAsDiffObject();
 	if (obj == nullptr) return json::object;
-	else return Value(obj);
+	else return Value(static_cast<const IValue *>(obj));
 }
 
 Value json::Object::applyDiff(const Value& baseObject, const Value& diffObject) {

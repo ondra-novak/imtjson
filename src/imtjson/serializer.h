@@ -4,6 +4,7 @@
 #include <cmath>
 #include <vector>
 #include "value.h"
+#include "binary.h"
 
 namespace json {
 
@@ -52,6 +53,7 @@ namespace json {
 		void writeDouble(double value);
 		void writeUnicode(unsigned int uchar);
 		void writeString(const StringView<char> &text);
+		void writeStringBody(const StringView<char> &text);
 
 	};
 
@@ -147,7 +149,14 @@ namespace json {
 	inline void Serializer<Fn>::serializeString(const IValue * ptr)
 	{
 		StringView<char> str = ptr->getString();
-		writeString(str);
+		if (ptr->flags()  & binaryString) {
+			BinaryEncoding enc = Binary::getEncoding(ptr);
+			target('"');
+			enc->encodeBinaryValue(BinaryView(str), [&](const StrViewA &str) {writeStringBody(str);});
+			target('"');
+		} else {
+			writeString(str);
+		}
 	}
 
 	template<typename Fn>
@@ -285,6 +294,13 @@ namespace json {
 	inline void Serializer<Fn>::writeString(const StringView<char>& text)
 	{
 		target('"');
+		writeStringBody(text);
+		target('"');
+	}
+	template<typename Fn>
+	inline void Serializer<Fn>::writeStringBody(const StringView<char>& text)
+
+	{
 		unsigned int uchar = 0;
 		unsigned int extra = 0;
 		for (auto&& c : text) {
@@ -337,7 +353,6 @@ namespace json {
 		if (extra) {
 			notValidUTF8(text);
 		}
-		target('"');
 	}
 
 }
