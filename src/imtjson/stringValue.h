@@ -22,7 +22,6 @@ public:
 	virtual bool getBool() const override {return true;}
 	virtual ValueTypeFlags flags() const override {return encoding != 0?binaryString:0;}
 
-
 	void *operator new(std::size_t sz, const std::size_t &strsz );
 	void operator delete(void *ptr, const std::size_t &sz);
 	void operator delete(void *ptr, std::size_t sz);
@@ -36,7 +35,7 @@ public:
 protected:
 	StringValue(StringValue &&) = delete;
 	StringValue(const StringValue &) = delete;
-	std::size_t size;
+	std::size_t sz;
 	BinaryEncoding encoding;
 	char charbuff[100]; ///< the string can be larger than 100 bytes - this is for preview in the debugger
 
@@ -48,13 +47,13 @@ protected:
 
 template<typename Fn>
 inline StringValue::StringValue(BinaryEncoding encoding, std::size_t strSz, const Fn& fn)
-	:size(strSz)
+	:sz(strSz)
 	,encoding(encoding) {
 	charbuff[strSz] = 0;
 	std::size_t wrsz = fn(charbuff);
 	if (wrsz > strSz || charbuff[strSz] != 0) stringOverflow();
 	charbuff[wrsz] = 0;
-	size = wrsz;
+	sz = wrsz;
 }
 
 }

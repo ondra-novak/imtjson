@@ -258,12 +258,21 @@ namespace json {
 		/**
 		 * @return For arrays or objects, the function returns count of items inside. For
 		 * other types, fhe function returns 0
+		 *
+		 * @note For strings, the function returns always zero. You have to
+		 * call String::length() or getString().length to receive length of
+		 * the string
 		 */
 		std::size_t size() const { return v->size(); }
 		///Determines whether value is an empty container
 		/**
 		 * @retval false the object or the array is not empty
 		 * @retval true the object or the array is empty, or the value is neither an array nor an object.
+		 *
+		 * @note For strings, the function returns always true. You have to
+		 * call String::empty() or getString().empty() to determine, whether
+		 * the string is empty.
+		 *
 		 */
 		bool empty() const { return v->size() == 0; }
 		///Access to an item stored in the container (array or object)
@@ -274,6 +283,8 @@ namespace json {
 		 * @param index index of the item to retrieve
 		 * @return Value of item in the container at the given index. If the container is an object,
 		 * returned value can be requested for the key - see getKey() function
+		 *
+		 * You cannot use the operator on strings to obtain n-th character.
 		 */
 		Value operator[](uintptr_t index) const { return v->itemAtIndex(index); }
 		///Access to an item stored in the object

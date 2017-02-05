@@ -23,7 +23,7 @@ void *StringValue::putMagic(void *obj) {
 	return obj;
 }
 
-json::StringValue::StringValue(BinaryEncoding enc, const StringView<char>& str):size(str.length),encoding(enc) {
+json::StringValue::StringValue(BinaryEncoding enc, const StringView<char>& str):sz(str.length),encoding(enc) {
 	char *trg = charbuff;
 	if (StringView<char>(trg,magic.length) != magic) throw std::runtime_error("StringView must be allocated by special new operator");
 	std::memcpy(trg, str.data, str.length);
@@ -31,7 +31,7 @@ json::StringValue::StringValue(BinaryEncoding enc, const StringView<char>& str):
 }
 
 StringView<char> json::StringValue::getString() const {
-	return StringView<char>(charbuff, size);
+	return StringView<char>(charbuff, sz);
 }
 
 std::intptr_t json::AbstractStringValue::getInt() const {

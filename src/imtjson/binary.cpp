@@ -13,10 +13,11 @@ BinaryEncoding Binary::getEncoding(const IValue *v)  {
 }
 
 Binary Binary::decodeBinaryValue(const Value &s, BinaryEncoding encoding) {
-	if (s.type() != string || s.empty()) {
+	StrViewA str = s.getString();
+	if (str.empty()) {
 		return Binary(json::string);
 	} else if (s.flags() != binaryString) {
-		return Binary(encoding->decodeBinaryValue(s.getString()));
+		return Binary(encoding->decodeBinaryValue(str));
 	} else {
 		return Binary(s);
 	}
@@ -73,14 +74,14 @@ public:
 			--finlen;
 			--len;
 		}
-		return String(finlen, [&] (char *buff) {
+		RefCntPtr<StringValue> strVal = new(len) StringValue(base64,len,[&] (char *buff) {
 
 			unsigned char *bbuf = reinterpret_cast<unsigned char *>(buff);
 
 			std::size_t rdpos = 0;
 			std::size_t wrpos = 0;
 			while (rdpos < len) {
-				char z = str[rdpos++];
+				char z = str[rdpos];
 				unsigned char b = t.table[(unsigned char)z];
 				switch (rdpos & 0x3) {
 				case 0: bbuf[wrpos] = b << 2;break;
@@ -90,12 +91,15 @@ public:
 				case 2: bbuf[wrpos] |= b >> 2;
 						bbuf[++wrpos] = b << 6;
 						break;
-				case 3: bbuf[++wrpos] |= b;
+				case 3: bbuf[wrpos] |= b;
+						++wrpos;
 						break;
 				}
+				rdpos++;
 			}
 			return finlen;
 		});
+		return PValue::staticCast(strVal);
 	}
 	virtual void encodeBinaryValue(const BinaryView &data, const WriteFn &fn) const override {
 

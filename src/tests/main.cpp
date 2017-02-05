@@ -226,12 +226,36 @@ int testMain() {
 		v.toStream(out);
 	};
 	tst.test("Serialize.binary","[\"\",\"Zg==\",\"Zm8=\",\"Zm9v\",\"Zm9vYg==\",\"Zm9vYmE=\",\"Zm9vYmFy\"]") >> [](std::ostream &out) {
+		//Tests whether binary values are properly encoded to base64
 		StrViewA v[] = {"","f","fo","foo","foob","fooba","foobar"};
 		Array res;
 		for (auto x : v) {
 			res.push_back(Value(BinaryView(x),json::base64));
 		}
 		Value(res).toStream(out);
+	};
+	tst.test("Parse.binary",",f,fo,foo,foob,fooba,foobar") >> [](std::ostream &out) {
+		//Tests whether base64 values are properly decoded to the Binary type
+		Value v = Value::fromString("[\"\",\"Zg==\",\"Zm8=\",\"Zm9v\",\"Zm9vYg==\",\"Zm9vYmE=\",\"Zm9vYmFy\"]");
+		Binary a( v[0].getBinary(base64));
+		Binary b( v[1].getBinary(base64));
+		Binary c( v[2].getBinary(base64));
+		Binary d( v[3].getBinary(base64));
+		Binary e( v[4].getBinary(base64));
+		Binary f( v[5].getBinary(base64));
+		Binary g( v[6].getBinary(base64));
+
+		out << StrViewA(a) << "," << StrViewA(b)
+				<< "," << StrViewA(c) << "," << StrViewA(d)
+				<< "," << StrViewA(e) << "," << StrViewA(f)
+				<< "," << StrViewA(g);
+	};
+	tst.test("Parse.base64.keepEncoding","\"Zm9vYmFy\"") >> [](std::ostream &out) {
+		//Tests whether the encoding is remembered after decode and properly used to encode data back.
+		Value v = Value::fromString("\"Zm9vYmFy\"");
+		Binary a( v.getBinary(base64));
+		Value w (a);
+		w.toStream(out);
 	};
 	tst.test("Object.create", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
 		Object o;
