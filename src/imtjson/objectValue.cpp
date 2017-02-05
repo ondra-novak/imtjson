@@ -51,7 +51,7 @@ namespace json {
 
 
 	void ObjectValue::sort() {
-		std::sort(begin(),end(),[](const PValue &left, const PValue &right) {
+		std::stable_sort(begin(),end(),[](const PValue &left, const PValue &right) {
 			return left->getMemberName().compare(right->getMemberName()) < 0;
 		});
 		StrViewA lastKey;
