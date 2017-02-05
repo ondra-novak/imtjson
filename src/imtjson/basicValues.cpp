@@ -137,7 +137,8 @@ public:
 			for (std::size_t i = 0; i < cnt; i++) {
 				const IValue *a = itemAtIndex(i);
 				const IValue *b = other->itemAtIndex(i);
-				if (a != b && (a->getMemberName() != b->getMemberName() || !a->equal(b))) return false;
+				if (a != b && (a->getMemberName() != b->getMemberName() || !a->equal(b)))
+					return false;
 			}
 			return true;
 		}

@@ -5,6 +5,7 @@
 #include "value.h"
 #include "stackProtection.h"
 #include "edit.h"
+#include "container.h"
 
 namespace json {
 
@@ -12,7 +13,8 @@ namespace json {
 
 
 
-	class ObjectIterator;
+	class ObjectValue;
+	class ObjectDiff;
 
 	///The class helps to build JSON object
 	/** To build or modify JSON object, construct this class. Then you can add, remove
@@ -51,6 +53,13 @@ namespace json {
 		///Destructor - performs cleanup, discards any changes.
 		~Object();
 
+		Object(const Object &other);
+
+		Object(Object &&other);
+
+		Object &operator=(const Object &other);
+		Object &operator=(Object &&other);
+
 		///Sets member to value
 		/**
 		 @param name name of key
@@ -76,7 +85,7 @@ namespace json {
 		the modified version. Modified version has priority. If the key doesn't exists or
 		has been deleter, the function returns undefined
 		*/
-		Value operator[](const StringView<char> &name) const;
+		const Value operator[](const StringView<char> &name) const;
 
 		///Removes key
 		/** Function removes already inserted key as well as the key that was defined on
@@ -132,6 +141,15 @@ namespace json {
 		@retval false no modifications recorded.
 		*/
 		bool dirty() const;
+
+		///Returns count of items in the object
+		/**
+		 * @note function can be inaccurate because it counts duplicated items and
+		 * items to remove. Use this value as a hint
+		 *
+		 * @return count of items in the container
+		 */
+		std::size_t size() const;
 
 		///Merges two objects
 		/** Function inserts items from the object specified by the argument to this object
@@ -232,25 +250,35 @@ namespace json {
 		 *
 		 * */
 		static StringView<PValue> getItems(const Value &v);
-	protected:
-
-		Value base;
-		typedef std::vector<Value> Changes;
-		
-		mutable Changes changes;
-		mutable std::size_t orderedPart = 0;
-		friend class ObjectIterator;
 
 
-		///Creates special object which is used to store a difference between two objects
+		///Creates diff object
 		/**
-		 * @return Retuned object is standard object however it can contain "undefined"
-		 * fields. These fields are exists and they have name, but undefined value. They
-		 * will appear while iteration, so this is the reason, why this method is protected.
-		 *
-		 * You can determine, whether the object is a diff using the function isObjectDiff()
+		 * @return Retuned a diff object. The object is using "named undefines" to express deletion
+		 * of the key
 		 */
 		Value commitAsDiff() const;
+
+	protected:
+
+		///Base object which contains an original items
+		Value base;
+		///Latest snapshot used for iterations
+		mutable Value lastIterSnapshot;
+		///Ordered part of container
+		/** for large objects, this contains already ordered items for faster lookup
+		 * The container is created when first lookup is requested
+		 */
+		mutable RefCntPtr<ObjectValue> ordered;
+		///Unordered part of container
+		/** contains item just added for append to replace original items
+		 * The container is not ordered and can contain duplicates.
+		 */
+		mutable RefCntPtr<ObjectValue> unordered;
+		
+
+		ObjectValue *commitAsDiffObject() const;
+
 		///Applies the diff-object to some other object and returns object with applied diff
 		/**
 		 *
@@ -269,11 +297,9 @@ namespace json {
 
 		static Value mergeDiffsObjs(const Value &lv,const Value &rv, const ConflictResolver& resolver, const Path &path);
 
-		class NameValueIter;
 
 private:
 	void set_internal(const Value& v);
-	mutable Value lastIterSnapshot;
 };
 
 

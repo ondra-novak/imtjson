@@ -26,7 +26,7 @@ String::String():impl(AbstractStringValue::getEmptyString())
 String::String(Value v):impl(v.getHandle()) {
 }
 
-String::String(std::size_t sz, std::function<std::size_t(char *)> fillFn):impl(new(sz) StringValue(sz, fillFn)) {
+String::String(std::size_t sz, std::function<std::size_t(char *)> fillFn):impl(new(sz) StringValue(nullptr, sz, fillFn)) {
 }
 
 
@@ -69,7 +69,7 @@ String::String(const std::initializer_list<StringView<char> >& strlist) {
 		cnt += item.length;
 	}
 
-	impl = new(cnt) StringValue(cnt, [&](char *buff) {
+	impl = new(cnt) StringValue(nullptr, cnt, [&](char *buff) {
 		for (auto &&item : strlist) {
 			memcpy(buff, item.data, item.length);
 			buff+=item.length;
@@ -132,7 +132,7 @@ String String::insert(std::size_t pos, const StringView<char>& what) {
 	if (pos > a.length) pos = a.length;
 	std::size_t sz = a.length+what.length;
 
-	return String(new(sz) StringValue(sz,[&](char *trg) {
+	return String(new(sz) StringValue(nullptr, sz,[&](char *trg) {
 		std::memcpy(trg, a.data, pos);
 		std::memcpy(trg+pos,what.data,what.length);
 		std::memcpy(trg+pos+what.length,a.data+pos,a.length-pos);
@@ -149,7 +149,7 @@ String String::replace(std::size_t pos, std::size_t size,
 	if (pos+size > a.length) size = a.length - pos;
 
 	std::size_t needsz = a.length+what.length - size;
-	return String(new(needsz) StringValue(needsz,[&](char *buff){
+	return String(new(needsz) StringValue(nullptr, needsz,[&](char *buff){
 		std::memcpy(buff, a.data, pos);
 		std::memcpy(buff+pos, what.data, what.length);
 		std::memcpy(buff+pos+what.length, a.data+pos+size, a.length-pos-size);

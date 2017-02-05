@@ -22,11 +22,19 @@ namespace json {
 		virtual bool getBool() const override {return true;}
 
 		void sort();
+		const IValue *findSorted(const StringView<char> &name) const;
 
 		static RefCntPtr<ObjectValue> create(std::size_t capacity);
+		RefCntPtr<ObjectValue> clone() const;
 
 		using Container<PValue>::operator new;
 		using Container<PValue>::operator delete;
+
+		bool isDiff = false;
+
+		virtual ValueTypeFlags flags() const override {return isDiff?objectDiff:0;}
+
+		ObjectValue &operator=(const ObjectValue &other);
 
 	};
 

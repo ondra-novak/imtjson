@@ -12,7 +12,7 @@ namespace json {
 	class ValueIterator;
 	class String;
 	class Binary;
-	class Allocator;
+	struct Allocator;
 	template<typename T> class ConvValueAs;
 	template<typename T> class ConvValueFrom;
 
@@ -177,11 +177,20 @@ namespace json {
 
 
 		///Create binary value
-		/** Binary values are not supported by JSON. They are emulated using base64 encoding
+		/** Binary values are not supported by JSON. They are emulated through encoding
 		 *
 		 * @param binary binary content
 		 */
-		Value(const BinaryView &binary, BinaryEncoding enc = base64);
+		Value(const BinaryView &binary, BinaryEncoding enc = defaultBinaryEncoding);
+
+
+		///Create binary value
+		/** Binary values are not supported by JSON. They are emulated through encoding
+		 *
+		 * @param binary binary content
+		 */
+		Value(const Binary &binary);
+
 		///Retrieves type of value
 		/**
 		 * @return type of value
@@ -244,17 +253,26 @@ namespace json {
 		 * @param be specify binary encoding.
 		 * @return Function returns decoded binary string.
 		 */
-		Binary getBinary(BinaryEncoding be = base64) const;
+		Binary getBinary(BinaryEncoding enc = base64) const;
 		///Retrieves count of items in the container (the array or the object)
 		/**
 		 * @return For arrays or objects, the function returns count of items inside. For
 		 * other types, fhe function returns 0
+		 *
+		 * @note For strings, the function returns always zero. You have to
+		 * call String::length() or getString().length to receive length of
+		 * the string
 		 */
 		std::size_t size() const { return v->size(); }
 		///Determines whether value is an empty container
 		/**
 		 * @retval false the object or the array is not empty
 		 * @retval true the object or the array is empty, or the value is neither an array nor an object.
+		 *
+		 * @note For strings, the function returns always true. You have to
+		 * call String::empty() or getString().empty() to determine, whether
+		 * the string is empty.
+		 *
 		 */
 		bool empty() const { return v->size() == 0; }
 		///Access to an item stored in the container (array or object)
@@ -265,6 +283,8 @@ namespace json {
 		 * @param index index of the item to retrieve
 		 * @return Value of item in the container at the given index. If the container is an object,
 		 * returned value can be requested for the key - see getKey() function
+		 *
+		 * You cannot use the operator on strings to obtain n-th character.
 		 */
 		Value operator[](uintptr_t index) const { return v->itemAtIndex(index); }
 		///Access to an item stored in the object
@@ -298,17 +318,36 @@ namespace json {
 
 
 		///Binds a key-name to the item
-		/** The function is used by objects, however you can use it to immitate
-		 * that the value is bound with some key-name.
+		/** The function is used by objects, however you can freely bind any value to a specified key outside of the object.
 		 * @param key-name which is bind to the value
 		 * @return new value with bound key.
 		 *
-		 * @note due immutable nature of the  value, you cannot change or set
+		 * @note due the immutable nature of the  value, you cannot change or set
 		 * the key-name to the existing value. A new value is always created.
 		 *
 		 * @see getKey
+		 *
+		 * @note function allocates a space for the key. It is faster than converting to the String and bind that object
+		 *
 		 */
 		Value setKey(const StringView<char> &key) const;
+		Value setKey(const char *k) const {return setKey(StrViewA(k));}
+		Value setKey(const std::string &k) const {return setKey(StrViewA(k));}
+
+
+		///Binds a key-name to the item
+		/** The function is used by objects, however you can freely bind any value to a specified key outside of the object.
+		 * @param key-name which is bind to the value.
+		 * @return new value with bound key.
+		 *
+		 * @note due the immutable nature of the  value, you cannot change or set
+		 * the key-name to the existing value. A new value is always created.
+		 *
+		 * @see getKey
+		 *
+		 * @note function shares the object String. It is faster if you already have the key represented as String
+		 */
+		Value setKey(const String &key) const;
 
 		///Converts the value to string
 		/**
@@ -757,6 +796,53 @@ namespace json {
 			return v->unproxy() < other.v->unproxy();
 		}
 
+
+		///Parse binary format
+		/** Parses and reconstructs JSON-Value from binary stream. The binary stream is
+		 * not standardised. You can use binary format to transfer values through  various
+		 * IPC tools, such a pipes, shared memory or sockets. Binary format is optimized for
+		 * speed, so it is not ideal to be transfered through the network (except fast local area network,
+		 * or localhost)
+		 *
+		 * @param fn function which returns next byte in the stream
+		 * @param enc specifies encoding for binary items. Original encoding is not stored in
+		 * binary format, so the parser must know, which encoding need to be assigned to
+		 * binary items. If not specified, then defaultBinaryEncoding is used. This value
+		 * defaults to base64
+		 *
+		 * @return value reconstructed value
+		 *
+		 * @code
+		 * unsigned char fn();
+		 * #endcode
+		 *
+		 * @note the function is able to transfer all value types including "undefined" It also
+		 * supports arrays where values are bound with a key. However, only the string keys are
+		 * supported.
+		 */
+		template<typename Fn>
+		static Value parseBinary(const Fn &fn, BinaryEncoding enc = defaultBinaryEncoding);
+
+
+
+		///Writes values to the binary stream
+		/** result binary stream is not by any standard. It is only recoginzed by the function parseBinary().
+		 * You can use binary format to transfer values through  various
+		 * IPC tools, such a pipes, shared memory or sockets. Binary format is optimized for
+		 * speed, so it is not ideal to be transfered through the network (except fast local area network,
+		 * or localhost)
+		 *
+		 *
+		 * @param fn function which receives a byte to write to the output stream
+		 * @param flags combination of flags: compressKeys and  maintain32BitComp
+		 * @code
+		 * void fn(unsigned char c);
+		 * @endcode
+		 */
+
+		template<typename Fn>
+		void serializeBinary(const Fn &fn, BinarySerializeFlags flags = compressKeys);
+
 public:
 
 		///Pointer to custom allocator
@@ -767,6 +853,7 @@ public:
 		   through your deallocator.		   
 		*/
 		static const Allocator *allocator;
+
 
 
 protected:

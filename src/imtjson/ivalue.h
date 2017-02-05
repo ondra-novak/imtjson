@@ -35,13 +35,13 @@ namespace json {
 	};
 
 
-	///Available binary encoders
-	enum BinaryEncoding {
-		///base64 encoding
-		base64,
-		///store binary in quoted printable form (so binary characters will be escaped)
-		quotedPrintable,
-	};
+	///Holds type of binary encoding
+	class IBinaryEncoder;
+	typedef const IBinaryEncoder *BinaryEncoding;
+
+	extern BinaryEncoding base64;
+	extern BinaryEncoding directEncoding;
+	extern BinaryEncoding defaultBinaryEncoding;
 
 	///Various flags tied with JSON's type
 	/**@see userDefined, numberInteger, numberUnsignedInteger, proxy
@@ -79,6 +79,35 @@ namespace json {
 	 *  contains differences
 	 */
 	const ValueTypeFlags objectDiff = 16;
+
+	/// States that object is binary string
+	/** This flag appears with a string only. It causes, that content of the string will be encoded
+	 * using encoding specified during creation of this object. Parser cannot create binary strings. However
+	 * you can use function Value::getBinary() to decode the parsed string as well as to receive content
+	 * of binary string without decoding.
+	 */
+	const ValueTypeFlags binaryString = 32;
+
+
+	typedef int BinarySerializeFlags;
+
+	///This flag allowes compression of the key
+	/**  Compressed keys takes less space, On other hand,
+		serializer must lookup for each key in dictionary and this can
+		harm the performance. There is also limit up to 127 keys
+		that can be effectively compressed. For larger objects,
+		with many keys this feature can be less efficient */	     
+	
+	const BinarySerializeFlags compressKeys = 0x1;
+	/// Binary serialize will maintain 32bit compatibility.
+	/** This allows to parse the binary format under 32bit system. The
+	    flag causes, that numbers with more then 32bits will be transfered
+		as floating point number. 
+
+		This flag has no effect on 32bit system
+	*/
+	    
+	const BinarySerializeFlags maintain32BitComp = 0x2;
 
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;

@@ -16,7 +16,9 @@
 #include "../imtjson/json.h"
 #include "../imtjson/compress.tcc"
 #include "../imtjson/basicValues.h"
+#include "../imtjson/key.h"
 #include "../imtjson/comments.h"
+#include "../imtjson/binjson.tcc"
 #include "testClass.h"
 
 using namespace json;
@@ -79,6 +81,25 @@ bool compressTest(std::string file) {
 	}*/
 	return input == compressed;
 }
+
+
+bool binTest(std::string file)  {
+	Value input,binloaded;
+	{
+		std::ifstream infile(file, std::ifstream::binary);
+		input = Value::fromStream(infile);
+	}
+	{
+		std::ofstream outfile(file + ".bin", std::ifstream::binary);
+		input.serializeBinary([&](unsigned char b) {outfile.put(b);});
+	}
+	{
+		std::ifstream infile(file + ".bin", std::ifstream::binary);
+		binloaded = Value::parseBinary([&] {return (unsigned char)(infile.get()); });
+	}
+	return input == binloaded;
+}
+
 
 void subobject(Object &&obj) {
 	obj("outbreak", 19)
@@ -204,6 +225,38 @@ int testMain() {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
 		v.toStream(out);
 	};
+	tst.test("Serialize.binary","[\"\",\"Zg==\",\"Zm8=\",\"Zm9v\",\"Zm9vYg==\",\"Zm9vYmE=\",\"Zm9vYmFy\"]") >> [](std::ostream &out) {
+		//Tests whether binary values are properly encoded to base64
+		StrViewA v[] = {"","f","fo","foo","foob","fooba","foobar"};
+		Array res;
+		for (auto x : v) {
+			res.push_back(Value(BinaryView(x),json::base64));
+		}
+		Value(res).toStream(out);
+	};
+	tst.test("Parse.binary",",f,fo,foo,foob,fooba,foobar") >> [](std::ostream &out) {
+		//Tests whether base64 values are properly decoded to the Binary type
+		Value v = Value::fromString("[\"\",\"Zg==\",\"Zm8=\",\"Zm9v\",\"Zm9vYg==\",\"Zm9vYmE=\",\"Zm9vYmFy\"]");
+		Binary a( v[0].getBinary(base64));
+		Binary b( v[1].getBinary(base64));
+		Binary c( v[2].getBinary(base64));
+		Binary d( v[3].getBinary(base64));
+		Binary e( v[4].getBinary(base64));
+		Binary f( v[5].getBinary(base64));
+		Binary g( v[6].getBinary(base64));
+
+		out << StrViewA(a) << "," << StrViewA(b)
+				<< "," << StrViewA(c) << "," << StrViewA(d)
+				<< "," << StrViewA(e) << "," << StrViewA(f)
+				<< "," << StrViewA(g);
+	};
+	tst.test("Parse.base64.keepEncoding","\"Zm9vYmFy\"") >> [](std::ostream &out) {
+		//Tests whether the encoding is remembered after decode and properly used to encode data back.
+		Value v = Value::fromString("\"Zm9vYmFy\"");
+		Binary a( v.getBinary(base64));
+		Value w (a);
+		w.toStream(out);
+	};
 	tst.test("Object.create", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
 		Object o;
 		o.set("kabrt", 123);
@@ -232,6 +285,18 @@ int testMain() {
 				("arte", undefined)
 				("age",19)
 		).toStream(out);
+	};
+
+	tst.test("Object.edit.move", "{\"age\":19,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":289,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
+		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");
+		Object o1(v);
+			o1("kabrt", 289)
+				("arte", undefined)
+				("age",19);
+		Object o2(std::move(o1));
+		o1("aaa",10);
+		o1.optimize();
+		Value(o2).toStream(out);
 	};
 
 tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:Azaxe,") >> [](std::ostream &out) {
@@ -288,6 +353,50 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		v = o;
 		v.toStream(out);
 	};
+	tst.test("Object.huge","hit{}") >> [](std::ostream &out) {
+		Object o;
+		o.set("test",o);
+		for (int i = 0; i < 1000; i++) {
+			String k = Value(rand()).toString();
+			o.set(k,i);
+		}
+		o.set("5000","hit");
+		out << o["5000"].getString() << o["test"].toString();
+
+	};
+	tst.test("Object.huge.search-delete","hit{\"aaa\":10}10<undefined><undefined><undefined><undefined><undefined><undefined>") >> [](std::ostream &out) {
+		Value base = Object("aaa",10);
+		Object o(base);
+		o.set("test",o);
+		for (int i = 0; i < 300; i++) {
+			String k = Value(rand()).toString();
+			o.set(k,i);
+		}
+		o.set("120","hit");
+		out << o["120"].toString();
+		out << o["test"].toString();
+		out << o["aaa"].toString();
+		o.unset("aaa");
+		o.unset("120");
+		o.unset("test");
+		out << o["120"].toString();
+		out << o["test"].toString();
+		out << o["aaa"].toString();
+		Value der = o;
+		out << der["120"].toString();
+		out << der["test"].toString();
+		out << der["aaa"].toString();
+	};
+
+	tst.test("Object.diff","{\"a\":\"undefined\",\"b\":5,\"d\":4}") >> [](std::ostream &out) {
+		Value v1 = Value::fromString("{\"a\":1,\"b\":2,\"c\":3}");
+		Value v2 = Value::fromString("{\"d\":4,\"b\":5,\"c\":3}");
+		Object o;
+		o.createDiff(v1,v2);
+		Value v = o.commitAsDiff();
+		out << v.toString();
+	};
+
 	tst.test("Array.create","[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]") >> [](std::ostream &out){
 		Array a;
 		a.add("hi").add("hola");
@@ -820,6 +929,16 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value::TwoValues v = testset.splitAt(5);
 		out << v.first.toString() << "," << v.second.toString();
 	};
+	tst.test("Value.setKey", "Hello world") >> [](std::ostream &out) {
+		Value v = "world";
+		v = v.setKey("Hello");
+		out << v.getKey() << " " << v.getString();
+	};
+	tst.test("Value.setKey2", "Hello world") >> [](std::ostream &out) {
+		Value v = "world";
+		v = v.setKey(String("Hello"));
+		out << v.getKey() << " " << v.getString();
+	};
 	tst.test("Parser.commented", "{\"blockComment\\/*not here*\\/\":\"here\\\"\\r\\n\",\"lineComment\\/\\/not here\":\"here\"}") >> [](std::ostream &out) {
 		StrViewA str = "{\r\n"
 			"\"lineComment//not here\":\r\n"
@@ -838,6 +957,13 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 
 	runValidatorTests(tst);
 
+
+	tst.test("binary.basic", "ok") >> [](std::ostream &out) {
+		if (binTest("src/tests/test.json")) out << "ok"; else out << "not same";
+	};
+	tst.test("binary.utf-8","ok") >> [](std::ostream &out) {
+		if (binTest("src/tests/test2.json")) out << "ok"; else out << "not same";
+	};
 	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
 		if (compressTest("src/tests/test.json")) out << "ok"; else out << "not same";
 	};

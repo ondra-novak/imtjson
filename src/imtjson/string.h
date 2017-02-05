@@ -36,7 +36,7 @@ public:
 	 * If you need to stringify the value, you have to use Value::toString
 	 * or Value::stringify
 	 */
-	String(Value v);
+	explicit String(Value v);
 	///Creates new string from a string view
 	/**
 	 * @param str a string's view. The StringView object can be constructed from

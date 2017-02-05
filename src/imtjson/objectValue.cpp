@@ -24,7 +24,12 @@ namespace json {
 		return true;
 	}
 
-	const IValue * ObjectValue::member(const StringView<char>& name) const
+	const IValue * ObjectValue::member(const StringView<char>& name) const {
+		const IValue *r = findSorted(name);
+		if (r == nullptr) return getUndefined();
+		else return r;
+	}
+	const IValue *ObjectValue::findSorted(const StringView<char> &name) const
 	{
 		std::size_t l = 0;
 		std::size_t r = size();
@@ -41,12 +46,12 @@ namespace json {
 				return operator[](m);
 			}
 		}
-		return getUndefined();
+		return nullptr;
 	}
 
 
 	void ObjectValue::sort() {
-		std::sort(begin(),end(),[](const PValue &left, const PValue &right) {
+		std::stable_sort(begin(),end(),[](const PValue &left, const PValue &right) {
 			return left->getMemberName().compare(right->getMemberName()) < 0;
 		});
 		StrViewA lastKey;
@@ -68,6 +73,18 @@ namespace json {
 	RefCntPtr<ObjectValue> ObjectValue::create(std::size_t capacity) {
 		AllocInfo nfo(capacity);
 		return new(nfo) ObjectValue(nfo);
+	}
+
+	RefCntPtr<ObjectValue> ObjectValue::clone() const {
+		RefCntPtr<ObjectValue> cp = create(size());
+		*cp = *this;
+		return cp;
+	}
+
+	ObjectValue& ObjectValue::operator =(const ObjectValue& other) {
+		Container<PValue>::operator =(other);
+		isDiff = other.isDiff;
+		return *this;
 	}
 
 }
