@@ -23,8 +23,8 @@ There is no headers. The very first byte is parsed as an opcode. The parser alwa
 | 2X | 0-8 bytes (value) | posint | unsigned integer |
 | 3X | 0-8 bytes (value)| negint | negative integer (stored as unsigned integer) |
 | 4X | 0-8 bytes (size) + payload | string | a  string. The opcode is read as **posint** and specifies the size of the string. The string's content immediatelly follows up to specified size |
-| 5X | 0-8 bytes (size) | object | a object. The keys and the items immediatelly follow without any separator up to specified size. **The items must be ascii-ordered by the keys**  |
-| 6X | 0-8 bytes (size) | array | a object. The items immediatelly follow without any separator up to specified size. The keys are allowed and optional, no ordering is required |
+| 5X | 0-8 bytes (size) | object | an object. The keys and the items immediatelly follow without any separator up to specified size. **The items must be ascii-ordered by the keys**  |
+| 6X | 0-8 bytes (size) | array | an array. The items immediatelly follow without any separator up to specified size. The keys are allowed and optional, no ordering is required |
 | 7X | 0-8 bytes (size) + payload + item | key | a key. It is stored as the string. The parser always expects an item after the key |
 | 80 | n/a | keyRef0 | recently remebered key (first key in the FIFO). The parser always expects an item after the key |
 | 81 | n/a | keyRef1 | second recently remebered key (second key in th FIFO). The parser always expects an item after the key |
