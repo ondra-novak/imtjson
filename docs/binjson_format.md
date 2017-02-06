@@ -2,7 +2,9 @@
 
 **note** - the format is **NOT COMPATIBLE** with any existing format defined elsewhere.
 
-No headers. The very first byte belongs to payload.
+The format has been designed really straightforward for accommodate to the structure represented by the **imtjson** library. The main goal is the fast parsing and serializing.
+
+There is no headers. The very first byte is parsed as an opcode. The parser always reads one item (which is defined as a single opcode or an opcode followed by some additional data). However some containers may contain many items in an unlimited structure, so "to read one item" may actually ends by a reading a large portion of the data.
 
 ### Table of opcodes
 
@@ -15,31 +17,32 @@ No headers. The very first byte belongs to payload.
 | 04 | n/a | false | a value **false** |
 | 05 | 4 bytes | float | a float number (currently not serialized) |
 | 06 | 8 bytes | double | a double number |
-| 0F | n/a | diff appears before object and signals, that object is diff |
+| 07-0E | n/a | reserved | reserved for future usage |
+| 0F | n/a | diff | appears before object and tags that object as diff (arrays will be supported by a future version)|
 | 1X | 0-8 bytes (size) + payload | binary | a binary string. The opcode is read as **posint**, and specifies the size of the string. The string's content immediatelly follows up to specified size |
 | 2X | 0-8 bytes (value) | posint | unsigned integer |
 | 3X | 0-8 bytes (value)| negint | negative integer (stored as unsigned integer) |
 | 4X | 0-8 bytes (size) + payload | string | a  string. The opcode is read as **posint** and specifies the size of the string. The string's content immediatelly follows up to specified size |
-| 5X | 0-8 bytes (size) | object | a object. Immediatelly follows keys and items without a separator up to specified size. Note: items must be ordered by keys |
-| 6X | 0-8 bytes (size) | array | a object. Immediatelly follows keys and items without a separator up to specified size  |
-| 7X | 0-8 bytes (size) + payload | key | a key. Immediatelly after the key an item follows. The recent 128 keys are also remebered |
-| 80 | n/a | keyRef0 | recently rembered key |
-| 81 | n/a | keyRef1 | second recently rembered key |
-| 82-FF | n/a | keyRef | other remebered keys |
+| 5X | 0-8 bytes (size) | object | a object. The keys and the items immediatelly follow without any separator up to specified size. **The items must be ascii-ordered by the keys**  |
+| 6X | 0-8 bytes (size) | array | a object. The items immediatelly follow without any separator up to specified size. The keys are allowed and optional, no ordering is required |
+| 7X | 0-8 bytes (size) + payload + item | key | a key. It is stored as the string. The parser always expects an item after the key |
+| 80 | n/a | keyRef0 | recently remebered key (first key in the FIFO). The parser always expects an item after the key |
+| 81 | n/a | keyRef1 | second recently remebered key (second key in th FIFO). The parser always expects an item after the key |
+| 82-FF | n/a | keyRef | remaining remembered keys: (opcode - 127) th key counted from the most recent to the oldest. The parser always expects an item after the key |
 
 ### decoding opcodes with arguments (the X in the opcode)
 
-For opcodes 10-7F, there lowest nibble can store the value or size of the value which immediatelly follows
+For the opcodes 10-7F, the lower nibble (lower four bits} contains the value or size of the value which immediately follows 
 
-| opcode | bytes follows |meaning |
+| opcode | bytes follow | meaning |
 |---|---|---|
 | X0-X9 | 0 | direct value 0-9 |
 | XA | 1 | value is stored as uint8 following the opcode |
 | XB | 2 | value is stored as uint16 following the opcode |
 | XC | 4 | value is stored as uint32 following the opcode |
 | XD | 8 | value is stored as uint64 following the opcode |
-| XE | n/a | invalid |
-| XF | n/a | invalid |
+| XE | n/a | invalid / reserved |
+| XF | n/a | invalid / reserved |
 
 Examples
 ```
@@ -51,7 +54,11 @@ Examples
 
 ### decoding strings and keys
 
-There is size of the string encoded as unsigned integer which follows the above schema
+There is a size of the string encoded as unsigned integer number (with  a different higher nibble of the opcode)
+
+```
+<size><string>
+```
 
 Examples
 ```
@@ -61,7 +68,12 @@ Examples
 
 ### decoding containers
 
-The is size of the containes encoded as unsigned integer which also follows the above schema
+There is a size of the container encoded as unsigned integer number (with  a different higher nibble of the opcode)
+
+```
+<size><item><item>...
+```
+
 
 Examples
 ```
@@ -70,9 +82,8 @@ Examples
 ```
 ### compressed keys
 
-The serializer can use opcodes 0x80-0xFF to refer already defined keys. It can refer recent 128 keys. The keys out of the reach must be stored again.
+The serializer can use opcodes 0x80-0xFF to refer already transfered keys. It can refer up to the recent 128 keys. The keys out of the reach must be transfered again. A key received through these opcodes is not considered as recent. The dictionary of the keys isn't modified by any way.
 
-Refering the key through the opcodes 0x80-0xFF doesn't affect currently stored keys. There is no reodering, redefining, etc. It just picks (opcode - 0x7F)th recent key and uses it.
 
 Exaples
 ```
