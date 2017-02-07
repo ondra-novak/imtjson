@@ -143,7 +143,7 @@ public:
 	StringView<char> str() const;
 	///Converts String to c-string (with terminating zero character)
 	const char *c_str() const;
-	///Converts string stored internally encoded to utf-8 as wide-char string.
+	///Converts string stored internally encoded to utf-8 to wide-char string.
 	std::wstring wstr() const;
 	///Insert substring to the string
 	String insert(std::size_t pos, const StringView<char> &what);

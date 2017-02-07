@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <cmath>
+#include <assert.h>
 #include "object.h"
 #include "array.h"
 
@@ -22,12 +23,20 @@ namespace json {
 		Value parseNumber();
 		Value parseString();
 
-		StrViewA readString();
 		void checkString(const StringView<char> &str);
 
 	
 
 	protected:
+
+		typedef std::pair<std::size_t, std::size_t> StrIdx;
+
+		StrViewA getString(StrIdx idx) {
+			return StrViewA(tmpstr).substr(idx.first, idx.second);
+		}
+
+		StrIdx readString();
+		void freeString(const StrIdx &str);
 
 		class Reader {
 			///source iterator
@@ -221,29 +230,30 @@ namespace json {
 			rd.commit();
 			return Value(object);
 		}
-		std::string name;
+		StrIdx name(0,0);
 		bool cont;
 		do {
 			if (c != '"') 
 				throw ParseError("Expected a key (string)");
 			rd.commit();
 			try {
-				StrViewA n = readString();
-				name.clear();
-				name.append(n.data,n.length);
+				name = readString();
 			}
 			catch (ParseError &e) {
-				e.addContext(name);
+				e.addContext(getString(name));
+				throw;
 			}
 			try {
 				if (rd.nextWs() != ':') 
 					throw ParseError("Expected ':'");
 				rd.commit();
 				Value v = parse();
-				tmpArr.push_back(v.setKey(name));
+				tmpArr.push_back(v.setKey(getString(name)));
+				freeString(name);
 			}
 			catch (ParseError &e) {
-				e.addContext(name);
+				e.addContext(getString(name));
+				freeString(name);
 				throw;
 			}
 			c = rd.nextWs();
@@ -476,47 +486,63 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parseString()
 	{
-		return Value(readString());
+		StrIdx str = readString();
+		Value res (getString(str));
+		freeString(str);
+		return res;
 	}
 
 	template<typename Fn>
-	inline StrViewA Parser<Fn>::readString()
+	inline void Parser<Fn>::freeString(const StrIdx &str)
 	{
-		tmpstr.clear();
-		char c = rd.nextCommit();
-		while (c != '"') {
-			if (c == -1)
-				throw ParseError("Unexpected end of file");
-			if (c & 0x80) {
-				//check and normalize UTF-8
-				parseUtf8(c);
-			}
-			else if (c == '\\') {
-				//parse escape sequence
-				c = rd.nextCommit();
-				switch (c) {
-				case '"':
-				case '\\':
-				case '/': tmpstr.push_back(c); break;
-				case 'b': tmpstr.push_back('\b'); break;
-				case 'f': tmpstr.push_back('\f'); break;
-				case 'n': tmpstr.push_back('\n'); break;
-				case 'r': tmpstr.push_back('\r'); break;
-				case 't': tmpstr.push_back('\t'); break;
-				case 'u': parseUnicode(); break;
-				default: throw ParseError("Unexpected escape sequence in the string");
-				}
-			}
-			else {
-				//put character to the result
-				tmpstr.push_back(c);
-				//read next
-			}
-			c = rd.nextCommit();
+		assert(str.first+ str.second== tmpstr.length());
+		tmpstr.resize(str.first);
 
-	
+	}
+
+	template<typename Fn>
+	inline typename Parser<Fn>::StrIdx Parser<Fn>::readString()
+	{
+		std::size_t start = tmpstr.length();
+		try {
+			char c = rd.nextCommit();
+			while (c != '"') {
+				if (c == -1)
+					throw ParseError("Unexpected end of file");
+				if (c & 0x80) {
+					//check and normalize UTF-8
+					parseUtf8(c);
+				}
+				else if (c == '\\') {
+					//parse escape sequence
+					c = rd.nextCommit();
+					switch (c) {
+					case '"':
+					case '\\':
+					case '/': tmpstr.push_back(c); break;
+					case 'b': tmpstr.push_back('\b'); break;
+					case 'f': tmpstr.push_back('\f'); break;
+					case 'n': tmpstr.push_back('\n'); break;
+					case 'r': tmpstr.push_back('\r'); break;
+					case 't': tmpstr.push_back('\t'); break;
+					case 'u': parseUnicode(); break;
+					default: throw ParseError("Unexpected escape sequence in the string");
+					}
+				}
+				else {
+					//put character to the result
+					tmpstr.push_back(c);
+					//read next
+				}
+				c = rd.nextCommit();
+
+
+			}
+			return StrIdx(start, tmpstr.length()-start);
+		} catch (...) {
+			tmpstr.resize(start);
+			throw;
 		}
-		return tmpstr;
 	}
 
 	template<typename Fn>
