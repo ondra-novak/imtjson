@@ -44,6 +44,14 @@ public:
 	 */
 	String(const StringView<char> &str);
 
+	///Creates new string from a wide-char string view
+	/**
+	 * @param str a wide-char string's view. The constructor converts wide-char string to utf-8 string.
+	 *
+	 * @note this constructor is explicit.
+	 */
+	explicit String(const StringView<wchar_t> &str);
+
 	///Creates new string from C-string
 	/**
 	 * @param str pointer to char array
@@ -135,6 +143,8 @@ public:
 	StringView<char> str() const;
 	///Converts String to c-string (with terminating zero character)
 	const char *c_str() const;
+	///Converts string stored internally encoded to utf-8 as wide-char string.
+	std::wstring wstr() const;
 	///Insert substring to the string
 	String insert(std::size_t pos, const StringView<char> &what);
 	///Replaces substring

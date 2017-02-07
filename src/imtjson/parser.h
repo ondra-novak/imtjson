@@ -147,6 +147,8 @@ namespace json {
 		///Stores unicode character as UTF-8 into the tmpstr
 		void storeUnicode(uintptr_t uchar);
 
+		///Parses UTF-8 character
+		unsigned int parseUtf8Char(char firstChar);
 		///Temporary string - to keep allocated memory
 		std::string tmpstr;
 
@@ -372,6 +374,12 @@ namespace json {
 	template<typename Fn>
 	inline void Parser<Fn>::parseUtf8(char firstChar)
 	{
+		storeUnicode(parseUtf8Char(firstChar));
+	}
+
+	template<typename Fn>
+	inline unsigned int Parser<Fn>::parseUtf8Char(char firstChar)
+	{
 		//unicode is parsed from utf-8 sequence
 		// and it is stored as back as UTF-8 
 		//this normalize utf-8 sequence
@@ -393,9 +401,9 @@ namespace json {
 		} else {		
 			throw ParseError("Invalid UTF-8 sequence - unsupported initial byte of the sequence ("+tmpstr+")");
 		}
-		storeUnicode(uchar);
-
+		return uchar;
 	}
+
 	template<typename Fn>
 	inline void Parser<Fn>::storeUnicode(uintptr_t uchar) {
 

@@ -953,6 +953,19 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		out << v.stringify();
 
 	};
+	tst.test("Misc.wideToUtf8",u8"testing-ěščřžýáíé") >> [](std::ostream &out) {
+		std::wstring text = L"testing-ěščřžýáíé";
+		String s(text);
+		out << s;
+	};
+
+	tst.test("Misc.utf8ToWide",u8"testing-ěščřžýáíé") >> [](std::ostream &out) {
+		std::string text = u8"testing-ěščřžýáíé";
+		String s(text);
+		std::wstring wtext = s.wstr();
+		String t(wtext);
+		out << s;
+	};
 
 
 	runValidatorTests(tst);
