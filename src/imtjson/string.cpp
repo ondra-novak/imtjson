@@ -14,7 +14,8 @@
 #include "stringValue.h"
 
 #include "array.h"
-#include "parser.h"
+#include "streams.h"
+#include "utf8.h"
 
 
 namespace json {
@@ -252,54 +253,30 @@ String::String(const std::basic_string<char>& str):impl(Value(str).getHandle()) 
 }
 
 
-class StrStream {
-public:
-	StrStream(const StrViewA &str):str(str), pos(0) {}
-	StrViewA str;
-	std::size_t pos;
-	int operator()() {
-		if (pos < str.length) return (unsigned char) str[pos++];
-		else return -1;
-	}
-};
-
-class WideReader: public Parser<StrStream> {
-public:
-
-
-
-	WideReader():Parser<StrStream>(StrStream(StrViewA())) {}
-	WideReader(StrViewA str):Parser<StrStream>(StrStream(str)) {}
-
-	const std::string &convWide(const StringView<wchar_t> &str) {
-		tmpstr.reserve(str.length*3);
-		tmpstr.clear();
-		for ( auto &&x: str) this->storeUnicode(x);
-		return tmpstr;
-	}
-
-	std::wstring readWide() {
-		std::wostringstream buff;
-		int c = rd.nextCommit();
-		while (c != -1) {
-			if (c < 0x80) buff.put((wchar_t)c);
-			else buff.put((wchar_t)parseUtf8Char((char)c));
-			c = rd.nextCommit();
-		}
-		return buff.str();
-	}
-};
-
-
 String::String(const StringView<wchar_t> &wstr) {
-	WideReader rd;
-	const std::string &b = rd.convWide(wstr);
-	impl = StringValue::create(b);
+
+	WideToUtf8 conv;
+	std::vector<char> buff;
+	buff.reserve(wstr.length*3);
+	std::size_t pos = 0;
+	conv([&]() -> int {
+		if (pos < wstr.length) return wstr[pos++];
+		else return eof;
+	}, [&](int c) {
+		buff.push_back((char)c);
+	});
+
+	StrViewA str(buff.data(), buff.size());
+	impl = StringValue::create(str);
 }
 
 std::wstring json::String::wstr() const {
-	WideReader rd(str());
-	return rd.readWide();
+	Utf8ToWide conv;
+	std::wostringstream buff;
+	conv(fromString(str()), [&](wchar_t c){
+		buff.put(c);
+	});
+	return buff.str();
 }
 
 }

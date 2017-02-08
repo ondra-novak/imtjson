@@ -17,9 +17,7 @@ int main(int argc, char **argv)
 #endif
 	try {
 		using namespace json;
-		Value v = Value::parse(decompress([] {
-			return std::cin.get();
-		}));
+		Value v = Value::parse(decompress(fromStream(std::cin)));
 		v.toStream(emitUtf8, std::cout);
 
 		return 0;

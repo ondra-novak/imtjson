@@ -19,41 +19,13 @@
 #include "../imtjson/key.h"
 #include "../imtjson/comments.h"
 #include "../imtjson/binjson.tcc"
+#include "../imtjson/streams.h"
 #include "testClass.h"
 
 using namespace json;
 
 void runValidatorTests(TestSimple &tst);
 
-void compressDemo(std::string file) {
-	std::ifstream infile(file);
-	{
-		std::ofstream outfile(file+".cmp",std::ofstream::out|std::ostream::trunc| std::ofstream::binary);
-		{
-			auto compressor = compress([&outfile](unsigned char b){
-				outfile.put(b);
-			});
-			int z;
-			while ((z = infile.get()) != -1) {
-				compressor((char)z);
-			}
-		}
-	}
-	{
-		std::ifstream infile(file+".cmp",std::ifstream::binary);
-		std::ofstream outfile(file+".decmp",std::ofstream::out|std::ostream::trunc|std::ofstream::binary);
-		{
-			auto decompressor = decompress([&infile](){
-				return infile.get();
-			});
-			int z;
-			while ((z = decompressor()) != -1) {
-				outfile.put((char)z);
-			}
-		}
-	}
-
-}
 
 bool compressTest(std::string file) {
 	Value input,compressed;
@@ -65,11 +37,11 @@ bool compressTest(std::string file) {
 	}
 	{
 		std::ofstream outfile(file + ".cmp", std::ifstream::binary);
-		input.serialize(json::emitUtf8, compress([&](char c) {outfile.put(c); }));
+		input.serialize(json::emitUtf8, compress(toStream(outfile)));
 	}
 	{
 		std::ifstream infile(file + ".cmp", std::ifstream::binary);
-		compressed = Value::parse(decompress([&]() {return infile.get(); }));
+		compressed = Value::parse(decompress(fromStream(infile)));
 	}
 	{
 		std::ofstream outfile(file + ".decmp", std::ifstream::binary);
@@ -91,11 +63,11 @@ bool binTest(std::string file)  {
 	}
 	{
 		std::ofstream outfile(file + ".bin", std::ifstream::binary);
-		input.serializeBinary([&](unsigned char b) {outfile.put(b);});
+		input.serializeBinary(toStream(outfile));
 	}
 	{
 		std::ifstream infile(file + ".bin", std::ifstream::binary);
-		binloaded = Value::parseBinary([&] {return (unsigned char)(infile.get()); });
+		binloaded = Value::parseBinary(fromStream(infile));
 	}
 	return input == binloaded;
 }

@@ -6,21 +6,19 @@
 #include <fcntl.h>
 #include <fstream>
 #include "../imtjson/json.h"
-#include "../imtjson/compress.tcc"
+#include "../imtjson/binjson.tcc"
 
 
 
 int main(int argc, char **argv)
 {
 #ifdef _WIN32
-	_setmode(_fileno(stdout), _O_BINARY);
+	_setmode(_fileno(stdin), _O_BINARY);
 #endif
 	try {
-
-	
 		using namespace json;
-		Value v = Value::fromStream(std::cin);
-		v.serialize(emitUtf8,compress(toStream(std::cout)));
+		Value v = Value::parseBinary(fromStream(std::cin));
+		v.toStream(emitUtf8, std::cout);
 
 		return 0;
 	}

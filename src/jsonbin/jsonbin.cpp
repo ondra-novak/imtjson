@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include "../imtjson/json.h"
-#include "../imtjson/compress.tcc"
+#include "../imtjson/binjson.tcc"
 
 
 
@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 	
 		using namespace json;
 		Value v = Value::fromStream(std::cin);
-		v.serialize(emitUtf8,compress(toStream(std::cout)));
+		v.serializeBinary(toStream(std::cout));
 
 		return 0;
 	}

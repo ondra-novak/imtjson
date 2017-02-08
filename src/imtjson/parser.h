@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "object.h"
 #include "array.h"
+#include "utf8.h"
 
 namespace json {
 
@@ -42,7 +43,7 @@ namespace json {
 			///source iterator
 			Fn source;
 			///temporary stored char here
-			char c;
+			int c;
 			///true if char is loaded, false if not
 			/** It could be possible to avoid such a flag if the commit()
 			  performs preload of the next character. However this can be a trap.
@@ -60,7 +61,7 @@ namespace json {
 
 
 		public:
-			char next() {
+			int next() {
 				//if char is not loaded, load it now
 				if (!loaded) {
 					//load
@@ -72,18 +73,18 @@ namespace json {
 				return c;
 			}
 
-			char nextWs() {
+			int nextWs() {
 				char n = next();
 				while (isspace(n)) { commit(); n = next(); }
 				return n;
 			}
 
-			void commit() {
+			int commit() {
 				//just mark character not loaded, which causes, that next() will load next character
 				loaded = false;
 			}
 
-			char nextCommit() {
+			int nextCommit() {
 				//if not loaded
 				if (!loaded) {
 					//load it but keep in not-loaded state, this does mean 'autocommit'
@@ -109,14 +110,14 @@ namespace json {
 		@retval true number is complete, no more digits in the stream
 		@retval false number is not complete, parser stopped on integer overflow
 		*/	    
-		bool parseUnsigned(uintptr_t &res, int &counter);
+		bool parseUnsigned(std::uintptr_t &res, int &counter);
 		///parses integer and stores result to the double
 		/** By storing result into double causes, that final number will rounded
 		  @param intPart already parsed pard by parseUnsigned
 		  @return parsed number as double
 		  @note function stops on first non-digit character (including dot)
 		*/
-		double parseLargeUnsigned(uintptr_t intPart);
+		double parseLargeUnsigned(std::uintptr_t intPart);
 		///Parses decimal part
 		/**
 			works similar as parseLargeUnsigned, but result is number between 0 and 1
@@ -135,7 +136,7 @@ namespace json {
 		 @note function doesn't extract leading sign '+' or '-' it expects that
 		 caller already used readSign() function
 		*/
-		Value parseDouble(uintptr_t intpart, bool neg);
+		Value parseDouble(std::uintptr_t intpart, bool neg);
 		///Reads sign '+' or '-' from the stream
 		/**
 		@retval true there were sign '-'.
@@ -145,19 +146,9 @@ namespace json {
 
 		///Parses unicode sequence encoded as \uXXXX, stores it as UTF-8 into the tmpstr
 		void parseUnicode();
-		///Parses UTF-8 sequence, checks it for errors and normalizes it and stores it
-		/** as the UTF-8 sequence into the tmpstr 
-		@param firstChar first extracted character. Function expects that it is
-		called after an UTF-8 chracter has been detected after extracting the first character		
-		*/
-		void parseUtf8(char firstChar);
-		///Reads next UTF-8 code and checks, whether it is valid. Throws exception if not
-		char readNextUtf8();
 		///Stores unicode character as UTF-8 into the tmpstr
-		void storeUnicode(uintptr_t uchar);
+		void storeUnicode(wchar_t uchar);
 
-		///Parses UTF-8 character
-		unsigned int parseUtf8Char(char firstChar);
 		///Temporary string - to keep allocated memory
 		std::string tmpstr;
 
@@ -362,7 +353,7 @@ namespace json {
 	{
 		//unicode is parsed from \uXXXX (which can be between 0 and 0xFFFF)
 		// and it is stored as UTF-8 (which can be 1...3 bytes)
-		uintptr_t uchar = 0;
+		std::uintptr_t uchar = 0;
 		for (int i = 0; i < 4; i++) {
 			char c = rd.nextCommit();
 			uchar *= 16;
@@ -374,67 +365,13 @@ namespace json {
 		storeUnicode(uchar);
 	}
 
-	template<typename Fn>
-	inline char Parser<Fn>::readNextUtf8() {
-		char z = rd.nextCommit();
-		if (z & 0x80) return z;
-		else throw ParseError("Invalid UTF-8 sequence - expected byte in range 0x80...0xFF ("+tmpstr+")");
-	}
 
 	template<typename Fn>
-	inline void Parser<Fn>::parseUtf8(char firstChar)
-	{
-		storeUnicode(parseUtf8Char(firstChar));
-	}
-
-	template<typename Fn>
-	inline unsigned int Parser<Fn>::parseUtf8Char(char firstChar)
-	{
-		//unicode is parsed from utf-8 sequence
-		// and it is stored as back as UTF-8 
-		//this normalize utf-8 sequence
-		uintptr_t uchar = 0;
-		if ((firstChar & 0xe0) == 0xc0) {
-			uchar = (firstChar & 0x3F) << 6;
-			uchar |= readNextUtf8() & 0x3F;
-		}
-		else if ((firstChar & 0xf0) == 0xe0) {
-			uchar = (firstChar & 0x1F) << 12;
-			uchar |= (readNextUtf8() & 0x3F) << 6;
-			uchar |= (readNextUtf8() & 0x3F);
-		}
-		else if ((firstChar & 0xF8) == 0xF0) {
-			uchar = (firstChar & 0x0F) << 18;
-			uchar |= (readNextUtf8() & 0x3F) << 12;
-			uchar |= (readNextUtf8() & 0x3F) << 6;
-			uchar |= (readNextUtf8() & 0x3F);
-		} else {		
-			throw ParseError("Invalid UTF-8 sequence - unsupported initial byte of the sequence ("+tmpstr+")");
-		}
-		return uchar;
-	}
-
-	template<typename Fn>
-	inline void Parser<Fn>::storeUnicode(uintptr_t uchar) {
-
-		if (uchar < 128) {
-			tmpstr.push_back((char)uchar);
-		}
-		else if (uchar >= 0x80 && uchar <= 0x7FF) {
-			tmpstr.push_back((char)(0xC0 | (uchar >> 6)));
-			tmpstr.push_back((char)(0x80 | (uchar & 0x3F)));
-		}
-		else if (uchar >= 0x800 && uchar <= 0xFFFF) {
-			tmpstr.push_back((char)(0xE0 | (uchar >> 12)));
-			tmpstr.push_back((char)(0x80 | ((uchar >> 6) & 0x3F)));
-			tmpstr.push_back((char)(0x80 | (uchar & 0x3F)));
-		}
-		else if (uchar >= 0x10000 && uchar <= 0x10FFFF) {
-			tmpstr.push_back((char)(0xF0 | (uchar >> 18)));
-			tmpstr.push_back((char)(0x80 | ((uchar >> 12) & 0x3F)));
-			tmpstr.push_back((char)(0x80 | ((uchar >> 6) & 0x3F)));
-			tmpstr.push_back((char)(0x80 | (uchar & 0x3F)));
-		}
+	inline void Parser<Fn>::storeUnicode(wchar_t uchar) {
+		int c = uchar;
+		WideToUtf8 conv;
+		conv([&]{int z = c; c= eof; return z;},
+			 [&](char c){tmpstr.push_back(c);});
 	}
 
 	template<typename Fn>
@@ -505,44 +442,46 @@ namespace json {
 	{
 		std::size_t start = tmpstr.length();
 		try {
-			char c = rd.nextCommit();
-			while (c != '"') {
-				if (c == -1)
-					throw ParseError("Unexpected end of file");
-				if (c & 0x80) {
-					//check and normalize UTF-8
-					parseUtf8(c);
-				}
-				else if (c == '\\') {
-					//parse escape sequence
-					c = rd.nextCommit();
-					switch (c) {
-					case '"':
-					case '\\':
-					case '/': tmpstr.push_back(c); break;
-					case 'b': tmpstr.push_back('\b'); break;
-					case 'f': tmpstr.push_back('\f'); break;
-					case 'n': tmpstr.push_back('\n'); break;
-					case 'r': tmpstr.push_back('\r'); break;
-					case 't': tmpstr.push_back('\t'); break;
-					case 'u': parseUnicode(); break;
-					default: throw ParseError("Unexpected escape sequence in the string");
+			Utf8ToWide conv;
+			conv([&]{
+				do {
+					int c = rd.nextCommit();
+					if (c == -1) {
+						throw ParseError("Unexpected end of file");
 					}
-				}
-				else {
-					//put character to the result
-					tmpstr.push_back(c);
-					//read next
-				}
-				c = rd.nextCommit();
+					else if (c == '"') {
+						return -1;
+					}else if (c == '\\') {
+						//parse escape sequence
+						c = rd.nextCommit();
+						switch (c) {
+						case '"':
+						case '\\':
+						case '/': tmpstr.push_back(c); break;
+						case 'b': tmpstr.push_back('\b'); break;
+						case 'f': tmpstr.push_back('\f'); break;
+						case 'n': tmpstr.push_back('\n'); break;
+						case 'r': tmpstr.push_back('\r'); break;
+						case 't': tmpstr.push_back('\t'); break;
+						case 'u': parseUnicode();break;
+						default:
+							throw ParseError("Unexpected escape sequence in the string");
+						}
+					}
+					else {
+						return c;
+					}
+				} while (true);
+			},[&](int w) {
+				storeUnicode(w);
+			});
+			return StrIdx(start, tmpstr.size()-start);
 
-
-			}
-			return StrIdx(start, tmpstr.length()-start);
 		} catch (...) {
 			tmpstr.resize(start);
 			throw;
 		}
+
 	}
 
 	template<typename Fn>
@@ -558,9 +497,9 @@ namespace json {
 
 
 	template<typename Fn>
-	inline bool Parser<Fn>::parseUnsigned(uintptr_t & res, int &counter)
+	inline bool Parser<Fn>::parseUnsigned(std::uintptr_t & res, int &counter)
 	{
-		const uintptr_t overflowDetection = ((uintptr_t)-1) / 10; //429496729
+		const std::uintptr_t overflowDetection = ((std::uintptr_t)-1) / 10; //429496729
 		//start at zero
 		res = 0;
 		//count read charactes
@@ -573,7 +512,7 @@ namespace json {
 				return false;
 			}
 			//calculate next val
-			uintptr_t nextVal = res * 10 + (c - '0');
+			std::uintptr_t nextVal = res * 10 + (c - '0');
 			//detect overflow
 			if (nextVal < res) {
 				//report overflow (maintain already parsed value
@@ -593,14 +532,14 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline double Parser<Fn>::parseLargeUnsigned(uintptr_t intPart)
+	inline double Parser<Fn>::parseLargeUnsigned(std::uintptr_t intPart)
 	{
 		//starts with given integer part - convert to double
 		double res = (double)intPart;
 		//read while there are digits
 		while (isdigit(rd.next())) {
 			//prepare next unsigned integer
-			uintptr_t part;
+			std::uintptr_t part;
 			//prepare counter
 			int cnt;
 			//read next sequence of digits as integer
@@ -625,7 +564,7 @@ namespace json {
 		//read while there all digites
 		while (isdigit(rd.next())) {
 			//prepare integer part
-			uintptr_t part;
+			std::uintptr_t part;
 			//prepare counter
 			int cnt;
 			//read sequence of digiths as integer
@@ -640,7 +579,7 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline Value Parser<Fn>::parseDouble(uintptr_t intpart, bool neg)
+	inline Value Parser<Fn>::parseDouble(std::uintptr_t intpart, bool neg)
 	{
 		//float number is in format [+/-]digits[.digits][E[+/-]digits]
 		//sign is stored in neg
@@ -669,7 +608,7 @@ namespace json {
 			//read and discard any possible sign
 			bool negexp = readSign();
 			//prepare integer exponent
-			uintptr_t expn;
+			std::uintptr_t expn;
 			//prepare counter (we don't need it)
 			int counter;
 			//next character must be a digit
@@ -678,7 +617,7 @@ namespace json {
 				throw ParseError("Expected '0'...'9' after 'E'");
 			//parse the exponent
 			if (!parseUnsigned(expn, counter))
-				//complain about too large exponent (two or three digits must match to uintptr_t)
+				//complain about too large exponent (two or three digits must match to std::uintptr_t)
 				throw ParseError("Exponent is too large");
 			//if exponent is negative
 			if (negexp) {

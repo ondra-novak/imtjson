@@ -5,6 +5,8 @@ add_subdirectory (src/imtjson)
 add_subdirectory (src/tests)
 add_subdirectory (src/jsonpack)
 add_subdirectory (src/jsonunpack)
+add_subdirectory (src/jsonbin)
+add_subdirectory (src/jsonunbin)
 add_subdirectory (src/validator)
   # The 'test' target runs all but the future tests
   cmake_policy(PUSH)
