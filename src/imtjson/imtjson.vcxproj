@@ -58,9 +58,11 @@
     <ClInclude Include="refcnt.h" />
     <ClInclude Include="serializer.h" />
     <ClInclude Include="stackProtection.h" />
+    <ClInclude Include="streams.h" />
     <ClInclude Include="string.h" />
     <ClInclude Include="stringValue.h" />
     <ClInclude Include="stringview.h" />
+    <ClInclude Include="utf8.h" />
     <ClInclude Include="validator.h" />
     <ClInclude Include="value.h" />
   </ItemGroup>

@@ -79,7 +79,7 @@ namespace json {
 				return n;
 			}
 
-			int commit() {
+			void commit() {
 				//just mark character not loaded, which causes, that next() will load next character
 				loaded = false;
 			}
@@ -369,7 +369,7 @@ namespace json {
 	template<typename Fn>
 	inline void Parser<Fn>::storeUnicode(wchar_t uchar) {
 		WideToUtf8 conv;
-		conv(oneItemStream(uchar),[&](char c){tmpstr.push_back(c);});
+		conv(oneCharStream(uchar),[&](char c){tmpstr.push_back(c);});
 	}
 
 	template<typename Fn>

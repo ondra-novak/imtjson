@@ -262,7 +262,7 @@ namespace json {
 
 		if (utf8output && uchar >=0x80 && uchar != 0x2028 && uchar != 0x2029) {
 			WideToUtf8 conv;
-			conv(oneItemStream(uchar),[&](char c){target(c);});
+			conv(oneCharStream(uchar),[&](char c){target(c);});
 		} else {
 			target('\\');
 			target('u');
