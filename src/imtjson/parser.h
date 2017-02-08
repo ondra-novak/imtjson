@@ -368,10 +368,8 @@ namespace json {
 
 	template<typename Fn>
 	inline void Parser<Fn>::storeUnicode(wchar_t uchar) {
-		int c = uchar;
 		WideToUtf8 conv;
-		conv([&]{int z = c; c= eof; return z;},
-			 [&](char c){tmpstr.push_back(c);});
+		conv(oneItemStream(uchar),[&](char c){tmpstr.push_back(c);});
 	}
 
 	template<typename Fn>

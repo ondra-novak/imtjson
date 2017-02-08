@@ -84,6 +84,23 @@ inline StreamToStdStream toStream(std::ostream &stream) {
 	return StreamToStdStream(stream);
 }
 
+template<typename T>
+class OneItemStream {
+public:
+	OneItemStream(const T &item):item(item) {}
+	T operator()() {
+		T z (std::move(item));
+		item = eof;
+		return z;
+	}
+protected:
+	T item;
+};
+
+template<typename T>
+inline OneItemStream<T> oneItemStream(const T &item) {
+	return OneItemStream<T>(item);
+}
 
 }
 

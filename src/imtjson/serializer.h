@@ -5,6 +5,7 @@
 #include <vector>
 #include "value.h"
 #include "binary.h"
+#include "utf8.h"
 
 namespace json {
 
@@ -256,29 +257,13 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writeUnicode(unsigned int uchar) {	
-		//see: http://stackoverflow.com/questions/2965293/javascript-parse-error-on-u2028-unicode-character
+	inline void Serializer<Fn>::writeUnicode(unsigned int uchar) {
+
+
 		if (utf8output && uchar >=0x80 && uchar != 0x2028 && uchar != 0x2029) {
-			if (uchar >= 0x80 && uchar <= 0x7FF) {
-				target((char)(0xC0 | (uchar >> 6)));
-				target((char)(0x80 | (uchar & 0x3F)));
-			}
-			else if (uchar >= 0x800 && uchar <= 0xFFFF) {
-				target((char)(0xE0 | (uchar >> 12)));
-				target((char)(0x80 | ((uchar >> 6) & 0x3F)));
-				target((char)(0x80 | (uchar & 0x3F)));
-			}
-			else if (uchar >= 0x10000 && uchar <= 0x10FFFF) {
-				target((char)(0xF0 | (uchar >> 18)));
-				target((char)(0x80 | ((uchar >> 12) & 0x3F)));
-				target((char)(0x80 | ((uchar >> 6) & 0x3F)));
-				target((char)(0x80 | (uchar & 0x3F)));
-			}
-			else {
-				notValidUTF8("");
-			}
-		}
-		else {
+			WideToUtf8 conv;
+			conv(oneItemStream(uchar),[&](char c){target(c);});
+		} else {
 			target('\\');
 			target('u');
 			const char hex[] = "0123456789ABCDEF";
@@ -299,8 +284,34 @@ namespace json {
 	}
 	template<typename Fn>
 	inline void Serializer<Fn>::writeStringBody(const StringView<char>& text)
-
 	{
+		Utf8ToWide conv;
+		auto strrd = fromString(text);
+		conv([&] {
+
+			do {
+				int c = strrd();
+				if (c == eof) return c;
+				switch (c) {
+					case '\\':
+					case '/':
+					case '"':target('\\'); target(c); break;
+					case '\f':target('\\'); target('f'); break;
+					case '\b':target('\\'); target('b'); break;
+					case '\r':target('\\'); target('r'); break;
+					case '\n':target('\\'); target('n'); break;
+					case '\t':target('\\'); target('t'); break;
+					default:
+						if (c < 32 || c>=128) return c;
+						else target(c);
+						//if (c < 32) writeUnicode(c);else target(c); break;
+				}
+			} while (true);
+
+		},[&](int c) {
+			writeUnicode(c);
+		});
+/*
 		unsigned int uchar = 0;
 		unsigned int extra = 0;
 		for (auto&& c : text) {
@@ -337,22 +348,13 @@ namespace json {
 				}
 			}
 			else {
-				switch (c) {
-				case '\\':
-				case '/':
-				case '"':target('\\'); target(c); break;
-				case '\f':target('\\'); target('f'); break;
-				case '\b':target('\\'); target('b'); break;
-				case '\r':target('\\'); target('r'); break;
-				case '\n':target('\\'); target('n'); break;
-				case '\t':target('\\'); target('t'); break;
-				default:if (c < 32) writeUnicode(c);else target(c); break;
 				}
 			}
 		}
 		if (extra) {
 			notValidUTF8(text);
 		}
+		*/
 	}
 
 }
