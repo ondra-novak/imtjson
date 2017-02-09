@@ -81,6 +81,8 @@ namespace json {
 		}
 		bool empty() const {return length == 0;}
 
+		static const std::size_t npos = -1;
+
 		std::size_t indexOf(const StringView sub, std::size_t pos) const {
 			if (sub.length > length) return -1;
 			std::size_t eflen = length - sub.length + 1;
@@ -88,8 +90,73 @@ namespace json {
 				if (substr(pos,sub.length) == sub) return pos;
 				pos++;
 			}
-			return -1;
+			return npos;
 		}
+
+		///Helper class to provide operation split
+		/** split() function */
+		class SplitFn {
+		public:
+			SplitFn(const StringView &source, const StringView &separator, unsigned int limit)
+				:source(source),separator(separator),startPos(0),limit(limit) {}
+			StringView operator()() {
+				std::size_t fnd = limit?source.indexOf(separator, startPos):npos;
+				std::size_t strbeg = startPos, strlen;
+				if (fnd == (std::size_t)-1) {
+					strlen = source.length - strbeg;
+					startPos = source.length;
+				} else {
+					strlen = fnd - startPos;
+					startPos = fnd + separator.length;
+					limit = limit -1;
+				}
+				return source.substr(strbeg, strlen);
+			}
+		protected:
+			StringView source;
+			StringView separator;
+			std::size_t startPos;
+			unsigned int limit;
+		};
+
+		///Function splits string into parts separated by the separator
+		/** Result of this function is another function, which
+		 * returns part everytime it is called.
+		 *
+		 * You can use following code to process all parts
+		 * @code
+		 * auto splitFn = str.split(",");
+		 * for (StrViewA s = splitFn(); !str.isEndSplit(s); s = splitFn()) {
+		 * 		//work with "s"
+		 * }
+		 * @endcode
+		 * The code above receives the split function into the splitFn
+		 * variable. Next, code processes all parts while each part
+		 * is available in the variable "s"
+		 *
+		 * Function starts returning the empty string once it extracts the
+		 * last part. However not every empty result means end of the
+		 * processing. You should pass the returned value to the
+		 * function isSplitEnd() which can determine, whether the
+		 * returned value is end of split.
+		 * @param separator
+		 * @param limit allows to limit count of substrings. Default is unlimited
+		 * @return function which provides split operation.
+		 */
+		SplitFn split(const StringView &separator, unsigned int limit = (unsigned int)-1) const {
+			return SplitFn(*this,separator, limit);
+		}
+
+		///Determines, whether argument has been returned as end of split cycle
+		/** @retval true yes
+		 *  @retval false no, this string is not marked as split'send
+		 * @param result
+		 * @return
+		 */
+		bool isSplitEnd(const StringView &result) {
+			return result.length == 0 && result.data == data + length;
+		}
+
 	};
 
 	template<typename T>

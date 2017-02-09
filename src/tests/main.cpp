@@ -938,6 +938,20 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		String t(wtext);
 		out << s;
 	};
+	tst.test("Misc.stringSplit","-aa-b-1231-ewx-123131--xdwew-32324")>> [](std::ostream &out) {
+		StrViewA x("aa/*/b/*/1231/*/ewx/*/123131/*//*/xdwew/*/32324");
+		auto splitFn = x.split("/*/");
+		for (StrViewA s = splitFn(); !x.isSplitEnd(s); s = splitFn()) {
+			out << "-" << s;
+		}
+	};
+	tst.test("Misc.stringSplit.limit","-aa-b-1231-ewx-123131/*//*/xdwew/*/32324")>> [](std::ostream &out) {
+		StrViewA x("aa/*/b/*/1231/*/ewx/*/123131/*//*/xdwew/*/32324");
+		auto splitFn = x.split("/*/",4);
+		for (StrViewA s = splitFn(); !x.isSplitEnd(s); s = splitFn()) {
+			out << "-" << s;
+		}
+	};
 
 
 	runValidatorTests(tst);
