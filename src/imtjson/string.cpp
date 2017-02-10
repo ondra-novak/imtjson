@@ -229,6 +229,10 @@ std::size_t String::indexOf(const StringView<char> other, std::size_t start) con
 	StringView<char> a = impl->getString();
 	return a.indexOf(other, start);
 }
+std::size_t String::lastIndexOf(const StringView<char> other, std::size_t start) const {
+	StringView<char> a = impl->getString();
+	return a.lastIndexOf(other, start);
+}
 
 
 PValue String::getHandle() const {

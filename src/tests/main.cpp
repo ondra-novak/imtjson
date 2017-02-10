@@ -770,6 +770,10 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		String s("Hello world!");
 		out << s.indexOf("w");
 	};
+	tst.test("String.lastIndexOf","36") >> [](std::ostream &out) {
+		String s("Hello planet earth, you are a great planet.");
+		out << s.lastIndexOf("planet");
+	};
 	tst.test("Operation.object_map","{\"aaa\":\"aaa10\",\"bbb\":\"bbbfoo\",\"ccc\":\"ccctrue\"}") >> [](std::ostream &out) {
 		Value v(
 				Object

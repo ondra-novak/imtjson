@@ -83,8 +83,8 @@ namespace json {
 
 		static const std::size_t npos = -1;
 
-		std::size_t indexOf(const StringView sub, std::size_t pos) const {
-			if (sub.length > length) return -1;
+		std::size_t indexOf(const StringView sub, std::size_t pos = 0) const {
+			if (sub.length > length) return npos;
 			std::size_t eflen = length - sub.length + 1;
 			while (pos < eflen) {
 				if (substr(pos,sub.length) == sub) return pos;
@@ -92,6 +92,17 @@ namespace json {
 			}
 			return npos;
 		}
+
+		std::size_t lastIndexOf(const StringView sub, std::size_t pos = 0) const {
+			if (sub.length > length) return -1;
+			std::size_t eflen = length - sub.length + 1;
+			while (pos < eflen) {
+				eflen--;
+				if (substr(eflen,sub.length) == sub) return eflen;
+			}
+			return npos;
+		}
+
 
 		///Helper class to provide operation split
 		/** split() function */
@@ -153,7 +164,7 @@ namespace json {
 		 * @param result
 		 * @return
 		 */
-		bool isSplitEnd(const StringView &result) {
+		bool isSplitEnd(const StringView &result) const {
 			return result.length == 0 && result.data == data + length;
 		}
 
