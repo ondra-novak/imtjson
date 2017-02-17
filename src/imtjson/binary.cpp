@@ -106,7 +106,9 @@ public:
 			std::size_t len = data.length;
 			if (len == 0) return ;
 			char buff[256];
-			std::size_t finlen = (len+2)/3 * 4;
+			std::size_t nlen = (len+2)/3;
+			std::size_t finlen = nlen * 4;
+			std::size_t padd = (nlen * 3) - len;
 
 
 			static char chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -141,8 +143,9 @@ public:
 				buff[wrpos++] = chars[nx];
 			}
 
-			while (wrpos < finlen)
-				buff[wrpos++] = '=';
+			for (std::size_t i = 0; i < padd; i++) {
+					buff[wrpos++] = '=';
+			}
 			fn(StrViewA(buff,wrpos));
 
 

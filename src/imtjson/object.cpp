@@ -173,10 +173,7 @@ void Object::set_internal(const Value& v) {
 
 	PValue Object::commit() const {
 		optimize();
-		if (base.empty() && ordered== nullptr) {
-			return AbstractObjectValue::getEmptyObject();
-		}
-		else if (ordered == nullptr) {
+		if (ordered == nullptr) {
 			return base.v;
 		} else {
 			std::size_t needsz = 0;
