@@ -9,6 +9,7 @@
 #define SRC_IMTJSON_BINJSON_H_
 
 #include "value.h"
+#include <unordered_map>
 
 namespace json {
 
@@ -71,7 +72,8 @@ protected:
 		ZeroID():value(0) {}
 	};
 
-	typedef std::map<StrViewA, ZeroID> KeyMap;
+	struct HashStr {std::size_t operator()(const StrViewA &str) const;};
+	typedef std::unordered_map<StrViewA, ZeroID, HashStr> KeyMap;
 	KeyMap keyMap;
 	unsigned int nextKeyId;
 	BinarySerializeFlags flags;

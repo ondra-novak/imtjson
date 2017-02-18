@@ -360,6 +360,17 @@ inline int BinarySerializer<Fn>::tryCompressKey(const StrViewA &key){
 	}
 }
 
+template<typename Fn>
+std::size_t  BinarySerializer<Fn>::HashStr::operator()(const StrViewA &str) const {
+	std::size_t acc = 2166136261;
+	for(auto c : str) {
+		unsigned char b = (unsigned char)c;
+		acc = acc ^ b;
+		acc = acc * 16777619;
+	}
+	return acc;
+
+}
 
 }
 

@@ -79,6 +79,7 @@ void Compress<Fn>::compress(char c) {
 	} else {
 		//search for pair <lastSeq, c> if we able to compress it
 		auto iter = seqdb.find(Sequence(lastSeq, c));
+
 		//no such pair
 		if (iter == seqdb.end()) {
 			//so first close previous sequence and send it to the output
@@ -90,24 +91,28 @@ void Compress<Fn>::compress(char c) {
 			++nextCode;
 			//store lastSeq as c - we starting accumulate next sequence
 			lastNewSeq = lastSeq = c;
-		} else if (iter->second.nextCode >= maxCode) {
-
-			write(lastSeq);
-
-			write(optimizeCode);
-
-			optimizeDB();
-
-			lastNewSeq = lastSeq = c;
 		} else {
-			//in case that pair has been found
-			//mark the pair used
-			if (!iter->second.used) {
-				optimizer.addCode(lastNewSeq, c, iter->second);
+			SeqInfo &nfo = iter->second;
+
+			if (nfo.nextCode >= maxCode) {
+
+				write(lastSeq);
+
+				write(optimizeCode);
+
+				optimizeDB();
+
+				lastNewSeq = lastSeq = c;
+			} else {
+				//in case that pair has been found
+				//mark the pair used
+				if (!nfo.used) {
+					optimizer.addCode(lastNewSeq, c, nfo);
+				}
+				//and advence current sequence
+				lastSeq = nfo.nextCode;
+				lastNewSeq = nfo.newCode;
 			}
-			//and advence current sequence
-			lastSeq = iter->second.nextCode;
-			lastNewSeq = iter->second.newCode;
 		}
 	}
 }

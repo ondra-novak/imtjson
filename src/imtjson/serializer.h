@@ -68,7 +68,7 @@ namespace json {
 	template<typename Fn>
 	inline void Value::serialize(const Fn & target) const
 	{
-		serialize(defaultUnicodeFormat, target);
+		serialize<Fn>(defaultUnicodeFormat, target);
 	}
 
 	template<typename Fn>
