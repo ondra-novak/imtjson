@@ -147,7 +147,7 @@ namespace json {
 		///Parses unicode sequence encoded as \uXXXX, stores it as UTF-8 into the tmpstr
 		void parseUnicode();
 		///Stores unicode character as UTF-8 into the tmpstr
-		void storeUnicode(wchar_t uchar);
+		void storeUnicode(std::uintptr_t uchar);
 
 		///Temporary string - to keep allocated memory
 		std::string tmpstr;
@@ -239,7 +239,7 @@ namespace json {
 					throw ParseError("Expected ':'");
 				rd.commit();
 				Value v = parse();
-				tmpArr.push_back(v.setKey(getString(name)));
+				tmpArr.push_back(Value(getString(name),v));
 				freeString(name);
 			}
 			catch (ParseError &e) {
@@ -367,9 +367,9 @@ namespace json {
 
 
 	template<typename Fn>
-	inline void Parser<Fn>::storeUnicode(wchar_t uchar) {
+	inline void Parser<Fn>::storeUnicode(std::uintptr_t uchar) {
 		WideToUtf8 conv;
-		conv(oneCharStream(uchar),[&](char c){tmpstr.push_back(c);});
+		conv(oneCharStream((int)uchar),[&](char c){tmpstr.push_back(c);});
 	}
 
 	template<typename Fn>

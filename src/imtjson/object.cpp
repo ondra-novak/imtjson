@@ -11,6 +11,14 @@
 namespace json {
 
 
+	PValue bindKeyToPValue(const StrViewA &key, const PValue &value) {
+		if (key.empty())
+			return value->unproxy();
+		else {
+			return new(key) ObjectProxy(key, value->unproxy());
+		}
+	}
+
 
 	class ObjectDiff: public ObjectValue {
 	public:
@@ -162,7 +170,7 @@ void Object::set_internal(const Value& v) {
 					defaultConflictResolv,
 					Path::root,
 					[&](const StringView<char> &name, const Value &v) {
-							newdiff->push_back(v.setKey(name).getHandle());
+							newdiff->push_back(bindKeyToPValue(name,v.getHandle()));
 					});
 
 			ordered = newdiff;
@@ -191,7 +199,7 @@ void Object::set_internal(const Value& v) {
 			mergeDiffsImpl(items.begin(), items.end(), ordered->begin(), ordered->end(),
 					defaultConflictResolv,Path::root,
 					[&merged](const StringView<char> &n, const Value &v) {
-						if (v.type() != undefined) merged->push_back(v.setKey(n).getHandle());
+						if (v.type() != undefined) merged->push_back(bindKeyToPValue(n,v.getHandle()));
 					});
 			return PValue::staticCast(merged);
 		}
@@ -294,7 +302,7 @@ Value json::Object::applyDiff(const Value& baseObject, const Value& diffObject) 
 	mergeDiffsImpl(items.begin(), items.end(), diff.begin(), diff.end(),
 			defaultConflictResolv,Path::root,
 			[&res](const StrViewA &n, const Value &v) {
-		if (v.defined()) res->push_back(v.setKey(n).getHandle());
+		if (v.defined()) res->push_back(bindKeyToPValue(n,v.getHandle()));
 	});
 
 	return PValue::staticCast(res);
@@ -381,20 +389,9 @@ Value Object::mergeDiffsObjs(const Value& lv, const Value& rv,
 	RefCntPtr<ObjectDiff> obj = ObjectDiff::create(needsz);
 	mergeDiffsImpl(ilv.begin(),ilv.end(),irv.begin(),irv.end(),resolver,Path(path,lv.getKey()),
 			[&](const StringView<char> &name, const Value &v){
-		obj->push_back(v.setKey(name).getHandle());
+		obj->push_back(bindKeyToPValue(name,v.getHandle()));
 	});
 	return PValue::staticCast(obj);
-}
-
-Value Value::setKey(const StringView<char> &key) const {
-	if (getKey() == key) return *this;
-	if (key.empty()) return Value(v->unproxy());
-	return Value(new(key) ObjectProxy(key,v->unproxy()));
-}
-Value Value::setKey(const String &key) const {
-	if (getKey() == key) return *this;
-	if (key.empty()) return Value(v->unproxy());
-	return Value(new ObjectProxyString(key,v->unproxy()));
 }
 
 StringView<PValue> Object::getItems(const Value& v) {
@@ -418,6 +415,10 @@ Object::Object(Object &&other)
 	,unordered(std::move(other.unordered)) {
 
 }
+
+
+
+Value::Value(const StrViewA key, const Value &value) :v(bindKeyToPValue(key, value.getHandle())) {}
 
 
 }

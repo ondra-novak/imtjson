@@ -26,7 +26,7 @@ String::String():impl(AbstractStringValue::getEmptyString())
 {
 }
 
-String::String(Value v):impl(v.getHandle()) {
+String::String(Value v):impl(v.getHandle()->unproxy()) {
 }
 
 String::String(std::size_t sz, std::function<std::size_t(char *)> fillFn):impl(new(sz) StringValue(nullptr, sz, fillFn)) {

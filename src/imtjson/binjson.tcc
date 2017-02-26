@@ -297,13 +297,13 @@ Value BinaryParser<Fn>::parseItem() {
 		keyHistory[keyIndex & 0x7F] = s;
 		keyIndex++;
 		Value v = parseItem();
-		return v.setKey(StrViewA(s));
+		return Value(s, v);
 	}
 	default: {
 		unsigned int p = (keyIndex - 1 - tag) & 0x7F;
 		String s = keyHistory[p];
 		Value v = parseItem();
-		return v.setKey(StrViewA(s));
+		return Value(s,v);
 	}
 		
 	}

@@ -229,6 +229,10 @@ int testMain() {
 		Value w (a);
 		w.toStream(out);
 	};
+	tst.test("StringValue.concat", "hello world 1") >> [](std::ostream &out) {
+		Value v(string, { "hello"," world ", 1 });
+		out << v.getString();
+	};
 	tst.test("Object.create", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
 		Object o;
 		o.set("kabrt", 123);
@@ -248,6 +252,30 @@ int testMain() {
 				("name", "Azaxe")
 				("data", { 90,60, 90 })
 		).toStream(out);
+	};
+	tst.test("Object.create3", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":0.1,\"kabrt\":123,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
+		//using default initializer list, but all values have key assigned - creates object
+		Value({"kabrt"_ = 123,
+			"frobla"_= 0.1,
+			"arte"_= true,
+			"name"_= "Azaxe",
+			"data"_= {90,60,90} }).toStream(out);
+	};
+	tst.test("Object.create4", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":0.1,\"kabrt\":123,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
+		//using _ suffix can have issues. If you disable it, you can use key/ as prefix to create key-value pair
+		Value({ key/"kabrt" = 123,
+			key/"frobla" = 0.1,
+			key/"arte" = true,
+			key/"name" = "Azaxe",
+			key/"data" = { 90,60,90 } }).toStream(out);
+	};
+	tst.test("Object.create5", "{\"\":123,\"arte\":true,\"data\":[90,60,90],\"frobla\":0.1,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
+		//without type, constructor will create array, because of empty key appear. You can enforce object by specifying type as argument
+		Value(object, { ""_ = 123,
+			"frobla"_ = 0.1,
+			"arte"_ = true,
+			"name"_ = "Azaxe",
+			"data"_ = { 90,60,90 } }).toStream(out);
 	};
 	tst.test("Object.edit", "{\"age\":19,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":289,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"arte\":true,\"data\":[90,60,90],\"frobla\":12.3,\"kabrt\":123,\"name\":\"Azaxe\"}");		
@@ -907,12 +935,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	};
 	tst.test("Value.setKey", "Hello world") >> [](std::ostream &out) {
 		Value v = "world";
-		v = v.setKey("Hello");
-		out << v.getKey() << " " << v.getString();
-	};
-	tst.test("Value.setKey2", "Hello world") >> [](std::ostream &out) {
-		Value v = "world";
-		v = v.setKey(String("Hello"));
+		v = "Hello"_= v;
 		out << v.getKey() << " " << v.getString();
 	};
 	tst.test("Parser.commented", "{\"blockComment\\/*not here*\\/\":\"here\\\"\\r\\n\",\"lineComment\\/\\/not here\":\"here\"}") >> [](std::ostream &out) {

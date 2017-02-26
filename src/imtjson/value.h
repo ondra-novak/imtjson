@@ -172,6 +172,12 @@ namespace json {
 		 * @endcode
 		 *
 		 * @param data argument is created by compiler.
+		 *
+		 * @note the constructor detects, whether the container is object or array
+		 * by exploring the first value. If there is key, which can be defined by
+		 * either lexical or key/ prefix, the constructor creates the object. Otherwise
+		 * it creates array.
+		 *
 		 */
 		Value(const std::initializer_list<Value> &data);
 
@@ -183,6 +189,8 @@ namespace json {
 		 */
 		Value(const BinaryView &binary, BinaryEncoding enc = defaultBinaryEncoding);
 
+
+		Value(const StrViewA key, const Value &value);
 
 		///Create binary value
 		/** Binary values are not supported by JSON. They are emulated through encoding
@@ -330,24 +338,7 @@ namespace json {
 		 * @note function allocates a space for the key. It is faster than converting to the String and bind that object
 		 *
 		 */
-		Value setKey(const StringView<char> &key) const;
-		Value setKey(const char *k) const {return setKey(StrViewA(k));}
-		Value setKey(const std::string &k) const {return setKey(StrViewA(k));}
-
-
-		///Binds a key-name to the item
-		/** The function is used by objects, however you can freely bind any value to a specified key outside of the object.
-		 * @param key-name which is bind to the value.
-		 * @return new value with bound key.
-		 *
-		 * @note due the immutable nature of the  value, you cannot change or set
-		 * the key-name to the existing value. A new value is always created.
-		 *
-		 * @see getKey
-		 *
-		 * @note function shares the object String. It is faster if you already have the key represented as String
-		 */
-		Value setKey(const String &key) const;
+//		Value setKey(const StringView<char> &key) const;
 
 		///Converts the value to string
 		/**
@@ -924,6 +915,27 @@ protected:
 	 * @endcode
 	 */
 	typedef Value var;
+
+	class KeyKeeper : public StrViewA {
+	public:
+		KeyKeeper(const StrViewA &k) :StrViewA(k) {}
+		Value operator=(const Value &v) const { return Value(*this, v); }
+	};
+
+	class KeyStart {
+	public:
+		KeyKeeper operator/(const StrViewA &a) const { return KeyKeeper(a); }
+	};
+	extern KeyStart key;
+
 }
+
+#ifndef IMTJSON_NOKEYLITERAL
+static inline json::KeyKeeper operator"" _(const char *k, std::size_t len) {
+	return json::KeyKeeper(json::StrViewA(k, len));
+}
+#endif
+
+
 #include "conv.h"
 

@@ -755,7 +755,7 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 
 void Validator::pushVar(String name, Value value)
 {
-	varList.push_back(value.setKey(name));
+	varList.push_back(Value(name,value));
 }
 
 void Validator::popVar()

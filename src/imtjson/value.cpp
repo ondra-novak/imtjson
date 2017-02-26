@@ -11,6 +11,8 @@
 
 namespace json {
 
+	KeyStart key;
+
 
 	const IValue *createByType(ValueType vtype) {
 		switch (vtype) {
@@ -235,16 +237,19 @@ namespace json {
 		}
 	}
 
-	RefCntPtr<ArrayValue> prepareValues(const std::initializer_list<Value>& data) {
-		RefCntPtr<ArrayValue> out = ArrayValue::create(data.size());
-		for (auto &&x : data) out->push_back(x.getHandle());
-		return out;
+	PValue prepareValues(const std::initializer_list<Value>& data) {
+		if (data.begin()->flags() & proxy) {
+			return Value(object, data).getHandle();
+		}
+		else {
+			return Value(array, data).getHandle();
+		}
 	}
 
 	Value::Value(const std::initializer_list<Value>& data)
 		:v(data.size() == 0?
 			PValue(AbstractArrayValue::getEmptyArray())
-			:PValue::staticCast(prepareValues(data)))
+			:prepareValues(data))
 	{
 
 	}
@@ -525,6 +530,26 @@ namespace json {
 			}
 			v = PValue::staticCast(vp);
 			break;
+		}
+		case string: {
+			std::vector<String> tmpStr;
+			tmpStr.reserve(values.length);
+			std::size_t needsz = 0;
+			for (auto &&x : values) {
+				String s = x.toString();
+				tmpStr.push_back(s);
+				needsz += s.length();
+			}
+			v = PValue(new (needsz) StringValue(nullptr, needsz, [&](char *c) {
+				for (auto &&x : tmpStr) {
+					std::memcpy(c, x.c_str(), x.length());
+					c += x.length();
+				}
+				return needsz;
+			}));
+			break;
+			
+
 		}
 		default:
 			 throw std::runtime_error("Invalid argument");

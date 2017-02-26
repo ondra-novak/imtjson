@@ -189,7 +189,7 @@ protected:
 			reset();
 		}
 		void addCode(DecInfo &sqinfo, ChainCode prevCodeTranslated) {
-			ChainCode newCode = newDb.size() + firstCode;
+			ChainCode newCode = (ChainCode)(newDb.size() + firstCode);
 			if (newCode < maxCodeForOptimize) {
 				sqinfo.used = true;
 				sqinfo.newCode = newCode;
