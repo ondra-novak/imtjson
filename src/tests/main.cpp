@@ -255,7 +255,7 @@ int testMain() {
 	};
 	tst.test("Object.create3", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":0.1,\"kabrt\":123,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
 		//using default initializer list, but all values have key assigned - creates object
-		Value({"kabrt"_ = 123,
+		Value(object,{"kabrt"_ = 123,
 			"frobla"_= 0.1,
 			"arte"_= true,
 			"name"_= "Azaxe",
@@ -263,7 +263,7 @@ int testMain() {
 	};
 	tst.test("Object.create4", "{\"arte\":true,\"data\":[90,60,90],\"frobla\":0.1,\"kabrt\":123,\"name\":\"Azaxe\"}") >> [](std::ostream &out) {
 		//using _ suffix can have issues. If you disable it, you can use key/ as prefix to create key-value pair
-		Value({ key/"kabrt" = 123,
+		Value(object, { key/"kabrt" = 123,
 			key/"frobla" = 0.1,
 			key/"arte" = true,
 			key/"name" = "Azaxe",
