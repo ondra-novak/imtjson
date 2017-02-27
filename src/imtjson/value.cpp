@@ -1,3 +1,4 @@
+#include <cstring>
 #include "value.h"
 #include "basicValues.h"
 #include "arrayValue.h"
@@ -238,12 +239,7 @@ namespace json {
 	}
 
 	PValue prepareValues(const std::initializer_list<Value>& data) {
-		if (data.begin()->flags() & proxy) {
-			return Value(object, data).getHandle();
-		}
-		else {
 			return Value(array, data).getHandle();
-		}
 	}
 
 	Value::Value(const std::initializer_list<Value>& data)

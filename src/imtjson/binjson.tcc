@@ -182,7 +182,7 @@ Value json::BinaryParser<Fn>::parseKey(unsigned char tag) {
 	keybuffer.resize(sz);
 	for (std::size_t i = 0; i < sz; i++) keybuffer[i] = (unsigned char)fn();
 	Value v = parseItem();
-	return v.setKey(StrViewA(keybuffer.data(),sz));
+	return Value(StrViewA(keybuffer.data(),sz),v);
 }
 
 template<typename Fn>
