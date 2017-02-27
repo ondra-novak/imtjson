@@ -20,6 +20,7 @@ namespace json {
 		StringView(const std::basic_string<T> &string) : data(string.data()), length(string.length()) {}
 		StringView(const std::vector<T> &string) : data(string.data()), length(string.size()) {}
 		StringView(const std::initializer_list<T> &list) :data(list.begin()), length(list.size()) {}
+		StringView(const StringView &other) :data(other.data), length(other.length) {}
 
 		StringView &operator=(const StringView &other) {
 			if (&other != this) {
@@ -183,6 +184,14 @@ namespace json {
 	class BinaryView: public StringView<unsigned char>{
 	public:
 		using StringView<unsigned char>::StringView;
+
+		BinaryView(const BinaryView &from)
+			:StringView<unsigned char>(from)
+		{}
+
+		BinaryView(const StringView<unsigned char> &from)
+			:StringView<unsigned char>(from)
+		{}
 
 		///Explicit conversion from any view to binary view
 		/** it might be useful for simple serialization, however, T should be POD or flat object */
