@@ -338,7 +338,7 @@ namespace json {
 		 * @note function allocates a space for the key. It is faster than converting to the String and bind that object
 		 *
 		 */
-//		Value setKey(const StringView<char> &key) const;
+		Value setKey(const StringView<char> &key) const {return Value(key, *this);}
 
 		///Converts the value to string
 		/**
