@@ -5,9 +5,13 @@
  *      Author: ondra
  */
 
+#include  <condition_variable>
+#include <mutex>
 #include "rpcserver.h"
 
 #include "array.h"
+#include "object.h"
+#include "operations.h"
 namespace json {
 
 
@@ -47,19 +51,19 @@ void RpcRequest::setResult(const Value& result) {
 
 void RpcRequest::setResult(const Value& result, const Value& context) {
 	Value resp (object,{
-			"id"_=data->id,
-			"result"_=result,
-			"error"_=nullptr,
-			"context"_=context});
+			key/"id"=data->id,
+			key/"result"=result,
+			key/"error"=nullptr,
+			key/"context"=context});
 	data->setResponse(resp);
 
 }
 
 void RpcRequest::setError(const Value& error) {
 	Value resp (object,{
-			"id"_=data->id,
-			"result"_=nullptr,
-			"error"_=error});
+			key/"id"=data->id,
+			key/"result"=nullptr,
+			key/"error"=error});
 	data->setResponse(resp);
 }
 
@@ -79,7 +83,10 @@ Value RpcRequest::operator [](const StrViewA name) const {
 }
 
 void RpcRequest::setError(unsigned int status, const String& message) {
-	setError(Value(object,{"status"_=status,"statusMessage"_=message}));
+	setError(Value(object,{
+			key/"code" =status,
+			key/"message"=message
+	}));
 }
 
 void RpcRequest::RequestData::setResponse(const Value& v) {
@@ -149,5 +156,146 @@ void RpcServer::add_help(const Value& helpContent, const String &name) {
 	});
 
 }
+
+RpcResult::RpcResult(Value result, bool isError, Value context)
+	:Value(result),error(isError),context(context)
+{}
+
+AbstractRpcClient::PreparedCall::PreparedCall(AbstractRpcClient& owner, unsigned int id, const Value& msg)
+	:owner(owner),id(id),msg(msg),executed(false)
+{
+}
+
+//object receives result and stores it
+class AbstractRpcClient::LocalPendingCall: public AbstractRpcClient::PendingCall {
+public:
+	virtual void onResponse(RpcResult response) override {
+		res = response;
+	}
+
+	LocalPendingCall()
+		:received(false),trig(nullptr) {}
+
+	void release() {
+		//when the storage is destroyed - set received to true
+		received = true;
+		//if the pointer is valid
+		if (trig != nullptr)
+			//notify conditional variable
+			trig->notify_one();
+	}
+
+	RpcResult res;
+	bool received;
+	std::condition_variable * trig;
+};
+
+void  AbstractRpcClient::onWait(LocalPendingCall &lpc) throw() {
+	//setup conditional variable
+	std::condition_variable t;
+	//set pointer - from now other thread must notify the conditional variable (if arrived soon, received is already true)
+	lpc.trig = &t;
+
+	//create mutex
+	std::mutex lock;
+	//lock the mutext
+	std::unique_lock<std::mutex> guard(lock);
+
+	//wait for receiving
+	t.wait(guard, [&] {return lpc.received;});
+	//received here
+}
+
+
+
+AbstractRpcClient::PreparedCall::operator RpcResult() {
+
+	if (executed) return RpcResult();
+	executed = true;
+
+	//declare storage here
+	LocalPendingCall lpc;
+	//register the storage (under its id)
+	owner.addPendingCall(id,PPendingCall(&lpc, [](PendingCall *d){
+		static_cast<LocalPendingCall *>(d)->release();}));
+	//send request now
+	owner.sendRequest(msg);
+	//in case that result has not been received here (will arrive later)
+	if (!lpc.received) {
+		owner.onWait(lpc);
+	}
+
+	//return received result
+	return lpc.res;
+}
+
+AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName, Value args) {
+	unsigned int id = ++idCounter;
+	return PreparedCall(*this,id,Value(object,{
+			key/"method"=methodName,
+			key/"params"=args,
+			key/"id"=id,
+			key/"context"=context}));
+}
+
+bool AbstractRpcClient::cancelAsyncCall(unsigned int id, RpcResult result) {
+	auto it = callMap.find(id);
+	if (it == callMap.end()) return false;
+	PPendingCall pc = std::move(it->second);
+	callMap.erase(it);
+	pc->onResponse(result);
+	return true;
+}
+
+AbstractRpcClient::ReceiveStatus AbstractRpcClient::processResponse(Value response) {
+	Value id = response["id"];
+	if (id.defined()) {
+		Value result = response["result"];
+		Value error = response["error"];
+		if (id.type() == number && result.defined() && response.defined()) {
+			unsigned int nid = id.getUInt();
+			Value ctx = response["context"];
+			updateContext(ctx);
+			if (error.isNull())  {
+				if (!cancelAsyncCall(nid,RpcResult(result,false,ctx))) return unexpected;
+			} else {
+				if (!cancelAsyncCall(nid,RpcResult(error,true,undefined))) return unexpected;
+			}
+
+		} else {
+			return request;
+		}
+	} else {
+		return notification;
+	}
+}
+
+Value AbstractRpcClient::getContext() const {
+	return context;
+}
+
+void AbstractRpcClient::setContext(const Value& value) {
+	context = value;
+}
+
+void AbstractRpcClient::updateContext(const Value& value) {
+	Object newContext;
+	context.merge(value,[&](Value l, Value r) {
+		int cmp;
+		if (!l.defined()) cmp = 1;
+		else if (!r.defined()) cmp = -1;
+		else cmp = l.getKey().compare(r.getKey());
+
+		if (cmp < 0) newContext.set(l);
+		else if (!r.isNull()) newContext.set(r);
+		return cmp;
+	});
+	setContext(newContext);
+}
+
+void AbstractRpcClient::addPendingCall(unsigned int id, PPendingCall &&pcall) {
+	callMap.insert(CallItemType(id,std::move(pcall)));
+}
+
 
 }
