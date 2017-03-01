@@ -1,4 +1,8 @@
 /*
+ * @file Basic support for JSONRPC client/server. Version 1.0 is implemented extended by
+ * special section "context" which allows to server store some data on client like a cookie. These data
+ * are later send back with each request of the same client
+ *
  * rpcserver.h
  *
  *  Created on: 28. 2. 2017
