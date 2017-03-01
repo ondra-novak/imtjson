@@ -2,6 +2,7 @@
 
 #include "refcnt.h"
 #include "stringview.h"
+#include "allocator.h"
 namespace json {
 
 	///Type of JSON value
@@ -115,7 +116,7 @@ namespace json {
 	class IEnumFn;
 
 	///Interface access internal value of JSON Value
-	class IValue: public RefCntObj {
+	class IValue: public RefCntObj, public AllocObject {
 	public:
 		virtual ~IValue() {}
 
@@ -139,8 +140,6 @@ namespace json {
 
 		virtual bool equal(const IValue *other) const = 0;
 
-		void *operator new(std::size_t);
-		void operator delete(void *, std::size_t);
 
 	};
 

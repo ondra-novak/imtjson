@@ -483,10 +483,10 @@ namespace json {
 
 	const Allocator * Value::allocator = &defaultAllocator;
 
-	void *IValue::operator new(std::size_t sz) {
+	void *AllocObject::operator new(std::size_t sz) {
 		return Value::allocator->alloc(sz);
 	}
-	void IValue::operator delete(void *ptr, std::size_t) {
+	void AllocObject::operator delete(void *ptr, std::size_t) {
 		return Value::allocator->dealloc(ptr);
 	}
 
