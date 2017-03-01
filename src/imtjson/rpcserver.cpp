@@ -7,6 +7,7 @@
 
 #include "rpcserver.h"
 
+#include "array.h"
 namespace json {
 
 
@@ -92,7 +93,7 @@ void RpcServer::operator ()(const RpcRequest& req) const {
 	Value args = req.getArgs();
 	Value context = req.getContext();
 	if (name.defined() && args.defined() && name.type() == string && args.type() == array
-			&& (!context.defined() || context.type() == obejct)) {
+			&& (!context.defined() || context.type() == object)) {
 		AbstractMethodReg *m = find(req.getMethodName());
 		if (m == nullptr) {
 			onMethodNotFound(req);
@@ -143,7 +144,7 @@ void RpcServer::add_help(const Value& helpContent, const String &name) {
 
 	Value helpCtx = helpContent;
 	add(name, [helpCtx](RpcRequest req) {
-		String n = req[0];
+		String n (req[0]);
 		req.setResult(helpCtx[n]);
 	});
 

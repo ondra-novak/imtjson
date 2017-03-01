@@ -20,6 +20,23 @@ public:
 	virtual ~IRpcCaller() {}
 };
 
+
+///Carries result or error
+class RpcResult: public Value {
+public:
+	RpcResult(Value result, bool isError, Value context);
+
+	Value getContext() const {return context;}
+	bool isError() const {return error;}
+
+	bool operator!() const {return error;}
+	operator bool() const {return !error;}
+
+protected:
+	Value context;
+	bool error;
+};
+
 ///Packs typical JSONRPC request into object. You can call RPC function with this object.
 /** Object can be copied, because it is internally shared. It can be stored when
  * the method is executed asynchronous way. Until the request is resolved, it
@@ -199,7 +216,7 @@ inline void RpcServer::add(const String& name, const Fn fn) {
 			fn(req);
 		}
 	protected:
-		F fn;
+		Fn fn;
 	};
 	RefCntPtr<AbstractMethodReg> f = new F(name, fn);
 	mapReg.insert(MapValue(f->name, f));
@@ -212,6 +229,28 @@ inline void RpcServer::add(const String& name, const ObjPtr& objPtr,
 }
 
 
+class RpcClient {
+public:
+
+	enum ReceiveStatus {
+		///response has been received and processed
+		processedResponse,
+		///delivered RPC request (send the request to RpcServer)
+		request,
+		///delivered RPC notification (can be processed as request through RpcServer)
+		notification,
+		///valid response, but nobody is waiting for it
+		unknownResponse
+
+	};
+
+
+
+protected:
+	Value context;
+
+	virtual void sendRequest(Value request) = 0;
+};
 
 }
 
