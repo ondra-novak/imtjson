@@ -500,7 +500,8 @@ namespace json {
 		case array: {
 			RefCntPtr<ArrayValue> vp = ArrayValue::create(values.length);
 			for (const Value &v: values) {
-				vp->push_back(v.getHandle());
+				if (v.defined())
+					vp->push_back(v.getHandle());
 			}
 			v = PValue::staticCast(vp);
 			break;
@@ -510,16 +511,18 @@ namespace json {
 			StrViewA lastKey;
 			bool ordered = true;
 			for (const Value &v: values) {
-				StrViewA k = v.getKey();
-				int c = lastKey.compare(k);
-				if (c > 0) {
-					ordered = false;
+				if (v.defined()) {
+					StrViewA k = v.getKey();
+					int c = lastKey.compare(k);
+					if (c > 0) {
+						ordered = false;
+					}
+					else if (c == 0) {
+						if (!vp->empty()) vp->pop_back();
+					}
+					vp->push_back(v.getHandle());
+					lastKey = k;
 				}
-				else if (c == 0) {
-					if (!vp->empty()) vp->pop_back();
-				}
-				vp->push_back(v.getHandle());
-				lastKey = k;
 			}
 			if (!ordered) {
 				vp->sort();

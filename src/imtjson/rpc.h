@@ -20,15 +20,6 @@
 
 namespace json {
 
-///Caller's context - it can carry services that are available during processing the call
-class IRpcCaller {
-public:
-	///Implements this to release instance. It can contain pure delete this, or some kind of reference counting
-	/** Function is called when the request is closed */
-	virtual void release() = 0;
-	virtual ~IRpcCaller() {}
-};
-
 
 ///Carries result or error
 class RpcResult: public Value {
@@ -56,14 +47,14 @@ class RpcRequest {
 
 	struct RequestData: public RefCntObj {
 	public:
-		RequestData(const Value &request, IRpcCaller *caller);
+		RequestData(const Value &request);
 		~RequestData();
 
 		String methodName;
 		Value args;
 		Value id;
 		Value context;
-		IRpcCaller *caller;
+		Value rejections;
 		bool responseSent;
 		virtual void response(const Value &result) = 0;
 
@@ -87,7 +78,7 @@ public:
 	 * @return RpcRequest instance. Value can be copied.
 	 */
 	template<typename Fn>
-	static RpcRequest create(const Value &request, IRpcCaller *context, const Fn &fn);
+	static RpcRequest create(const Value &request, const Fn &fn);
 
 	///Name of method
 	const String &getMethodName() const;
@@ -97,13 +88,55 @@ public:
 	const Value &getId() const;
 	///Context (optional)
 	const Value &getContext() const;
-	///pointer to caller
-	const IRpcCaller *getCaller() const;
 	///access to arguments
 	Value operator[](unsigned int index) const;
 	///acfcess to context
 	Value operator[](const StrViewA name) const;
 
+	///Checks arguments
+	/** Perform argument checking's.
+	 *
+	 * @param argDefTuple Array of argument types defined in the validator. Each position
+	 *     match to argument position. Alternated types are allowed. "optional" is also
+	 *     allowed to signal optional arguments. The count of arguments must be less or equal
+	 *     to the count of items in argDefTuple, otherwise the rule is rejected.
+	 *
+	 * @retval true arguments valid, false validation failed. To retrieve rejections, call
+	 * getRejections()
+	 */
+	bool checkArgs(const Value &argDefTuple);
+
+	///Checks arguments
+	/** Perform argument checking's.
+	 *
+	 * @param argDefTuple Array of argument types defined in the validator. Each position
+	 *     match to argument position. Alternated types are allowed. "optional" is also
+	 *     allowed to signal optional arguments.
+	 * @param optionalArgs Rules for additional arguments.
+	 * @retval true arguments valid, false validation failed. To retrieve rejections, call
+	 * getRejections()
+	 */
+	bool checkArgs(const Value &argDefTuple, const Value &optionalArgs);
+
+	///Checks arguments
+	/** Perform argument checking's.
+	 *
+	 * @param argDefTuple Array of argument types defined in the validator. Each position
+	 *     match to argument position. Alternated types are allowed. "optional" is also
+	 *     allowed to signal optional arguments.
+	 * @param optionalArgs Rules for additional arguments.
+	 * @param customClasses contains validator's definition of custom rules. The default
+	 * rule don't need to be present, because the checkArgs doesn't use default rule
+	 * @retval true arguments valid, false validation failed. To retrieve rejections, call
+	 * getRejections()
+	 */
+	bool checkArgs(const Value &argDefTuple, const Value &optionalArgs, const Value &customClasses);
+
+	///Retrieves rejections of the previous checkArgs call
+	Value getRejections() const;
+
+	///Sets standard error 'invalid arguments'. You can supply rejections by calling getRejections
+	void setArgError(Value rejections);
 
 	///set result (can be called once only)
 	void setResult(const Value &result);
@@ -113,25 +146,27 @@ public:
 	void setError(const Value &error);
 	///set error (can be called once only)
 	void setError(unsigned int status, const String &message);
+
 protected:
+	RpcRequest(RefCntPtr<RequestData> data):data(data) {}
 
 	RefCntPtr<RequestData> data;
 };
 
 
 template<typename Fn>
-inline RpcRequest RpcRequest::create(const Value& request, IRpcCaller* context, const Fn& fn) {
+inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn) {
 	class Call: public RequestData {
 	public:
-		Call(const Value &request, IRpcCaller *caller, const Fn &fn)
-			:RequestData(request,caller)
+		Call(const Value &request,  const Fn &fn)
+			:RequestData(request)
 			,fn(fn) {}
 		virtual void response(const Value &result) {fn(result);}
 	protected:
 		Fn fn;
 	};
 
-	return RpcRequest(new Call(request, context, fn));
+	return RpcRequest(new Call(request, fn));
 }
 
 

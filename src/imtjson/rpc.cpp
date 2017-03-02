@@ -12,15 +12,15 @@
 #include "array.h"
 #include "object.h"
 #include "operations.h"
+#include "validator.h"
 namespace json {
 
 
-RpcRequest::RequestData::RequestData(const Value& request,IRpcCaller* caller) {
+RpcRequest::RequestData::RequestData(const Value& request) {
 	methodName = String(request["method"]);
 	args = request["params"];
 	id = request["id"];
 	context = request["context"];
-	this->caller = caller;
 	responseSent = false;
 }
 
@@ -40,9 +40,6 @@ const Value& RpcRequest::getContext() const {
 	return data->context;
 }
 
-const IRpcCaller* RpcRequest::getCaller() const {
-	return data->caller;
-}
 
 void RpcRequest::setResult(const Value& result) {
 	setResult(result, undefined);
@@ -54,7 +51,7 @@ void RpcRequest::setResult(const Value& result, const Value& context) {
 			key/"id"=data->id,
 			key/"result"=result,
 			key/"error"=nullptr,
-			key/"context"=context});
+			key/"context"=context.empty()?Value(undefined):context});
 	data->setResponse(resp);
 
 }
@@ -69,7 +66,6 @@ void RpcRequest::setError(const Value& error) {
 
 
 RpcRequest::RequestData::~RequestData() {
-	if (caller) caller->release();
 	if (!responseSent) setResponse(undefined);
 
 }
@@ -80,6 +76,54 @@ Value RpcRequest::operator [](unsigned int index) const {
 
 Value RpcRequest::operator [](const StrViewA name) const {
 	return data->context[name];
+}
+
+class RpcArgValidator: public Validator {
+public:
+	RpcArgValidator():Validator(object) {}
+	RpcArgValidator(const Value &customClasses):Validator(customClasses) {}
+
+	bool checkArgs(const Value &subject, const Value &pattern) {
+		return evalRuleArray(subject, pattern, pattern.size());
+	}
+	bool checkArgs(const Value &subject, const Value &pattern, const Value &alt) {
+		Value::TwoValues s = subject.splitAt(pattern.size());
+		if (checkArgs(s.first, pattern)) {
+			return evalRuleAlternatives(s.second, alt, 0);
+		}
+		else return false;
+	}
+};
+
+bool RpcRequest::checkArgs(const Value& argDefTuple) {
+	RpcArgValidator val;
+	if (val.checkArgs(data->args, argDefTuple)) return true;
+	data->rejections = val.getRejections();
+}
+
+bool RpcRequest::checkArgs(const Value& argDefTuple, const Value& optionalArgs) {
+	RpcArgValidator val;
+	if (val.checkArgs(data->args, argDefTuple, optionalArgs)) return true;
+	data->rejections = val.getRejections();
+}
+
+bool RpcRequest::checkArgs(const Value& argDefTuple, const Value& optionalArgs,
+		const Value& customClasses) {
+	RpcArgValidator val(customClasses);
+	if (val.checkArgs(data->args, argDefTuple, optionalArgs)) return true;
+	data->rejections = val.getRejections();
+}
+
+Value RpcRequest::getRejections() const {
+	return data->rejections;
+}
+
+void RpcRequest::setArgError(Value rejections) {
+	setError(Value(object,{
+			key/"code"=1,
+			key/"message"="Invalid parameters",
+			key/"rejections" = rejections
+	}));
 }
 
 void RpcRequest::setError(unsigned int status, const String& message) {
@@ -124,12 +168,12 @@ RpcServer::AbstractMethodReg* RpcServer::find(const StrViewA& name) const {
 
 void RpcServer::onMethodNotFound(const RpcRequest& req) const {
 	RpcRequest creq(req);
-	creq.setError(404,{"Method ot found: ", req.getMethodName() } );
+	creq.setError(2,{"Method ot found: ", req.getMethodName() } );
 }
 
 void RpcServer::onMalformedRequest(const RpcRequest& req) const {
 	RpcRequest creq(req);
-	creq.setError(400,{"Malformed request"} );
+	creq.setError(3,{"Malformed request"} );
 
 }
 
@@ -235,7 +279,7 @@ AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName
 			key/"method"=methodName,
 			key/"params"=args,
 			key/"id"=id,
-			key/"context"=context}));
+			key/"context"=context.empty()?Value(undefined):context}));
 }
 
 bool AbstractRpcClient::cancelAsyncCall(unsigned int id, RpcResult result) {

@@ -10,5 +10,5 @@ install(TARGETS imtjson
         DESTINATION "lib"
         ) 
 INSTALL(FILES ${imtjson_HDR}
-        DESTINATION "include/imtjson"
+        DESTINATION "include/imtjson" 
         )  
