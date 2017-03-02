@@ -213,7 +213,7 @@ public:
 	 * @param fn pointer to member function of given prototype
 	 */
 	template<typename ObjPtr, typename Fn>
-	void add(const String &name, const ObjPtr &objPtr, const void (Fn::*fn)(RpcRequest));
+	void add(const String &name, ObjPtr objPtr, void (Fn::*fn)(RpcRequest));
 
 	///Remove method
 	void remove(const StrViewA &name);
@@ -270,9 +270,9 @@ inline void RpcServer::add(const String& name, const Fn fn) {
 }
 
 template<typename ObjPtr, typename Fn>
-inline void RpcServer::add(const String& name, const ObjPtr& objPtr,
-		const void (Fn::*fn)(RpcRequest)) {
-	add(name, [=](const RpcRequest &req) {(objPtr->*fn)(req);});
+inline void RpcServer::add(const String& name, ObjPtr objPtr,
+		void (Fn::*fn)(RpcRequest)) {
+	add(name, [=](const RpcRequest &req) {((*objPtr).*fn)(req);});
 }
 
 ///RpcClient core
