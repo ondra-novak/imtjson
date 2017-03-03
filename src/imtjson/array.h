@@ -1,6 +1,6 @@
 #pragma once
 
-#include "value.h"
+#include "valueref.h"
 #include "stackProtection.h"
 #include "edit.h"
 
@@ -139,6 +139,13 @@ namespace json {
 		 * @return value at given postion.
 		 */
 		Value operator[](std::size_t pos) const;
+
+		///Retrieves value at position
+		/**
+		 * @param pos position to retrieve
+		 * @return value at given postion.
+		 */
+		ValueRef makeRef(std::size_t pos);
 
 		///Retrieves count of items in the array
 		std::size_t size() const;

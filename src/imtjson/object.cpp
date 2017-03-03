@@ -142,6 +142,10 @@ void Object::set_internal(const Value& v) {
 		return base[name];
 	}
 
+	ValueRef Object::makeRef(const StringView<char> &name) {
+		return ValueRef(*this, name);
+	}
+
 	Object &Object::operator()(const StringView<char> &name, const Value &value) {
 		return set(name, value);		
 	}

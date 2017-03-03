@@ -65,9 +65,7 @@ static const unsigned char key= 0x70;
 
 template<typename Fn>
 void BinarySerializer<Fn>::serialize(const Value &v) {
-	nextKeyId = 256;
 	serialize((const IValue *)v.getHandle());
-	keyMap.clear();
 
 }
 
@@ -370,6 +368,34 @@ std::size_t  BinarySerializer<Fn>::HashStr::operator()(const StrViewA &str) cons
 	}
 	return acc;
 
+}
+
+template<typename Fn>
+inline void BinaryParser<Fn>::preloadKey(const String& str) {
+	keyHistory[keyIndex] = str;
+	keyIndex = (keyIndex + 1) & 0x7F;
+}
+
+template<typename Fn>
+inline void BinarySerializer<Fn>::preloadKey(const String& str) {
+	if (pkeys == nullptr) pkeys = new PreloadedKeys;
+	pkeys->keys[pkeys->keyIndex] = str;
+	pkeys->keyIndex = (pkeys->keyIndex + 1) & 0x7F;
+	ZeroID &id = keyMap[str];
+	id.value = nextKeyId;
+	++nextKeyId;
+}
+
+template<typename Fn>
+inline void BinaryParser<Fn>::clearKeys() {
+	for (auto &x : keyHistory) x = String();
+	keyIndex = 0;
+}
+
+template<typename Fn>
+inline void BinarySerializer<Fn>::clearKeys() {
+	keyMap.clear();
+	nextKeyId = 256;
 }
 
 }

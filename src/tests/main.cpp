@@ -207,6 +207,11 @@ int testMain() {
 		}
 		Value(res).toStream(out);
 	};
+	tst.test("Serialize.valueHash", "13532798998175024480") >> [](std::ostream &out) {
+		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
+		std::hash<Value> hv;
+		out << hv(v);
+	};
 	tst.test("Parse.binary",",f,fo,foo,foob,fooba,foobar") >> [](std::ostream &out) {
 		//Tests whether base64 values are properly decoded to the Binary type
 		Value v = Value::fromString("[\"\",\"Zg==\",\"Zm8=\",\"Zm9v\",\"Zm9vYg==\",\"Zm9vYmE=\",\"Zm9vYmFy\"]");

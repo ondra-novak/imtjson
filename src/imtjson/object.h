@@ -2,10 +2,11 @@
 
 #include <map>
 #include <functional>
-#include "value.h"
+#include "valueref.h"
 #include "stackProtection.h"
 #include "edit.h"
 #include "container.h"
+
 
 namespace json {
 
@@ -86,6 +87,15 @@ namespace json {
 		has been deleter, the function returns undefined
 		*/
 		const Value operator[](const StringView<char> &name) const;
+
+		///Retrieves value under given key
+		/**
+		@param name name of key to retrieve
+		@return value stored under given key. Function can ask original object as well as
+		the modified version. Modified version has priority. If the key doesn't exists or
+		has been deleter, the function returns undefined
+		*/
+		ValueRef makeRef(const StringView<char> &name);
 
 		///Removes key
 		/** Function removes already inserted key as well as the key that was defined on

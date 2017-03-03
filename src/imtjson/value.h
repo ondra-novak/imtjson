@@ -2,7 +2,7 @@
 
 #include <vector>
 #include "ivalue.h"
-
+#include <functional>
 namespace json {
 
 	class Array;
@@ -832,7 +832,7 @@ namespace json {
 		 */
 
 		template<typename Fn>
-		void serializeBinary(const Fn &fn, BinarySerializeFlags flags = compressKeys);
+		void serializeBinary(const Fn &fn, BinarySerializeFlags flags = compressKeys) const;
 
 public:
 
@@ -929,6 +929,14 @@ protected:
 	extern KeyStart key;
 
 }
+
+namespace std {
+template<> struct hash<::json::Value> {
+	size_t operator()(const ::json::Value &v) const;
+};
+}
+
+
 
 #ifndef IMTJSON_NOKEYLITERAL
 static inline json::KeyKeeper operator"" _(const char *k, std::size_t len) {

@@ -10,6 +10,7 @@
 
 #include "value.h"
 #include <unordered_map>
+#include <memory>
 
 namespace json {
 
@@ -23,7 +24,15 @@ class BinaryParser {
 public:
 	BinaryParser(const Fn &fn, BinaryEncoding binaryEncoding);
 
+	///Parse binary json
 	Value parse();
+	///Initializes dictionary.
+	/**The dictionary must be initialized in same order as the dictionary of
+	 the serializer. Call this function for one or more keys
+	 */
+	void preloadKey(const String &str);
+	///Clears all keys
+	void clearKeys();
 protected:
 
 	Value parseItem();
@@ -61,8 +70,21 @@ class BinarySerializer {
 public:
 	BinarySerializer(const Fn &fn, BinarySerializeFlags flags):fn(fn), flags(flags) {}
 
+	///Serialize to binary stream
 	void serialize(const Value &v);
-
+	///Preloads to achieve better compression from the beginning
+	/** The keys preloaded here will occupy minimum space. You can preload up to 128 keys. Note that
+	 * if there is more keys in the json, they can eventually slip out from the dictionary and then
+	 * they may appear uncompressed.
+	 *
+	 * Function is inteed to be used to reduce space for short json's with a few keys.
+	 * @param str preloaded key. Call this function repatedly for each key to preload
+	 *
+	 * @note the parser needs to preload exact the same keys in the same order. Not following this rule
+	 * will lead to file/stream corruption. Different or empty keys can appear during parsing
+	 */
+	void preloadKey(const String &str);
+	void clearKeys();
 
 protected:
 	Fn fn;
@@ -75,8 +97,15 @@ protected:
 	struct HashStr {std::size_t operator()(const StrViewA &str) const;};
 	typedef std::unordered_map<StrViewA, ZeroID, HashStr> KeyMap;
 	KeyMap keyMap;
-	unsigned int nextKeyId;
+	unsigned int nextKeyId = 256;
 	BinarySerializeFlags flags;
+
+	struct PreloadedKeys{
+		String keys[128];
+		unsigned int keyIndex = 0;
+	};
+	std::unique_ptr<PreloadedKeys> pkeys;
+
 
 	template<typename T>
 	void writePOD(const T &val);
@@ -99,7 +128,7 @@ protected:
 };
 
 template<typename Fn>
-inline void Value::serializeBinary(const Fn &fn , BinarySerializeFlags flags) {
+inline void Value::serializeBinary(const Fn &fn , BinarySerializeFlags flags) const {
 	BinarySerializer<Fn> ser(fn, flags);
 	ser.serialize(*this);
 }
@@ -112,6 +141,7 @@ inline Value Value::parseBinary(const Fn &fn, BinaryEncoding binEnc) {
 }
 
 }
+
 
 #endif /* SRC_IMTJSON_BINJSON_H_ */
 

@@ -122,6 +122,10 @@ namespace json {
 		}
 	}
 
+	ValueRef Array::makeRef(std::size_t pos) {
+		return ValueRef(*this, pos);
+	}
+
 	std::size_t Array::size() const
 	{
 		return changes.offset + changes.size();

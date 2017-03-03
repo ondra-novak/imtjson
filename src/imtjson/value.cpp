@@ -9,6 +9,8 @@
 #include "serializer.h"
 #include "binary.h"
 #include "stringValue.h"
+#include "fnv.h"
+#include "binjson.tcc"
 
 namespace json {
 
@@ -558,3 +560,12 @@ namespace json {
 
 }
 
+namespace std {
+size_t hash<::json::Value>::operator()(const ::json::Value &v)const {
+	size_t ret;
+	FNV1a<sizeof(ret)> fnvcalc(ret);
+	v.serializeBinary(fnvcalc,0);
+	return ret;
+}
+
+}
