@@ -20,6 +20,7 @@
 #include "../imtjson/comments.h"
 #include "../imtjson/binjson.tcc"
 #include "../imtjson/streams.h"
+#include "../imtjson/valueref.h"
 #include "testClass.h"
 
 using namespace json;
@@ -984,6 +985,58 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		for (StrViewA s = splitFn(); !x.isSplitEnd(s); s = splitFn()) {
 			out << "-" << s;
 		}
+	};
+	tst.test("Reference.object","42,42,52,52") >> [](std::ostream &o) {
+		Object x;
+		x.set("test",42);
+		ValueRef ref = x.makeRef("test"); //ref = &(x.test)
+		o << x["test"] << "," << ref << ",";
+		ref = 52;
+		o << x["test"] << "," << ref;
+	};
+	tst.test("Reference.array","42,42,52,52") >> [](std::ostream &o) {
+		Array x;
+		x.push_back(10);
+		x.push_back(42);
+		ValueRef ref = x.makeRef(1);
+		o << x[1] << "," << ref << ",";
+		ref = 52;
+		o << x[1] << "," << ref;
+	};
+	tst.test("Reference.value","42,42,52,52") >> [](std::ostream &o) {
+		Value v = 42;
+		ValueRef ref(v);
+		o << v << "," << ref << ",";
+		ref = 52;
+		o << v << "," << ref;
+	};
+	tst.test("Reference.sync.object","42,42,52,42,52") >> [](std::ostream &o) {
+		Object x;
+		x.set("test",42);
+		ValueRef ref = x.makeRef("test"); //ref = &(x.test)
+		o << x["test"] << "," << ref << ",";
+		x.set("test",52);
+		o << x["test"] << "," << ref << ",";
+		o << ref.sync();
+
+	};
+	tst.test("Reference.sync.array","42,42,52,42,52") >> [](std::ostream &o) {
+		Array x;
+		x.push_back(10);
+		x.push_back(42);
+		ValueRef ref = x.makeRef(1);
+		o << x[1] << "," << ref << ",";
+		x.set(1,52);
+		o << x[1] << "," << ref << ",";
+		o << ref.sync();
+	};
+	tst.test("Reference.sync.value","42,42,52,42,52") >> [](std::ostream &o) {
+		Value v = 42;
+		ValueRef ref(v);
+		o << v << "," << ref << ",";
+		v = 52;
+		o << v << "," << ref << ",";
+		o << ref.sync();
 	};
 
 

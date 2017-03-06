@@ -9,22 +9,27 @@ class Array;
 
 ///Stores a reference to a JSON variable
 /**
- * It makes universal reference to a JSON variable and allows change it later. This doesn't
- * break immutability, because you can create reference only to mutable objects. You
- * can create the reference to variable of type Value, similar to Value &, however, you can
- * also create the reference to a object's member variable or to a value located in an array.
+ * Reference to value. It acts like ordinary Value, in exception you can actually assign a value to it.
+ * The objects remembers the source of the value, and assigning to the variable causes, that original
+ * variable is modified, like an ordinary reference supose to work. However, this object allows to
+ * make a reference to a member variable of a container - object or array. Setting the value to the reference
+ * also overwrites the value in the source container.
  *
- * The object ValueRef can be converted to Value, which perform reading the value of the referenced
- * variable. The object ValueRef also exposes the assigment operator which allows to change the
- * referenced variable. This is particular useful for variables located in some container.
+ * This feature doesn't break immutability, because you cannot modify containers stored as the Value. Only
+ * containers stored as the Object or the Array can create reference.
  *
- * @note Similar to standard references, this object also becomes invalid, when referenced variable
- * or container is destroyed. Accessing the destroyed variable can involve the crash. You should
- * remove all references to destroying referenced variable
+ * Similar to common reference, the reference remains valid as long as source value is valid. Accessing
+ * the reference after destroying the source container causes undefined behavoir or crash.
+ *
+ * Unlike to common reference, content of this reference is not synced with other references created from
+ * the same source. For implementation reason, the ValueRef objects keeps copy of the value for fast
+ * access. The copy is updated everytime the value is modified throught the reference object, but not in
+ * situation, when the source is modified by another way. If you need to have fresh copy of the source value,
+ * you need to manually call the function sync()
  *
 
  */
-class ValueRef {
+class ValueRef: public Value {
 public:
 
 	///Constructs a reference to member variable of the object
@@ -58,8 +63,13 @@ public:
 	explicit ValueRef(Value &var);
 
 
-	///Reads the value
-	operator Value() const;
+	///Make copy of the reference
+	/**
+	 * This makes copy of the reference.
+	 * @param other source reference
+	 */
+	ValueRef(const ValueRef &other);
+
 	///Writes the value
 	ValueRef &operator=(const Value &val);
 	///Once the reference is constructed, it cannot be redirected.
@@ -73,20 +83,34 @@ public:
 	ValueRef &operator=(const ValueRef &val);
 
 
+	///Obtains the fresh copy of the source value
+	/**
+	 * Unlike the common C++ reference, this object keeps copy of the source value. This is the
+	 * reason, why modifying the source value doesn't change the value stored in the reference. You
+	 * need to call this function to obtain fresh copy of the source value.
+	 */
+	const Value &sync();
+
 protected:
 
-	static const std::uintptr_t objectRef = (std::uintptr_t)-1;
-	static const std::uintptr_t valueRef = (std::uintptr_t)-2;
-
+	///contains index in array. For non-array container, it contains type of container, see declaration of constants
 	std::uintptr_t typeOrIndex;
 
+
+	///Reference to object's member variable. The key can be retrieved by the function getKey()
+	static const std::uintptr_t objectRef = (std::uintptr_t)-1;
+	///Direct reference to an instance of Value
+	static const std::uintptr_t valueRef = (std::uintptr_t)-2;
+
 	union {
+		///pointer to object container, valid when typeOrIndex is equal to objectRef
 		Object *objptr;
+		///pointer to array container, valid when typeOrIndex contains valid index
 		Array *arrptr;
+		///pointer to the source value (directly), valid when typeOrIndex is equal to valueRef
 		Value *valptr;
 	};
 
-	Value curValue;
 };
 
 

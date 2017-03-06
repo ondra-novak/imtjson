@@ -12,47 +12,41 @@
 
 namespace json {
 
-ValueRef::ValueRef(Object& obj, const StrViewA& name)
-	:typeOrIndex(objectRef),objptr(&obj),curValue(const_cast<const Object &>(obj).operator [](name))
-{
-	//we need to save name somewhere
-	if (!curValue.defined()) {
-		curValue = Value(name, undefined);
-	}
+static Value getValueOrName(const Object &source, StrViewA name) {
+	Value v = source[name];
+	if (v.getKey() != name) return Value(name, v);
+	else return v;
 }
 
+ValueRef::ValueRef(Object& obj, const StrViewA& name)
+	:Value(getValueOrName(obj,name)),typeOrIndex(objectRef),objptr(&obj)
+{
+}
 ValueRef::ValueRef(Array& arr, std::uintptr_t index)
-	:typeOrIndex(index),arrptr(&arr)
+	:Value(arr[index]),typeOrIndex(index),arrptr(&arr)
 {
 
 }
 
 ValueRef::ValueRef(Value& var)
-	:typeOrIndex(valueRef),valptr(&var)
+	:Value(var),typeOrIndex(valueRef),valptr(&var)
 {
 }
 
-ValueRef::operator Value() const {
-	switch (typeOrIndex) {
-	case objectRef:
-		return const_cast<const Object *>(objptr)->operator [](curValue.getKey());
-	case valueRef: return *valptr;
-	default:
-		return const_cast<const Array *>(arrptr)->operator [](typeOrIndex);
-	}
-}
 
 ValueRef& ValueRef::operator =(const Value& val) {
 	switch (typeOrIndex) {
 	case objectRef:
-		curValue = Value(curValue.getKey(),val);
+		Value::operator= (Value(getKey(),val));
 		objptr->checkInstance();
-		objptr->set(curValue);
+		objptr->set(*this);
 		break;
 	case valueRef:
-		*valptr = val;
+		Value::operator= (val);
+		*valptr = *this;
 		break;
 	default:
+		Value::operator= (val);
 		arrptr->checkInstance();
 		arrptr->set(typeOrIndex, val);
 		break;
@@ -64,7 +58,31 @@ ValueRef& json::ValueRef::operator =(const ValueRef& val) {
 	return this->operator=((Value)val);
 }
 
+ValueRef::ValueRef(const ValueRef& other):Value(other),typeOrIndex(other.typeOrIndex) {
+	switch (typeOrIndex) {
+	case objectRef: arrptr = other.arrptr;break;
+	case valueRef: valptr = other.valptr;break;
+	default: arrptr = other.arrptr;break;
+	}
+}
 
+const Value &ValueRef::sync() {
+	switch (typeOrIndex) {
+	case objectRef:
+		arrptr->checkInstance();
+		Value::operator= (getValueOrName(*objptr, getKey()));
+		break;
+	case valueRef:
+		Value::operator= (*valptr);
+		break;
+	default:
+		arrptr->checkInstance();
+		Value::operator= (arrptr->operator [](typeOrIndex));
+		break;
+	}
+	return *this;
 
 }
 
+
+}
