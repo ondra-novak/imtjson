@@ -11,6 +11,7 @@
 #include "stringValue.h"
 #include "fnv.h"
 #include "binjson.tcc"
+#include "path.h"
 
 namespace json {
 
@@ -558,6 +559,40 @@ namespace json {
 		}
 	}
 
+	static Value setToPathRev(const Path &p, const Value &oldVal, const  Value &newVal) {
+		if (p.isRoot()) return newVal;
+		if (p.isIndex()) {
+			Array a;
+			std::size_t i = p.getIndex();
+			if (oldVal.type() == array) a.setBaseObject(oldVal);
+			if (i >= a.size()) a.push_back(setToPathRev(p.getParent(),undefined,newVal));
+			else a.set(i, setToPathRev(p.getParent(),a[i],newVal));
+			return a;
+		}
+		if (p.isKey()) {
+			Object o;
+			if (oldVal.type() == object) o.setBaseObject(oldVal);
+			StrViewA k = p.getKey();
+			o.set(k,setToPathRev(p.getParent(),o[k], newVal));
+			return o;
+		}
+	}
+
+	static Value reversePath(const Path &p, const Path &newPath, const Value &oldval, const Value &newval) {
+		if (p.isRoot())
+			return setToPathRev(newPath, oldval, newval);
+		if (p.isIndex())
+			return reversePath(p.getParent(),Path(newPath,p.getIndex()), oldval, newval);
+		if (p.isKey())
+			return reversePath(p.getParent(),Path(newPath,p.getKey()), oldval, newval);
+	}
+
+	Value Value::change(const Path& path, const Value& val) const {
+		const Path &newpath = Path::root;
+		return reversePath(path, newpath, *this, val);
+
+	}
+
 }
 
 namespace std {
@@ -568,4 +603,7 @@ size_t hash<::json::Value>::operator()(const ::json::Value &v)const {
 	return ret;
 }
 
+
+
 }
+

@@ -131,7 +131,7 @@ public:
 	Path operator/(const StringView<char> &key) const {
 		return Path(*this,key);
 	}
-	Path operator/(uintptr_t index) {
+	Path operator/(uintptr_t index) const {
 		return Path(*this,index);
 	}
 	//@}

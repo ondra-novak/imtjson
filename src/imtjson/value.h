@@ -577,6 +577,18 @@ namespace json {
 		Value reverse() const;
 
 
+		///Set value at given path
+		/**
+		 * Function creates new value by sharing current value but modified by certain way
+		 * @param path specifies path to the value which will be replaced.
+		 * @param val new value
+		 * @return updated value
+		 *
+		 * @note if given path or a part of the path doesn't exists, the function creates it. If
+		 * path contains different type of object, function replaces it by correct type of object. If
+		 * index to an array is out of bounds, the function just appends the value to the current array
+		 */
+		Value change(const Path &path, const Value &val) const;
 		///Merges to array
 		/**
 		 * @param other other container

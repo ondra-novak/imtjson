@@ -17,6 +17,12 @@ namespace json {
 		Array();
 		~Array();
 
+		void setBaseObject(Value object) {
+			base = object;
+			if (changes.empty()) changes.offset = base.size();
+			else changes.offset = std::min(changes.offset, base.size());
+		}
+
 
 		Array &operator=(const Array &other);
 		Array &operator=(Array &&other);
