@@ -48,7 +48,6 @@ class RpcRequest {
 	struct RequestData: public RefCntObj {
 	public:
 		RequestData(const Value &request);
-		~RequestData();
 
 		String methodName;
 		Value args;
@@ -162,6 +161,9 @@ inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn) {
 			:RequestData(request)
 			,fn(fn) {}
 		virtual void response(const Value &result) {fn(result);}
+		~Call() {
+			setResponse(Value(undefined));
+		}
 	protected:
 		Fn fn;
 	};

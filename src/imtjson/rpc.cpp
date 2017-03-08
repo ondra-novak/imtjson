@@ -65,10 +65,6 @@ void RpcRequest::setError(const Value& error) {
 }
 
 
-RpcRequest::RequestData::~RequestData() {
-	if (!responseSent) setResponse(undefined);
-
-}
 
 Value RpcRequest::operator [](unsigned int index) const {
 	return data->args[index];

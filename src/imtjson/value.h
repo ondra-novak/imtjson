@@ -324,6 +324,14 @@ namespace json {
 		 */
 		StringView<char> getKey() const { return v->getMemberName(); }
 
+		///Removes key from the value
+		/** Items in objects are stored with keys. This key is part of the value, and
+		 * even if there are many operations ignoring the key, it still can often
+		 * obstruct to some processing. Function strips the key from the value. If the
+		 * value has no key, the value itself is returned
+		 * @return value where key is stripped.
+		 */
+		Value stripKey() const {return v->unproxy();}
 
 		///Binds a key-name to the item
 		/** The function is used by objects, however you can freely bind any value to a specified key outside of the object.

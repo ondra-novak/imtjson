@@ -599,7 +599,7 @@ namespace std {
 size_t hash<::json::Value>::operator()(const ::json::Value &v)const {
 	size_t ret;
 	FNV1a<sizeof(ret)> fnvcalc(ret);
-	v.serializeBinary(fnvcalc,0);
+	v.stripKey().serializeBinary(fnvcalc,0);
 	return ret;
 }
 
