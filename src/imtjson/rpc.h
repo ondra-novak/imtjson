@@ -14,6 +14,7 @@
 #include <map>
 #include <atomic>
 #include <memory>
+#include <functional>
 #include "refcnt.h"
 #include "value.h"
 #include "string.h"
@@ -196,7 +197,7 @@ class RpcServer {
 public:
 
 	///call the request
-	void operator()(const RpcRequest &req) const;
+	void operator()(const RpcRequest &req) const throw();
 
 	///Register a method
 	/**
@@ -234,6 +235,10 @@ public:
 	 */
 	virtual void onMalformedRequest(const RpcRequest &req) const;
 
+	virtual void onInvalidParams(const RpcRequest &req) const;
+
+	virtual void onException(const RpcRequest &req) const;
+
 	///Adds buildin method Server.listMethods
 	void add_listMethods(const String &name = "Server.listMethods" );
 
@@ -252,6 +257,7 @@ protected:
 	typedef MapReg::value_type MapValue;
 
 	MapReg mapReg;
+	void runMulticall(RpcRequest req, std::function<std::pair<Value,Value>()> nextItem) const;
 };
 
 
@@ -370,6 +376,7 @@ public:
 	void setContext(const Value &value);
 	///Updates current context (by rules of updating the context)
 	void updateContext(const Value &value);
+	static Value updateContext(const Value &context, const Value &value);
 
 	AbstractRpcClient(): idCounter(0){}
 	virtual ~AbstractRpcClient() {}

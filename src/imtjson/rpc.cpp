@@ -135,20 +135,24 @@ void RpcRequest::RequestData::setResponse(const Value& v) {
 	response(v);
 }
 
-void RpcServer::operator ()(const RpcRequest& req) const {
-	Value name = req.getMethodName();
-	Value args = req.getArgs();
-	Value context = req.getContext();
-	if (name.defined() && args.defined() && name.type() == string && args.type() == array
-			&& (!context.defined() || context.type() == object)) {
-		AbstractMethodReg *m = find(req.getMethodName());
-		if (m == nullptr) {
-			onMethodNotFound(req);
+void RpcServer::operator ()(const RpcRequest& req) const throw() {
+	try {
+		Value name = req.getMethodName();
+		Value args = req.getArgs();
+		Value context = req.getContext();
+		if (name.defined() && args.defined() && name.type() == string && args.type() == array
+				&& (!context.defined() || context.type() == object)) {
+			AbstractMethodReg *m = find(req.getMethodName());
+			if (m == nullptr) {
+				onMethodNotFound(req);
+			} else {
+				m->call(req);
+			}
 		} else {
-			m->call(req);
+			onMalformedRequest(req);
 		}
-	} else {
-		onMalformedRequest(req);
+	} catch (...) {
+		onException(req);
 	}
 }
 
@@ -169,7 +173,24 @@ void RpcServer::onMethodNotFound(const RpcRequest& req) const {
 
 void RpcServer::onMalformedRequest(const RpcRequest& req) const {
 	RpcRequest creq(req);
-	creq.setError(3,{"Malformed request"} );
+	creq.setError(3,"Malformed request" );
+
+}
+
+void RpcServer::onInvalidParams(const RpcRequest &req) const {
+	RpcRequest creq(req);
+	creq.setError(4,"Invalid params" );
+
+}
+void RpcServer::onException(const RpcRequest &req) const {
+	RpcRequest creq(req);
+	try {
+		throw;
+	} catch (std::exception &e) {
+		creq.setError(5, e.what());
+	} catch (...) {
+		creq.setError(5, "Uncaught exception");
+	}
 
 }
 
@@ -184,7 +205,102 @@ void RpcServer::add_listMethods(const String& name) {
 	});
 }
 
+class MulticallContext {
+public:
+	typedef std::function<std::pair<Value,Value>()> NextFn;
+	Array results;
+	Array errors;
+	Value context;
+	Value contextchange;
+
+	std::atomic<int> mtfork;
+
+	RpcRequest req;
+	NextFn nextfn;
+	RpcServer &server;
+
+	MulticallContext(RpcServer &server, RpcRequest req, const NextFn &nextFn):server(server),req(req),nextfn(nextFn) {
+		context = req.getContext();
+
+	}
+
+	void run() {
+		do {
+			auto p = nextfn();
+			mtfork = 0;
+			if (p.first.defined()) {
+				RpcRequest req = RpcRequest::create(
+						Value(object,{key/"method"=p.first, key/"params" = p.second, key/"context" = context, key/"id" = 1}),
+						[&](Value res) {
+							if (res.defined()) {
+								if (res["error"].defined() ) {
+									results.push_back(nullptr);
+									errors.push_back(res["error"]);
+								} else {
+									results.push_back(res["result"]);
+									Value ctx = res["context"];
+									if (ctx.defined()) {
+										context = AbstractRpcClient::updateContext(context,ctx);
+										contextchange = AbstractRpcClient::updateContext(contextchange,ctx);
+									}
+								}
+							} else {
+								results.push_back(nullptr);
+								errors.push_back(nullptr);
+							}
+							if (++mtfork == 2) {
+								this->run();
+							}
+						}
+				);
+				server(req);
+			} else {
+				req.setResult(Value(object,{key/"results"=results, key/"errors"= errors}));
+				++mtfork;
+			}
+		} while (++mtfork == 2);
+
+	}
+
+
+protected:
+
+};
+
+
 void RpcServer::add_multicall(const String& name) {
+	add(name, [this](RpcRequest req) {
+
+		if (req.getArgs().empty()) onInvalidParams(req);
+		else if (req[0].type() == json::string) {
+			int pos = 1;
+			MulticallContext *m = new MulticallContext(*this,req, [&] {
+				if (pos < req.getArgs().size())
+					return std::make_pair(req[0],req[pos++]);
+				else
+					return std::make_pair(Value(),Value());
+			});
+			m->run();
+		} else if (req[0].type() == json::array) {
+			int pos = 0;
+			MulticallContext *m = new MulticallContext(*this,req,[&] {
+				int x = pos++;
+				if (x < req.getArgs().size())
+					return std::make_pair(req[x][0],req[x]);
+				else
+					return std::make_pair(Value(),Value());
+			});
+			m->run();
+		} else {
+			onInvalidParams(req);
+		}
+	});
+}
+
+
+void RpcServer::runMulticall(RpcRequest req, std::function<std::pair<Value,Value>()> nextItem) const {
+
+
 }
 
 void RpcServer::add_help(const Value& helpContent, const String &name) {
@@ -317,8 +433,10 @@ Value AbstractRpcClient::getContext() const {
 void AbstractRpcClient::setContext(const Value& value) {
 	context = value;
 }
-
 void AbstractRpcClient::updateContext(const Value& value) {
+	setContext(updateContext(context,value));
+}
+Value AbstractRpcClient::updateContext(const Value& context, const Value& value) {
 	Object newContext;
 	context.merge(value,[&](Value l, Value r) {
 		int cmp;
@@ -330,7 +448,7 @@ void AbstractRpcClient::updateContext(const Value& value) {
 		else if (!r.isNull()) newContext.set(r);
 		return cmp;
 	});
-	setContext(newContext);
+	return newContext;
 }
 
 void AbstractRpcClient::addPendingCall(unsigned int id, PPendingCall &&pcall) {
