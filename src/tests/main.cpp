@@ -117,6 +117,9 @@ int testMain() {
 	tst.test("Parse.numberDouble","587.3") >> [](std::ostream &out) {
 		out << Value::fromString("587.3").getNumber();
 	};
+	tst.test("Parse.numberDouble2","50.051") >> [](std::ostream &out) {
+		out << Value::fromString("50.051").getNumber();
+	};
 	tst.test("Parse.numberDoubleSmall","0.000257") >> [](std::ostream &out) {
 		out << Value::fromString("0.000257").getNumber();
 	};
@@ -194,6 +197,10 @@ int testMain() {
 	tst.test("Parse.objectInObject", "2 3 2 1") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
 		out << v.size() << " " << v["b"].size() << " " << v["b"]["b"].size() << " " << v["b"]["b"]["b"].size();
+	};
+	tst.test("Serialize.number", "50.0075") >> [](std::ostream &out) {
+		Value v = 50.0075;
+		v.toStream(out);
 	};
 	tst.test("Serialize.objects", "{\"a\":7,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6}}") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");

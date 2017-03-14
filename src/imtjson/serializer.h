@@ -50,6 +50,7 @@ namespace json {
 		void write(const StringView<char> &text);
 		void writeUnsigned(std::uintptr_t value);
 		void writeUnsignedRec(std::uintptr_t value);
+		void writeUnsigned(std::uintptr_t value, std::uintptr_t digits);
 		void writeSigned(std::intptr_t value);
 		void writeDouble(double value);
 		void writeUnicode(unsigned int uchar);
@@ -194,6 +195,13 @@ namespace json {
 	}
 
 	template<typename Fn>
+	inline void Serializer<Fn>::writeUnsigned(std::uintptr_t value, std::uintptr_t digits)
+	{
+		if (digits>1) writeUnsigned(value/10,digits-1);
+		target('0'+(value % 10));
+	}
+
+	template<typename Fn>
 	inline void Serializer<Fn>::writeSigned(std::intptr_t value)
 	{
 		if (value < 0) {
@@ -234,12 +242,13 @@ namespace json {
 			target('.');
 
 			double fractMultiply = pow(10, maxPrecisionDigits);
+			std::uintptr_t digits = maxPrecisionDigits;
 			//multiply fraction by maximum fit to integer
 			std::uintptr_t m = (std::uintptr_t)floor(frac * fractMultiply +0.5);
 			//remove any rightmost zeroes
-			while (m && (m % 10) == 0) m = m / 10;
+			while (m && (m % 10) == 0) {m = m / 10;--digits;}
 			//write final number
-			writeUnsigned(m);
+			writeUnsigned(m, digits);
 		}
 		//if exponent is set
 		if (iexp) {
