@@ -21,7 +21,6 @@ RpcRequest::RequestData::RequestData(const Value& request) {
 	args = request["params"];
 	id = request["id"];
 	context = request["context"];
-	responseSent = false;
 }
 
 const String& RpcRequest::getMethodName() const {
@@ -122,11 +121,16 @@ void RpcRequest::setArgError(Value rejections) {
 	}));
 }
 
-void RpcRequest::setError(unsigned int status, const String& message) {
-	setError(Value(object,{
-			key/"code" =status,
-			key/"message"=message
-	}));
+void RpcRequest::setError(int code, String message, Value d) {
+	if (data->formatter == nullptr) {
+		setError(Value(object,{
+				key/"code" =code,
+				key/"message"=message,
+				key/"data"=d
+		}));
+	} else {
+		setError(data->formatter->formatError(false,code,message,d));
+	}
 }
 
 void RpcRequest::RequestData::setResponse(const Value& v) {
@@ -135,8 +139,9 @@ void RpcRequest::RequestData::setResponse(const Value& v) {
 	response(v);
 }
 
-void RpcServer::operator ()(const RpcRequest& req) const throw() {
+void RpcServer::operator ()(RpcRequest req) const throw() {
 	try {
+		req.setErrorFormatter(this);
 		Value name = req.getMethodName();
 		Value args = req.getArgs();
 		Value context = req.getContext();
@@ -144,15 +149,17 @@ void RpcServer::operator ()(const RpcRequest& req) const throw() {
 				&& (!context.defined() || context.type() == object)) {
 			AbstractMethodReg *m = find(req.getMethodName());
 			if (m == nullptr) {
-				onMethodNotFound(req);
+				req.setError(errorMethodNotFound,"Method not found",name);
 			} else {
 				m->call(req);
 			}
 		} else {
-			onMalformedRequest(req);
+			req.setError(errorInvalidRequest,"Invalid request");
 		}
+	} catch (std::exception &e) {
+		req.setInternalError(true, e.what());
 	} catch (...) {
-		onException(req);
+		req.setInternalError(true,nullptr);
 	}
 }
 
@@ -164,34 +171,6 @@ RpcServer::AbstractMethodReg* RpcServer::find(const StrViewA& name) const {
 	auto f = mapReg.find(name);
 	if (f == mapReg.end()) return nullptr;
 	return &(*(f->second));
-}
-
-void RpcServer::onMethodNotFound(const RpcRequest& req) const {
-	RpcRequest creq(req);
-	creq.setError(2,{"Method ot found: ", req.getMethodName() } );
-}
-
-void RpcServer::onMalformedRequest(const RpcRequest& req) const {
-	RpcRequest creq(req);
-	creq.setError(3,"Malformed request" );
-
-}
-
-void RpcServer::onInvalidParams(const RpcRequest &req) const {
-	RpcRequest creq(req);
-	creq.setError(4,"Invalid params" );
-
-}
-void RpcServer::onException(const RpcRequest &req) const {
-	RpcRequest creq(req);
-	try {
-		throw;
-	} catch (std::exception &e) {
-		creq.setError(5, e.what());
-	} catch (...) {
-		creq.setError(5, "Uncaught exception");
-	}
-
 }
 
 void RpcServer::add_listMethods(const String& name) {
@@ -229,11 +208,10 @@ public:
 			auto p = nextfn();
 			mtfork = 0;
 			if (p.first.defined()) {
-				RpcRequest req = RpcRequest::create(
-						Value(object,{key/"method"=p.first, key/"params" = p.second, key/"context" = context, key/"id" = 1}),
+				RpcRequest req = RpcRequest::create(String(p.first), p.second,this->req.getId(),context,
 						[&](Value res) {
 							if (res.defined()) {
-								if (res["error"].defined() ) {
+								if (!res["error"].isNull() ) {
 									results.push_back(nullptr);
 									errors.push_back(res["error"]);
 								} else {
@@ -256,7 +234,8 @@ public:
 				server(req);
 			} else {
 				req.setResult(Value(object,{key/"results"=results, key/"errors"= errors}));
-				++mtfork;
+				delete this;
+				return ;
 			}
 		} while (++mtfork == 2);
 
@@ -271,10 +250,10 @@ protected:
 void RpcServer::add_multicall(const String& name) {
 	add(name, [this](RpcRequest req) {
 
-		if (req.getArgs().empty()) onInvalidParams(req);
+		if (req.getArgs().empty()) req.setError(errorInvalidParams,"Empty arguments");
 		else if (req[0].type() == json::string) {
 			int pos = 1;
-			MulticallContext *m = new MulticallContext(*this,req, [&] {
+			MulticallContext *m = new MulticallContext(*this,req, [pos,req] () mutable {
 				if (pos < req.getArgs().size())
 					return std::make_pair(req[0],req[pos++]);
 				else
@@ -283,25 +262,27 @@ void RpcServer::add_multicall(const String& name) {
 			m->run();
 		} else if (req[0].type() == json::array) {
 			int pos = 0;
-			MulticallContext *m = new MulticallContext(*this,req,[&] {
+			MulticallContext *m = new MulticallContext(*this,req,[pos,req] () mutable {
 				int x = pos++;
 				if (x < req.getArgs().size())
-					return std::make_pair(req[x][0],req[x]);
+					return std::make_pair(req[x][0],req[x][1]);
 				else
 					return std::make_pair(Value(),Value());
 			});
 			m->run();
 		} else {
-			onInvalidParams(req);
+			req.setError(errorInvalidParams,"The first argument must be either string or array");
 		}
 	});
 }
 
-
-void RpcServer::runMulticall(RpcRequest req, std::function<std::pair<Value,Value>()> nextItem) const {
-
-
+void RpcServer::add_ping(const String &name) {
+	add(name, [](RpcRequest req) {
+		req.setResult(req.getArgs());
+	});
 }
+
+
 
 void RpcServer::add_help(const Value& helpContent, const String &name) {
 
@@ -455,5 +436,42 @@ void AbstractRpcClient::addPendingCall(unsigned int id, PPendingCall &&pcall) {
 	callMap.insert(CallItemType(id,std::move(pcall)));
 }
 
+RpcRequest::RequestData::RequestData(const String& methodName,
+		const Value& args, const Value& id, const Value& context)
+	:methodName(methodName), args(args), id(id), context(context) {}
 
+
+Value RpcServer::formatError(bool , int code,
+							const String& message, Value data) const {
+	return Value(object,{
+			key/"code"=code,
+			key/"message"=message,
+			key/"data"=data
+	});
 }
+
+void RpcRequest::setNoResultError(RequestData *r) {
+	Value err =r->formatter->formatError(false,RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
+	r->setResponse(Value(object,{
+		key/"error"=err,
+		key/"result"=nullptr,
+		key/"id"=r->id
+	}));
+}
+
+void RpcRequest::setNoResultError() {
+	setNoResultError(data);
+}
+
+void RpcRequest::setErrorFormatter(const IErrorFormatter *fmt) {
+	data->formatter = fmt;
+}
+
+void RpcRequest::setInternalError(bool exception, const char *what) {
+	if (what == nullptr) what = "Internal error";
+	Value err = data->formatter->formatError(exception,RpcServer::errorInternalError,what);
+	setError(err);
+}
+}
+
+

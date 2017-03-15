@@ -45,20 +45,34 @@ protected:
  * alive */
 
 class RpcRequest {
+public:
+	class IErrorFormatter {
+	public:
+		virtual Value formatError(bool exception,  int code, const String &message, Value data=Value()) const = 0;
+		virtual ~IErrorFormatter() {}
+	};
+
+
+private:
 
 	struct RequestData: public RefCntObj {
 	public:
 		RequestData(const Value &request);
+		RequestData(const String &methodName,const Value &args,
+				const Value &id,const Value &context);
 
 		String methodName;
 		Value args;
 		Value id;
 		Value context;
 		Value rejections;
-		bool responseSent;
+		const IErrorFormatter *formatter = nullptr;
+		bool responseSent = false;
 		virtual void response(const Value &result) = 0;
 
 		void setResponse(const Value &v);
+		virtual ~RequestData() {}
+
 	};
 
 public:
@@ -79,6 +93,24 @@ public:
 	 */
 	template<typename Fn>
 	static RpcRequest create(const Value &request, const Fn &fn);
+
+
+	template<typename Fn>
+	static RpcRequest create(const String &methodName, const Value &args,const Value& id,  const Value &context, const Fn &fn);
+
+	template<typename Fn>
+	static RpcRequest create(const String &methodName, const Value &args, const Fn &fn);
+
+	///Changes request's error formatter
+	/** Functions which helps to format error message will use this formatter.
+	 *  There is always a formatter defined, because this value is set when the request is processed
+	 *  by the RpcServer
+	 * @param fmt pointer to the formater.
+	 *
+	 * @note always ensure, that formatter is valid during lifetime of the request. The RpcServer
+	 * must be destoyed after the all requests are finished (including asynchronous requests).
+	 */
+	void setErrorFormatter(const IErrorFormatter *fmt);
 
 	///Name of method
 	const String &getMethodName() const;
@@ -138,6 +170,18 @@ public:
 	///Sets standard error 'invalid arguments'. You can supply rejections by calling getRejections
 	void setArgError(Value rejections);
 
+	///Sets standard error 'invalid arguments'. It pickups rejections
+	void setArgError();
+
+	///Sets standard error 'Method did not produce a result'
+	void setNoResultError();
+
+	///Sets internal error
+	/**
+	 * @param what what string from the exception
+	 */
+	void setInternalError(bool exception, const char *what);
+
 	///set result (can be called once only)
 	void setResult(const Value &result);
 	///set result (can be called once only)
@@ -145,10 +189,12 @@ public:
 	///set error (can be called once only)
 	void setError(const Value &error);
 	///set error (can be called once only)
-	void setError(unsigned int status, const String &message);
+	void setError(int code, String message, Value data = Value());
 
 protected:
 	RpcRequest(RefCntPtr<RequestData> data):data(data) {}
+
+	static void setNoResultError(RequestData *data);
 
 	RefCntPtr<RequestData> data;
 };
@@ -163,13 +209,41 @@ inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn) {
 			,fn(fn) {}
 		virtual void response(const Value &result) {fn(result);}
 		~Call() {
-			setResponse(Value(undefined));
+			if (!responseSent) {
+				RpcRequest::setNoResultError(this);
+			}
 		}
 	protected:
 		Fn fn;
 	};
 
 	return RpcRequest(new Call(request, fn));
+}
+
+template<typename Fn>
+inline RpcRequest json::RpcRequest::create(const String& methodName,
+		const Value& args, const Value& id, const Value& context, const Fn& fn) {
+	class Call: public RequestData {
+	public:
+		Call(const String& methodName, const Value& args, const Value& id, const Value& context, const Fn& fn)
+			:RequestData(methodName,args,id,context)
+			,fn(fn) {}
+		virtual void response(const Value &result) {fn(result);}
+		~Call() {
+			if (!responseSent) {
+				RpcRequest::setNoResultError(this);
+			}
+		}
+	protected:
+		Fn fn;
+	};
+
+	return RpcRequest(new Call(methodName, args,id,context,  fn));
+}
+
+template<typename Fn>
+inline RpcRequest json::RpcRequest::create(const String& methodName, const Value& args, const Fn& fn) {
+	return create(methodName, args, 0,Value(),fn);
 }
 
 
@@ -185,7 +259,7 @@ inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn) {
  *
  * @note No methods are MT safe! For MT safety you need to wrap the class by locks
  */
-class RpcServer {
+class RpcServer: private RpcRequest::IErrorFormatter {
 
 	class AbstractMethodReg: public RefCntObj {
 	public:
@@ -196,8 +270,22 @@ class RpcServer {
 
 public:
 
+	///JSON parse error is actually cannot happen here, but it is defined because the guidlines
+	static const int errorParseError = -32700;
+	///Invalid request (missing some mandatory field)
+	static const int errorInvalidRequest = -32600;
+	///Method not found
+	static const int errorMethodNotFound = -32601;
+	///Invalid parameters in method
+	static const int errorInvalidParams = -32602;
+	///Any exception thrown from the method
+	static const int errorInternalError = -32603;
+	///In situation, when request is finished without producing any result (extension)
+	static const int errorMethodDidNotProduceResult = -32099;
+
+
 	///call the request
-	void operator()(const RpcRequest &req) const throw();
+	void operator()(RpcRequest req) const throw();
 
 	///Register a method
 	/**
@@ -224,26 +312,27 @@ public:
 	///Find method
 	AbstractMethodReg *find(const StrViewA &name) const;
 
-	///Called when method not found
-	/**
-	 * @param req request
-	 */
-	virtual void onMethodNotFound(const RpcRequest &req) const;
-	///Called when request is malformed (doesn't contain mandatory fields)
-	/**
-	 * @param req request
-	 */
-	virtual void onMalformedRequest(const RpcRequest &req) const;
 
-	virtual void onInvalidParams(const RpcRequest &req) const;
-
-	virtual void onException(const RpcRequest &req) const;
+	///Called to format error object
+	/** Default implementation formats error message by specification of JSONRPC 2.0
+	 *
+	 * @param req the request
+	 * @param exception true if function is called inside exception handler (so you can explore exception)
+	 * @param code error code
+	 * @param message error message
+	 * @param data optional data
+	 * @return error object
+	 */
+	virtual Value formatError(bool exception,  int code, const String &message, Value data=Value()) const;
 
 	///Adds buildin method Server.listMethods
 	void add_listMethods(const String &name = "Server.listMethods" );
 
 	///Adds buildin method Server.multicall
 	void add_multicall(const String &name = "Server.multicall");
+
+	///Adds buildin method Server.ping
+	void add_ping(const String &name = "Server.ping");
 
 	///Adds buildin method Server.help
 	/**
@@ -257,7 +346,6 @@ protected:
 	typedef MapReg::value_type MapValue;
 
 	MapReg mapReg;
-	void runMulticall(RpcRequest req, std::function<std::pair<Value,Value>()> nextItem) const;
 };
 
 
@@ -282,6 +370,7 @@ inline void RpcServer::add(const String& name, ObjPtr objPtr,
 		void (Fn::*fn)(RpcRequest)) {
 	add(name, [=](const RpcRequest &req) {((*objPtr).*fn)(req);});
 }
+
 
 ///RpcClient core
 /** The client doesn't contain serialization and desterialization. It expects
