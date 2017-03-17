@@ -79,6 +79,7 @@ public:
 	RpcArgValidator(const Value &customClasses):Validator(customClasses) {}
 
 	bool checkArgs(const Value &subject, const Value &pattern) {
+		curPath = &Path::root;
 		return evalRuleArray(subject, pattern, pattern.size());
 	}
 	bool checkArgs(const Value &subject, const Value &pattern, const Value &alt) {
@@ -129,7 +130,7 @@ void RpcRequest::setError(int code, String message, Value d) {
 				key/"data"=d
 		}));
 	} else {
-		setError(data->formatter->formatError(false,code,message,d));
+		setError(data->formatter->formatError(code,message,d));
 	}
 }
 
@@ -157,9 +158,9 @@ void RpcServer::operator ()(RpcRequest req) const throw() {
 			req.setError(errorInvalidRequest,"Invalid request");
 		}
 	} catch (std::exception &e) {
-		req.setInternalError(true, e.what());
+		req.setInternalError(e.what());
 	} catch (...) {
-		req.setInternalError(true,nullptr);
+		req.setInternalError(nullptr);
 	}
 }
 
@@ -441,7 +442,7 @@ RpcRequest::RequestData::RequestData(const String& methodName,
 	:methodName(methodName), args(args), id(id), context(context) {}
 
 
-Value RpcServer::formatError(bool , int code,
+Value RpcServer::formatError(int code,
 							const String& message, Value data) const {
 	return Value(object,{
 			key/"code"=code,
@@ -451,7 +452,7 @@ Value RpcServer::formatError(bool , int code,
 }
 
 void RpcRequest::setNoResultError(RequestData *r) {
-	Value err =r->formatter->formatError(false,RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
+	Value err =r->formatter->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
 	r->setResponse(Value(object,{
 		key/"error"=err,
 		key/"result"=nullptr,
@@ -467,9 +468,9 @@ void RpcRequest::setErrorFormatter(const IErrorFormatter *fmt) {
 	data->formatter = fmt;
 }
 
-void RpcRequest::setInternalError(bool exception, const char *what) {
+void RpcRequest::setInternalError(const char *what) {
 	if (what == nullptr) what = "Internal error";
-	Value err = data->formatter->formatError(exception,RpcServer::errorInternalError,what);
+	Value err = data->formatter->formatError(RpcServer::errorInternalError,what);
 	setError(err);
 }
 }

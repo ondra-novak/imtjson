@@ -48,7 +48,7 @@ class RpcRequest {
 public:
 	class IErrorFormatter {
 	public:
-		virtual Value formatError(bool exception,  int code, const String &message, Value data=Value()) const = 0;
+		virtual Value formatError(int code, const String &message, Value data=Value()) const = 0;
 		virtual ~IErrorFormatter() {}
 	};
 
@@ -180,7 +180,7 @@ public:
 	/**
 	 * @param what what string from the exception
 	 */
-	void setInternalError(bool exception, const char *what);
+	void setInternalError(const char *what);
 
 	///set result (can be called once only)
 	void setResult(const Value &result);
@@ -316,14 +316,12 @@ public:
 	///Called to format error object
 	/** Default implementation formats error message by specification of JSONRPC 2.0
 	 *
-	 * @param req the request
-	 * @param exception true if function is called inside exception handler (so you can explore exception)
 	 * @param code error code
 	 * @param message error message
 	 * @param data optional data
 	 * @return error object
 	 */
-	virtual Value formatError(bool exception,  int code, const String &message, Value data=Value()) const;
+	virtual Value formatError(int code, const String &message, Value data=Value()) const override;
 
 	///Adds buildin method Server.listMethods
 	void add_listMethods(const String &name = "Server.listMethods" );
