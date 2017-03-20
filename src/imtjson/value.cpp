@@ -560,7 +560,22 @@ namespace json {
 	}
 
 	static Value setToPathRev(const Path &p, const Value &oldVal, const  Value &newVal) {
-		if (p.isRoot()) return newVal;
+		if (p.isRoot()) {
+			if (newVal.flags() & json::valueDiff) {
+				switch (newVal.type()) {
+					case json::object:
+						return Object::applyDiff(oldVal,newVal);
+					case array:
+						//currently unsupported
+						return newVal;
+					default:
+						//cannot merge noncontainer
+						return newVal;
+				}
+			} else {
+				return newVal;
+			}
+		}
 		if (p.isIndex()) {
 			Array a;
 			std::size_t i = p.getIndex();
@@ -587,7 +602,7 @@ namespace json {
 			return reversePath(p.getParent(),Path(newPath,p.getKey()), oldval, newval);
 	}
 
-	Value Value::change(const Path& path, const Value& val) const {
+	Value Value::replace(const Path& path, const Value& val) const {
 		const Path &newpath = Path::root;
 		return reversePath(path, newpath, *this, val);
 

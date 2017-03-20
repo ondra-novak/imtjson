@@ -73,13 +73,12 @@ namespace json {
 		*/
 	const ValueTypeFlags proxy = 8;
 
-	/// States that object is diff-object
-	/** Diff-object contains difference between two object which can be applied to a third
-	 *  object. Diff-objects are used internally and should not appear outside of the
-	 *  library. however this flag has been introduced to easily determine whether the object
-	 *  contains differences
+	/// States that value contains difference
+	/**
+	 * Diff value can be object or array. If it is applied, the original value
+	 * is changed by the difference.
 	 */
-	const ValueTypeFlags objectDiff = 16;
+	const ValueTypeFlags valueDiff = 16;
 
 	/// States that object is binary string
 	/** This flag appears with a string only. It causes, that content of the string will be encoded

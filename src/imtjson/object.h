@@ -201,8 +201,10 @@ namespace json {
 		 * @param newObject target object
 		 * @param recursive specifies how deep the recursion must go. Objects beyond the limit
 		 * are not stored as diff, but they are stored as one replaces other complete
+		 * @retval true success
+		 * @retval false cannot create diff (unusable arguments, non-object type, etc)
 		 */
-		void createDiff(const Value oldObject, Value newObject, unsigned int recursive = 0);
+		bool createDiff(const Value oldObject, Value newObject, unsigned int recursive = 0);
 
 		///Function called to resolve conflicts
 		/** @return function returns resolved value.
@@ -269,7 +271,22 @@ namespace json {
 		 */
 		Value commitAsDiff() const;
 
+		///Applies the diff-object to some other object and returns object with the difference applied.
+		/**
+		 *
+		 * @param baseObject source object
+		 * @param diffObject diff-object create using commitAsDiff.
+		 * @return new object with applied changes
+		 *
+		 *
+		 */
+		static Value applyDiff(const Value &baseObject, const Value &diffObject);
+
+
+
 	protected:
+
+
 
 		///Base object which contains an original items
 		Value base;
@@ -288,24 +305,6 @@ namespace json {
 		
 
 		ObjectValue *commitAsDiffObject() const;
-
-		///Applies the diff-object to some other object and returns object with applied diff
-		/**
-		 *
-		 * @param baseObject source object
-		 * @param diffObject diff-object create using commitAsDiff. However, the function
-		 * will work with an ordinary object, only without ability to remove keys (because
-		 * there is no standard way how to write "remove action" into standard object
-		 * @return new object with applied changes
-		 *
-		 */
-		static Value applyDiff(const Value &baseObject, const Value &diffObject);
-
-
-		template<typename It,typename It2, typename Fn>
-		static void mergeDiffsImpl(It lbeg, It lend, It2 rbeg, It2 rend, const ConflictResolver &resolver,const Path &path, const Fn &setFn);
-
-		static Value mergeDiffsObjs(const Value &lv,const Value &rv, const ConflictResolver& resolver, const Path &path);
 
 
 private:

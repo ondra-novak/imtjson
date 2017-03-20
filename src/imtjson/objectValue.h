@@ -32,7 +32,7 @@ namespace json {
 
 		bool isDiff = false;
 
-		virtual ValueTypeFlags flags() const override {return isDiff?objectDiff:0;}
+		virtual ValueTypeFlags flags() const override {return isDiff?valueDiff:0;}
 
 		ObjectValue &operator=(const ObjectValue &other);
 

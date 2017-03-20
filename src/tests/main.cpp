@@ -1045,24 +1045,24 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		o << v << "," << ref << ",";
 		o << ref.sync();
 	};
-	tst.test("Value.change", "[{\"aaa\":1,\"bbb\":2},{\"ccc\":3,\"ddd\":[\"a\",\"x\",\"c\"]}]") >> [](std::ostream &out) {
+	tst.test("Value.replace", "[{\"aaa\":1,\"bbb\":2},{\"ccc\":3,\"ddd\":[\"a\",\"x\",\"c\"]}]") >> [](std::ostream &out) {
 		Value tstv ({Object("aaa",1)("bbb",2),Object("ccc",3)("ddd",{"a","b","c"})});
-		Value modv = tstv.change(Path::root/1/"ddd"/1,"x");
+		Value modv = tstv.replace(Path::root/1/"ddd"/1,"x");
 		modv.toStream(out);
 	};
-	tst.test("Value.change2", "[{\"aaa\":1,\"bbb\":2},{\"ccc\":3,\"ddd\":[\"a\",\"b\",\"c\",\"x\"]}]") >> [](std::ostream &out) {
+	tst.test("Value.replace2", "[{\"aaa\":1,\"bbb\":2},{\"ccc\":3,\"ddd\":[\"a\",\"b\",\"c\",\"x\"]}]") >> [](std::ostream &out) {
 		Value tstv ({Object("aaa",1)("bbb",2),Object("ccc",3)("ddd",{"a","b","c"})});
-		Value modv = tstv.change(Path::root/1/"ddd"/10,"x");
+		Value modv = tstv.replace(Path::root/1/"ddd"/10,"x");
 		modv.toStream(out);
 	};
-	tst.test("Value.change3", "[{\"aaa\":{\"pokus\":\"x\"},\"bbb\":2},{\"ccc\":3,\"ddd\":[\"a\",\"b\",\"c\"]}]") >> [](std::ostream &out) {
+	tst.test("Value.replace3", "[{\"aaa\":{\"pokus\":\"x\"},\"bbb\":2},{\"ccc\":3,\"ddd\":[\"a\",\"b\",\"c\"]}]") >> [](std::ostream &out) {
 		Value tstv ({Object("aaa",1)("bbb",2),Object("ccc",3)("ddd",{"a","b","c"})});
-		Value modv = tstv.change(Path::root/0/"aaa"/"pokus","x");
+		Value modv = tstv.replace(Path::root/0/"aaa"/"pokus","x");
 		modv.toStream(out);
 	};
-	tst.test("Value.change4", "[{\"aaa\":1,\"bbb\":2},{\"1\":{\"2\":{\"3\":\"x\"}},\"ccc\":3,\"ddd\":[\"a\",\"b\",\"c\"]}]") >> [](std::ostream &out) {
+	tst.test("Value.replace4", "[{\"aaa\":1,\"bbb\":2},{\"1\":{\"2\":{\"3\":\"x\"}},\"ccc\":3,\"ddd\":[\"a\",\"b\",\"c\"]}]") >> [](std::ostream &out) {
 		Value tstv ({Object("aaa",1)("bbb",2),Object("ccc",3)("ddd",{"a","b","c"})});
-		Value modv = tstv.change(Path::root/1/"1"/"2"/"3","x");
+		Value modv = tstv.replace(Path::root/1/"1"/"2"/"3","x");
 		modv.toStream(out);
 	};
 

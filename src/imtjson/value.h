@@ -585,18 +585,25 @@ namespace json {
 		Value reverse() const;
 
 
-		///Set value at given path
+		///Replace value at given path (generates new value)
 		/**
-		 * Function creates new value by sharing current value but modified by certain way
-		 * @param path specifies path to the value which will be replaced.
-		 * @param val new value
-		 * @return updated value
+		 * Function searches the value in the JSON container hierarchy specified by the path
+		 * and replaces it by a new value. The result is returned as new value. Function
+		 * handles changes in all parent containers.
 		 *
-		 * @note if given path or a part of the path doesn't exists, the function creates it. If
-		 * path contains different type of object, function replaces it by correct type of object. If
-		 * index to an array is out of bounds, the function just appends the value to the current array
+		 * @param path path to the value in JSON container hierarchy. If the path
+		 * doesn't exists, it is created. if the index in the path doesn't exists,
+		 * the new value is added back to the container.
+		 * @param val new value replacing the value referenced by the path.
+		 *
+		 * @return new value contains the change
+		 *
+		 * @note if the value is marked as diff, it is applied to original value. If there
+		 * is no original value, the diff is applied onto empty container
+		 *
 		 */
-		Value change(const Path &path, const Value &val) const;
+		Value replace(const Path &path, const Value &val) const;
+
 		///Merges to array
 		/**
 		 * @param other other container
