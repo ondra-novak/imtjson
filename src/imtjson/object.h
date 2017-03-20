@@ -282,6 +282,20 @@ namespace json {
 		 */
 		static Value applyDiff(const Value &baseObject, const Value &diffObject);
 
+		static Value applyDiff(const Value &baseObject, const Value &diffObject,
+				const std::function<Value(const Value &base, const Value &diff)> &mergeFn);
+
+		///A mergeFn for applyDiff
+		/** Function simply returns value form the diffObject replacing value in baseObject
+		 * regadless on what type the value is
+		 */
+		static const Value &defaultMerge(const Value &baseObject, const Value &diffObject);
+
+		///A mergeFn for applyDiff
+		/** Function uses applyDiff for inner objects without need to declare, that
+		 * inner object is diff.
+		 */
+		static Value recursiveMerge(const Value &baseObject, const Value &diffObject);
 
 
 	protected:

@@ -410,6 +410,12 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value v = o.commitAsDiff();
 		out << v.toString();
 	};
+	tst.test("Object.applyNonDiff","{\"a\":4,\"b\":2,\"c\":{\"x\":42,\"y\":56,\"z\":25}}") >> [](std::ostream &out) {
+		Value v1 = Value::fromString("{\"a\":1,\"b\":2,\"c\":{\"x\":42,\"y\":56,\"z\":78}}");
+		Value v2 = Value::fromString("{\"a\":4,\"c\":{\"z\":25}}");
+		Value r = Object::applyDiff(v1,v2,Object::recursiveMerge);
+		r.toStream(out);
+	};
 
 	tst.test("Array.create","[\"hi\",\"hola\",1,2,3,5,8,13,21,7.5579e+27]") >> [](std::ostream &out){
 		Array a;
@@ -949,7 +955,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	};
 	tst.test("Value.setKey", "Hello world") >> [](std::ostream &out) {
 		Value v = "world";
-		v = "Hello"_= v;
+		v = Value("Hello", v);
 		out << v.getKey() << " " << v.getString();
 	};
 	tst.test("Parser.commented", "{\"blockComment\\/*not here*\\/\":\"here\\\"\\r\\n\",\"lineComment\\/\\/not here\":\"here\"}") >> [](std::ostream &out) {

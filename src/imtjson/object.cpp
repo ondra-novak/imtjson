@@ -10,13 +10,26 @@
 
 namespace json {
 
-	static RefCntPtr<ObjectValue> applyDiffImpl(const Value &baseObject, const Value &diffObject);
+	template<typename Fn>
+	static RefCntPtr<ObjectValue> applyDiffImpl(const Value &baseObject, const Value &diffObject, Fn mergeFn);
 
+	const Value &Object::defaultMerge(const Value &, const Value &v) {
+		return v;
+	}
+
+	Value Object::recursiveMerge(const Value &b, const Value &d) {
+		if (b.type() == json::object && d.type() == json::object)
+			return applyDiff(b,d,recursiveMerge);
+		else
+			return d;
+	}
 
 	PValue bindKeyToPValue(const StrViewA &key, const PValue &value) {
-		if (key.empty())
+		if (key.empty()) {
 			return value->unproxy();
-		else {
+		}else if (key == value->getMemberName()) {
+			return value;
+		}else {
 			return new(key) ObjectProxy(key, value->unproxy());
 		}
 	}
@@ -171,7 +184,8 @@ void Object::set_internal(const Value& v) {
 			//however, it returns new ObjectValue
 			ordered = applyDiffImpl(
 					Value(PValue::staticCast(ordered)),
-					Value(PValue::staticCast(unordered)));
+					Value(PValue::staticCast(unordered)),
+					defaultMerge);
 
 		}
 		unordered->clear();
@@ -290,9 +304,21 @@ Value Object::applyDiff(const Value& baseObject, const Value& diffObject) {
 	if (diffObject.type() != json::object) return baseObject;
 	if (baseObject.type() != json::object) return applyDiff(json::object, diffObject);
 
-	return PValue::staticCast(applyDiffImpl(baseObject,diffObject));
+	return PValue::staticCast(applyDiffImpl(baseObject,diffObject,defaultMerge));
 }
-static RefCntPtr<ObjectValue> applyDiffImpl(const Value &baseObject, const Value &diffObject) {
+
+Value Object::applyDiff(const Value &baseObject, const Value &diffObject,
+		const std::function<Value(const Value &base, const Value &diff)> &mergeFn) {
+
+	if (diffObject.type() != json::object) return baseObject;
+	if (baseObject.type() != json::object) return applyDiff(json::object, diffObject);
+
+	return PValue::staticCast(applyDiffImpl(baseObject,diffObject,mergeFn));
+
+}
+
+template<typename Fn>
+static RefCntPtr<ObjectValue> applyDiffImpl(const Value &baseObject, const Value &diffObject, Fn mergeFn) {
 
 	RefCntPtr<ObjectValue> newobj = ObjectValue::create(baseObject.size()+diffObject.size());
 	bool createDiff = (baseObject.flags() & valueDiff) != 0;
@@ -303,8 +329,13 @@ static RefCntPtr<ObjectValue> applyDiffImpl(const Value &baseObject, const Value
 	auto be = baseObject.end();
 	auto de = diffObject.end();
 
-	auto merge = [](const Value &old, const Value &nw) {
-		if (nw.type() & valueDiff) return old.replace(Path::root,nw);
+	auto merge = [&mergeFn](const Value &old, const Value &nw) {
+		if (nw.type() & valueDiff) return Value(old.getKey(),old.replace(Path::root,nw));
+		else return Value(old.getKey(),mergeFn(old,nw));
+	};
+
+	auto merge2 = [](const Value &nw) {
+		if (nw.type() & valueDiff) return Value(nw.getKey(),Value(json::object).replace(Path::root,nw));
 		else return nw;
 	};
 
@@ -316,7 +347,7 @@ static RefCntPtr<ObjectValue> applyDiffImpl(const Value &baseObject, const Value
 		} else if (cmp > 0){
 			Value v = *dp;
 			if (v.defined()) {
-				newobj->push_back(merge(Value(),v).getHandle());
+				newobj->push_back(merge2(v).getHandle());
 			} else if (createDiff) {
 				newobj->push_back(v.getHandle());
 			}
@@ -338,7 +369,7 @@ static RefCntPtr<ObjectValue> applyDiffImpl(const Value &baseObject, const Value
 	}
 	while (dp != de) {
 		if ((*dp).defined()) {
-			newobj->push_back(merge(Value(),*dp).getHandle());
+			newobj->push_back(merge2(*dp).getHandle());
 		} else if (createDiff) {
 			newobj->push_back((*dp).getHandle());
 		}

@@ -952,6 +952,8 @@ protected:
 	class KeyStart {
 	public:
 		KeyKeeper operator/(const StrViewA &a) const { return KeyKeeper(a); }
+		KeyKeeper operator()(const StrViewA &a) const {return KeyKeeper(a);}
+
 	};
 	extern KeyStart key;
 
