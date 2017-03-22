@@ -260,6 +260,25 @@ inline Array Object::sort(const Cmp& cmp) const {
 	return genSort(cmp,*this, this->size());
 }
 
+template<typename Fn>
+Value Value::find(const Fn &orderFn, const Value &key) const {
+	Fn cmp(orderFn);
+	std::size_t l = 0, h = size();
+	while (l < h) {
+		std::size_t m = (l+h)/2;
+		Value v = operator[](m);
+		int c = cmp(key,v);
+		if (c < 0) {
+			h = m;
+		} else if (c > 0) {
+			l = m+1;
+		} else {
+			return v;
+		}
+	}
+	return undefined;
+}
+
 
 }
 

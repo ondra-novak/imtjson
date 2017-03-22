@@ -29,8 +29,8 @@ public:
 		hash = 2166136261;
 	}
 	template<typename X>
-	void operator()(std::uint8_t c) {
-		hash = (hash ^ c) * 16777619;
+	void operator()(X c) {
+		hash = (hash ^ (std::uint8_t)c) * 16777619;
 	}
 
 protected:

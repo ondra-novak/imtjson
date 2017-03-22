@@ -671,9 +671,21 @@ namespace json {
 
 
 		///Removes duplicated values after sort
-		/** Function expects sorted result. It removes duplicated values */
+		/** Function expects sorted container. It removes duplicated values */
 		template<typename Fn>
 		Value uniq(const Fn &sortFn) const;
+
+		///Finds key in given container
+		/** Function expects sorted container. It returns whole value which matches the key
+		 *
+		 * @param orderFn defines container ordering. Function returns -1 for a<b or 1 for a>b or 0 if the
+		 * value equals
+		 * @param key key to find
+		 * @return function returns found value or undefined when not found.
+		 *
+		 * */
+		template<typename Fn>
+		Value find(const Fn &orderFn, const Value &key) const;
 
 
 		///Splits container to an array of sets of values that are considered as equal according to sortfn
