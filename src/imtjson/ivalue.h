@@ -8,20 +8,20 @@ namespace json {
 	///Type of JSON value
 	enum ValueType {
 
-		///number, which can be floating or integer type (this is transparent)
-		number,
-		///string - currently only ascii and utf-8 is supported 
-		string,
-		///boolean - true or false
-		boolean,
-		///array
-		array,
-		///object
-		object,
 		///null value - JSON's null value is also value as others
-		null,
+		null = 0,
+		///boolean - true or false
+		boolean = 1,
+		///number, which can be floating or integer type (this is transparent)
+		number = 2,
+		///string - currently only ascii and utf-8 is supported 
+		string = 3,
+		///array
+		array = 4,
+		///object
+		object = 5,
 		///special type used everytime when value is not defined (it is also default for Value() )
-		undefined
+		undefined = 6
 
 	};
 
@@ -138,6 +138,8 @@ namespace json {
 		virtual const IValue *unproxy() const = 0;
 
 		virtual bool equal(const IValue *other) const = 0;
+
+		virtual int compare(const IValue *other) const = 0;
 
 
 	};

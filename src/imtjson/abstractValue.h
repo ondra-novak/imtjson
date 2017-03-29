@@ -28,6 +28,13 @@ namespace json {
 
 		virtual bool equal(const IValue *other) const  override {return false;}
 
+		///
+		/**
+		 * @retval <0 *this < *other
+		 * @retval ==0 *this == *other
+		 * @retval >0 *this == *other
+		 */
+		virtual int compare(const IValue *other) const override;
 
 		static const IValue *getUndefined();
 	};

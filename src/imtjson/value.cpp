@@ -608,6 +608,10 @@ namespace json {
 
 	}
 
+
+	int Value::compare(const Value &a, const Value &b) {
+		return a.v->compare(b.v);
+	}
 }
 
 namespace std {

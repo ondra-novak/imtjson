@@ -873,6 +873,9 @@ namespace json {
 		template<typename Fn>
 		void serializeBinary(const Fn &fn, BinarySerializeFlags flags = compressKeys) const;
 
+
+		static int compare(const Value &a, const Value &b);
+
 public:
 
 		///Pointer to custom allocator

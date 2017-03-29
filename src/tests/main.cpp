@@ -1083,6 +1083,33 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value modv = tstv.replace(Path::root/1/"1"/"2"/"3","x");
 		modv.toStream(out);
 	};
+	tst.test("Value.compare", "-10-110-1-11100-111-1100-11-10-1-1-1") >> [](std::ostream &out) {
+		out << Value::compare(null,true);//-1
+		out << Value::compare(null,null);//0
+		out << Value::compare(false,true);//-1
+		out << Value::compare(true,false);//1
+		out << Value::compare(true,true);//0
+		out << Value::compare(100U,256U);//-1
+		out << Value::compare(-256,279U);//-1
+		out << Value::compare(256,-279);//1
+		out << Value::compare(-256,-279);//1
+		out << Value::compare(100U,100U);//0
+		out << Value::compare(-100,-100);//0
+		out << Value::compare(100.5,100.9);//-1
+		out << Value::compare(100,-58.9);//1
+		out << Value::compare(-23.2,-58.9);//1
+		out << Value::compare("aaa","bbb");//-1
+		out << Value::compare("ccc","bbb");//1
+		out << Value::compare("bbb","bbb");//0
+		out << Value::compare("","");//0
+		out << Value::compare({1,2,3},{3,4,1});//-1
+		out << Value::compare({1,2,3},{true,4,1});//1
+		out << Value::compare({1,2,3},{1,2,3,4});//-1
+		out << Value::compare({1,2,3,4},{1,2,3,4});//0
+		out << Value::compare(Value(object,{key/"aaa"=10}),Value(object,{key/"aaa"=20}));//-1
+		out << Value::compare(Value(object,{key/"aaa"=10}),Value(object,{key/"bbb"=10}));//-1
+		out << Value::compare(null,Value(object,{key/"aaa"=10}));//-1
+	};
 
 
 	runValidatorTests(tst);
