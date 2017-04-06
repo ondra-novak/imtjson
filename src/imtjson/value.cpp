@@ -612,6 +612,11 @@ namespace json {
 	int Value::compare(const Value &a, const Value &b) {
 		return a.v->compare(b.v);
 	}
+
+	Range<ValueIterator> Value::range() const {
+		return Range<ValueIterator>(begin(),end());
+	}
+
 }
 
 namespace std {

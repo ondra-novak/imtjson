@@ -3,6 +3,7 @@
 #include <vector>
 #include "ivalue.h"
 #include <functional>
+#include "range.h"
 namespace json {
 
 	class Array;
@@ -15,6 +16,7 @@ namespace json {
 	struct Allocator;
 	template<typename T> class ConvValueAs;
 	template<typename T> class ConvValueFrom;
+	template<typename Cmp> class Ordered;
 
 	///Stores one JSON value
 	/** The instance of the class Value can store one value of any JSON type:
@@ -523,6 +525,9 @@ namespace json {
 		/**@note You should be able to iterate through arrays and objects as well */
 		ValueIterator end() const;
 
+		///Returns whole range
+		Range<ValueIterator> range() const;
+
 		///Retrieves true, whether value is defined
 		/**
 		 * @retval true value is defined
@@ -568,7 +573,9 @@ namespace json {
 		 * are sorted by the key)
 		 *
 		 * @param sortFn sort function
-		 * @return sorted array
+		 * @return Ordered array. Function returns the container as type Ordered which is compatible
+		 * with Value, so you can assign result to the Value. However, the Ordered still remembers
+		 * the function sortFn and it can be used to invoke operations which require an ordered container
 		 *
 		 * The function has following prototype
 		 * @code
@@ -579,7 +586,7 @@ namespace json {
 		 *
 		 */
 		template<typename Fn>
-		Value sort(const Fn &sortFn)  const;
+		Ordered<Fn> sort(const Fn &sortFn)  const;
 
 		///Reverses container
 		Value reverse() const;
@@ -604,7 +611,7 @@ namespace json {
 		 */
 		Value replace(const Path &path, const Value &val) const;
 
-		///Merges to array
+		///Merges to array (DEPRECATED)
 		/**
 		 * @param other other container
 		 * @param mergeFn function which compares each items and performs merge item per item
@@ -626,7 +633,7 @@ namespace json {
 		template<typename Fn>
 		void merge(const Value &other, const Fn &mergeFn) const;
 
-		///Merges to array
+		///Merges to array (DEPRECATED)
 		/**
 		 * @param other other conatiner
 		 * @param mergeFn function which compares each items and performs merge item per item
@@ -648,7 +655,7 @@ namespace json {
 		template<typename Fn>
 		Value mergeToArray(const Value &other, const Fn &mergeFn) const;
 
-		///Merges to object
+		///Merges to object (DEPRECATED)
 		/**
 		 * @param other other conatiner
 		 * @param mergeFn function which compares each items and performs merge item per item
@@ -670,12 +677,12 @@ namespace json {
 
 
 
-		///Removes duplicated values after sort
+		///Removes duplicated values after sort (DEPRECATED)
 		/** Function expects sorted container. It removes duplicated values */
 		template<typename Fn>
 		Value uniq(const Fn &sortFn) const;
 
-		///Finds key in given container
+		///Finds key in given container (DEPRECATED)
 		/** Function expects sorted container. It returns whole value which matches the key
 		 *
 		 * @param orderFn defines container ordering. Function returns -1 for a<b or 1 for a>b or 0 if the
@@ -688,7 +695,7 @@ namespace json {
 		Value find(const Fn &orderFn, const Value &key) const;
 
 
-		///Splits container to an array of sets of values that are considered as equal according to sortfn
+		///Splits container to an array of sets of values that are considered as equal according to sortfn (DEPRECATED)
 		/**
 		 * - Example: [12,14,23,25,27,34,36,21,22,78]
 		 * - Result (split by tens) [[12,14],[23,25,26],[34,36],[21,22],[78]]
@@ -713,7 +720,7 @@ namespace json {
 		TwoValues splitAt(int pos) const;
 
 
-		///Makes intersection of two containers
+		///Makes intersection of two containers (DEPRECATED)
 		/**
 		 * @param other second container
 		 * @param sortFn function which defines order of values.
@@ -725,7 +732,7 @@ namespace json {
 		template<typename Fn>
 		Value makeIntersection(const Value &other, const Fn &sortFn) const;
 
-		///Makes union of two containers
+		///Makes union of two containers (DEPRECATED)
 		/**
 		 * @param other second container
 		 * @param sortFn function which defines order of values.
@@ -743,7 +750,7 @@ namespace json {
 		 * source container should be sorted by same order. After split the reduce is performed for each group.
 		 * Result is single-dimensional array with reduced results
 		 * @param cmp compare function
-		 * @param reduce refuce function
+		 * @param reduce reduce function
 		 * @param initVal initial value for each reduce() call
 		 * @return array with result
 		 */
@@ -873,8 +880,17 @@ namespace json {
 		template<typename Fn>
 		void serializeBinary(const Fn &fn, BinarySerializeFlags flags = compressKeys) const;
 
-
+		///Compare two jsons
+		/**
+		 *
+		 * @param a left value
+		 * @param b right value
+		 * @retval <0 left is less then right
+		 * @retval >0 left is greater then right
+		 * @retval ==0 left is equal to right
+		 */
 		static int compare(const Value &a, const Value &b);
+
 
 public:
 
@@ -944,6 +960,10 @@ protected:
 		bool atBegin() const {
 			return index == 0;
 		}
+		ValueIterator &operator+=(int p) {index+=p;return *this;}
+		ValueIterator &operator-=(int p) {index-=p;return *this;}
+		ValueIterator operator+(int p) {return ValueIterator(v,index+p);}
+		ValueIterator operator-(int p) {return ValueIterator(v,index-p);}
 	};
 
 
@@ -960,7 +980,7 @@ protected:
 
 	class KeyKeeper : public StrViewA {
 	public:
-		KeyKeeper(const StrViewA &k) :StrViewA(k) {}
+		explicit KeyKeeper(const StrViewA &k) :StrViewA(k) {}
 		Value operator=(const Value &v) const { return Value(*this, v); }
 	};
 

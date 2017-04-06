@@ -858,14 +858,13 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	};
 	tst.test("Operation.find","[11,\"ccc\"][-33,\"ddd\"][90,\"fff\"]<undefined>") >> [](std::ostream &out) {
 		Value v = {{21,"aaa"},{87,"bbb"},{11,"ccc"},{-33,"ddd"},{43,"eee"},{90,"fff"}};
-		auto orderFn = [](const Value &a, const Value &b){
-			return a[0].getNumber()-b[0].getNumber();
-		};
-		Value w = v.sort(orderFn);
-		Value found1 = w.find(orderFn,Value(array,{11}));
-		Value found2 = w.find(orderFn,Value(array,{-33}));
-		Value found3 = w.find(orderFn,Value(array,{90}));
-		Value found4 = w.find(orderFn,Value(array,{55}));
+		auto w = v.sort([](const Value &a, const Value &b){
+						return a[0].getNumber()-b[0].getNumber();
+						});
+		Value found1 = w.find(Value(array,{11}));
+		Value found2 = w.find(Value(array,{-33}));
+		Value found3 = w.find(Value(array,{90}));
+		Value found4 = w.find(Value(array,{55}));
 		out << found1.toString() << found2.toString() << found3.toString() << found4.toString();
 	};
 	tst.test("Operation.merge","{\"added\":[10,17,55,99],\"removed\":[-33,8,11,21]}") >> [](std::ostream &out) {
@@ -930,7 +929,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 			return a.getNumber()-b.getNumber();
 		};
 
-		Value res= testset.sort(cmp).uniq(cmp);
+		Value res= testset.sort(cmp).uniq();
 		res.toStream(out);
 	};
 

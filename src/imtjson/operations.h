@@ -12,7 +12,323 @@
 #include "object.h"
 #include "array.h"
 #include "value.h"
+#include "range.h"
 namespace json {
+
+
+
+///Ordered container
+/** Container which has been ordered by an ordering/sorting function. There are several methods
+ * available for ordered containers
+ */
+template<typename Cmp>
+class Ordered: public Value {
+
+	class SortFn: public RefCntObj, public AllocObject {
+	public:
+		SortFn(const Cmp &sortFn):sortFn(sortFn) {}
+
+		Value sort(const Value &container) const;
+		ValueIterator find(const Value &haystack, const Value &needle) const;
+		Value uniq(const Value &container) const;
+
+		template<typename ConflictFn>
+		Value comm(const Value &container1, const Value &container2, int sides, const ConflictFn &fn) const;
+
+		template<typename ReduceFn, typename InitVal>
+		Value group(const Value &container1, const ReduceFn &reduceFn) const;
+
+
+		int operator()(const Value &a, const Value &b) const {
+			return sortFn(a,b);
+		}
+
+	protected:
+		Cmp sortFn;
+	};
+
+	static const Value &defaultConflictFn(const Value &, const Value &b) {return b;}
+
+
+	enum Side {
+		diffLeft = 1,
+		diffRight = 2,
+		common = 4
+	};
+
+public:
+
+
+	///Constructs Ordered instance
+	/**
+	 * @param sortFn - function that defines ordering
+	 */
+	Ordered(const Cmp &sortFn): sortFn(new SortFn(sortFn) ) {}
+	///Constructs Ordered instance, called mostly internally by various functions
+	/**
+	 * @param value a container - must be ordered. It is better to call Value::sort to create Ordered instance
+	 * @param sortFn - function that defines ordering
+	 */
+	Ordered(const Value &value, const RefCntPtr<SortFn> &sortFn):Value(value), sortFn(sortFn) {}
+
+
+	///Perform sort operation on other container
+	/**
+	 * @param value unordered container
+	 * @return ordered container
+	 */
+	Ordered sort(const Value &value) const {
+		return Ordered(sortFn->sort(value), sortFn);
+	}
+	///Find in ordered container
+	/**
+	 * @param needle value to find
+	 * @return value found. Function returns undefined for not found value
+	 */
+	Value find(const Value &needle) const {
+		ValueIterator iter = sortFn->find(*this, needle);
+		if (iter.atEnd()) return undefined;
+		else return *iter;
+	}
+
+	///Finds first equal item
+	ValueIterator lowerBound(const Value &needle) const {
+		ValueIterator iter = sortFn->find(*this, needle);
+		if (iter.atEnd()) return iter;
+		while (!iter.atBegin()) {
+			--iter;
+			if ((*sortFn)(*iter,needle) != 0) return iter+1;
+		}
+		return iter;
+	}
+	///Finds first item above specified item
+	ValueIterator upperBound(const Value &needle) const {
+		ValueIterator iter = sortFn->find(*this, needle);
+		while (!iter.atEnd()) {
+			++iter;
+			if ((*sortFn)(*iter,needle) != 0) return iter;
+		}
+		return iter;
+
+	}
+
+	///Finds range where needle is equal.
+	Range<ValueIterator> equalRange(const Value &needle) const {
+		ValueIterator iter1 = sortFn->find(*this, needle);
+		if (iter1.atEnd()) Range<ValueIterator>(iter1,iter1);
+		while (!iter1.atBegin()) {
+			--iter1;
+			if ((*sortFn)(*iter1,needle) != 0) {
+				++iter1;
+				break;
+			}
+		}
+		ValueIterator iter2 = iter1;
+		while (!iter2.atEnd()) {
+			++iter2;
+			if ((*sortFn)(*iter2,needle) != 0) break;
+		}
+		return Range<ValueIterator>(iter1,iter2);
+	}
+	///Remove duplicated elements from ordered container
+	/**
+	 * Making container to have unique values
+	 * @return container with unique values
+	 */
+	Ordered uniq() const {
+		return Ordered(sortFn->uniq(*this),sortFn);
+	}
+	///Reduces container grouping equal values.
+	/**
+	 * @param fn Reduce function. The function accepts Range object, which contains range of equal
+	 * items (they don't need to be equal, the sort function just considered them equal).
+	 *
+	 * @return Result as container
+	 *
+	 * The reduce function is different then Array::reduce. It has following prototype
+	 *
+	 * @code
+	 * Value reduceFn(const Range<ValueIterator> &range);
+	 * @endcode
+	 */
+	template<typename ReduceFn>
+	Value group(const ReduceFn &fn) const {
+		return sortFn->group(*this,fn);
+	}
+
+
+	///Merge two ordered containers
+	/**
+	 * @param other other container
+	 *
+	 * @return merged container - still ordered
+	 *
+	 * @note Function automatically merges same elemenets
+	 */
+	Ordered merge(const Ordered &other) const {
+		return Ordered(sortFn->comm(*this, other, common | diffLeft | diffRight, defaultConflictFn), sortFn);
+	}
+	template<typename ConflictFn>
+	Ordered merge(const Ordered &other, const ConflictFn &conflictFn) const {
+		return Ordered(sortFn->comm(*this, other, common | diffLeft | diffRight, conflictFn), sortFn);
+	}
+	Ordered complement(const Ordered &other) const {
+		return Ordered(sortFn->comm(*this, other, diffLeft, defaultConflictFn ), sortFn);
+	}
+	Ordered intersection(const Ordered &other) const  {
+		return Ordered(sortFn->comm(*this, other, common, defaultConflictFn), sortFn);
+	}
+	template<typename ConflictFn>
+	Ordered intersection(const Ordered &other, const ConflictFn &conflictFn) const  {
+		return Ordered(sortFn->comm(*this, other, common, conflictFn), sortFn);
+	}
+	Ordered symdiff(const Ordered &other) const  {
+		return Ordered(sortFn->comm(*this, other, diffLeft | diffRight, defaultConflictFn), sortFn);
+	}
+
+
+protected:
+	RefCntPtr<SortFn> sortFn;
+};
+
+template<typename Cmp>
+Value Ordered<Cmp>::SortFn::sort(const Value &container) const {
+	if (container.empty()) return json::array;
+	RefCntPtr<ArrayValue> av = ArrayValue::create(container.size());
+	std::stable_sort(av->begin(), av->end(), [&](const PValue &a, const PValue &b) {
+		return this->sortFn(a,b) < 0;
+	});
+	return Value(PValue::staticCast(av));
+}
+
+template<typename Cmp>
+ValueIterator Ordered<Cmp>::SortFn::find(const Value &haystack, const Value &needle) const {
+	std::size_t l = 0, h = haystack.size();
+	while (l < h) {
+		std::size_t m = (l+h)/2;
+		Value v = haystack[m];
+		int c = sortFn(needle,v);
+		if (c < 0) {
+			h = m;
+		} else if (c > 0) {
+			l = m+1;
+		} else {
+			return haystack.begin()+m;
+		}
+	}
+	return haystack.end();
+}
+
+template<typename Cmp>
+Value Ordered<Cmp>::SortFn::uniq(const Value &container) const {
+	std::size_t sz = container.size();
+	if (sz == 0) return container;
+	RefCntPtr<ArrayValue> ar = ArrayValue::create(sz);
+	Value prevValue = container[0];
+	for (std::size_t i = 1; i < sz; i++) {
+		Value v = container[i];
+		if (sortFn(prevValue, v) != 0) {
+			ar->push_back(prevValue.getHandle());
+			prevValue = v;
+		}
+	}
+	ar->push_back(prevValue.getHandle());
+	return PValue::staticCast(ar);
+}
+
+template<typename Cmp>
+template<typename ConflictFn>
+Value Ordered<Cmp>::SortFn::comm(const Value &container1,const Value &container2,int side, const ConflictFn &conflictFn) const {
+
+	auto it1 = container1.begin();
+	auto it2 = container2.begin();
+	auto end1 = container1.end();
+	auto end2 = container2.end();
+	std::size_t estSize;
+	switch (side) {
+		case diffLeft | common:
+		case diffLeft: estSize = container1.size();break;
+		case diffRight | common:
+		case diffRight: estSize = container2.size();break;
+		case common:estSize = std::max(container1.size(),container2.size());break;
+		default: estSize = container1.size()+container2.size();break;
+	}
+	RefCntPtr<ArrayValue> av = ArrayValue::create(estSize);
+
+	bool cont = it1 != end1 && it2 != end2;
+	if (cont) {
+
+		Value a1 = *it1;
+		Value a2 = *it2;
+
+		while (true) {
+			int r = sortFn(a1,a2);
+			if (r < 0) {
+				if (side & diffLeft) av->push_back(a1.getHandle());
+				++it1;
+				cont = it1 != end1;
+				if (cont) a1 = *it1; else break;
+			} else if (r > 0) {
+				if (side & diffRight) av->push_back(a2.getHandle());
+				++it2;
+				cont = it2 != end2;
+				if (cont) a1 = *it2; else break;
+			} else {
+				if (side & common) av->push_back(Value(conflictFn(a1,a2)).getHandle());
+				++it1;
+				++it2;
+				cont = it1 != end1 && it2 != end2;
+				if (cont) {
+					a1 = *it1;
+					a2 = *it2;
+				} else {
+					break;
+				}
+			}
+		}
+	}
+	if (side & diffLeft) {
+		while (it1 != end1) {
+			av->push_back((*it1).getHandle());
+			++it1;
+		}
+	}
+	if (side & diffRight) {
+		while (it2 != end2) {
+			av->push_back((*it2).getHandle());
+			++it2;
+		}
+	}
+
+
+	return Value(PValue::staticCast(av));
+}
+
+template<typename Cmp>
+template<typename ReduceFn, typename InitVal>
+Value Ordered<Cmp>::SortFn::group(const Value &container, const ReduceFn &reduceFn) const {
+	ReduceFn fn(reduceFn);
+	std::size_t sz = container.size();
+	if (sz == 0) return container;
+	Array result;
+	ValueIterator start = container.begin();
+	ValueIterator pos = start;
+	ValueIterator end = container.end();
+	Value prevValue = *pos;
+	++pos;
+	while (pos != end) {
+		Value v  = *pos;
+		if (sortFn(prevValue,v) != 0) {
+			result.push_back(Value(fn(Range<ValueIterator>(start,pos))));
+			prevValue = v;
+			start = pos;
+		}
+		++pos;
+	}
+	result.push_back(Value(fn(Range<ValueIterator>(start,pos))));
+	return result;
+}
+
 
 template<typename Fn>
 inline Value Value::map(const Fn& mapFn) const {
@@ -30,8 +346,8 @@ inline Total Value::reduce(const Fn& reduceFn, Total curVal) const {
 
 
 template<typename Fn>
-inline Value Value::sort(const Fn& sortFn) const {
-	return Array(*this).sort(sortFn);
+inline Ordered<Fn> Value::sort(const Fn& sortFn) const {
+	return Ordered<Fn>(sortFn).sort(*this);
 }
 
 
