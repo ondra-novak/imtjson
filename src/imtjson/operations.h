@@ -35,7 +35,7 @@ class Ordered: public Value {
 		template<typename ConflictFn>
 		Value comm(const Value &container1, const Value &container2, int sides, const ConflictFn &fn) const;
 
-		template<typename ReduceFn, typename InitVal>
+		template<typename ReduceFn>
 		Value group(const Value &container1, const ReduceFn &reduceFn) const;
 
 
@@ -195,6 +195,8 @@ template<typename Cmp>
 Value Ordered<Cmp>::SortFn::sort(const Value &container) const {
 	if (container.empty()) return json::array;
 	RefCntPtr<ArrayValue> av = ArrayValue::create(container.size());
+	for(Value v : container) av->push_back(v.getHandle());
+
 	std::stable_sort(av->begin(), av->end(), [&](const PValue &a, const PValue &b) {
 		return this->sortFn(a,b) < 0;
 	});
@@ -272,7 +274,7 @@ Value Ordered<Cmp>::SortFn::comm(const Value &container1,const Value &container2
 				if (side & diffRight) av->push_back(a2.getHandle());
 				++it2;
 				cont = it2 != end2;
-				if (cont) a1 = *it2; else break;
+				if (cont) a2 = *it2; else break;
 			} else {
 				if (side & common) av->push_back(Value(conflictFn(a1,a2)).getHandle());
 				++it1;
@@ -305,7 +307,7 @@ Value Ordered<Cmp>::SortFn::comm(const Value &container1,const Value &container2
 }
 
 template<typename Cmp>
-template<typename ReduceFn, typename InitVal>
+template<typename ReduceFn>
 Value Ordered<Cmp>::SortFn::group(const Value &container, const ReduceFn &reduceFn) const {
 	ReduceFn fn(reduceFn);
 	std::size_t sz = container.size();

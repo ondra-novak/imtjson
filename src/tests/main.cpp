@@ -867,32 +867,15 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value found4 = w.find(Value(array,{55}));
 		out << found1.toString() << found2.toString() << found3.toString() << found4.toString();
 	};
-	tst.test("Operation.merge","{\"added\":[10,17,55,99],\"removed\":[-33,8,11,21]}") >> [](std::ostream &out) {
+	tst.test("Operation.complements","{\"added\":[10,17,55,99],\"removed\":[-33,8,11,21]}") >> [](std::ostream &out) {
 		Value oldSet = {21,87,11,-33,43,90,11,8,3,97};
 		Value newSet = {10,55,17,90,11,99,3,97,43,87};
-		Array added;
-		Array removed;
-		auto cmp = [](const Value &a, const Value &b){
+		auto oldOrdered = oldSet.sort([](const Value &a, const Value &b){
 			return a.getNumber()-b.getNumber();
-		};
-
-		oldSet.sort(cmp).merge(newSet.sort(cmp),
-				[&added,&removed,&cmp](const Value &left, const Value &right) -> decltype(cmp(undefined,undefined)) {
-			if (!left.defined()) {
-				added.add(right);return 0;
-			} else if (!right.defined()) {
-				removed.add(left);return 0;
-			} else {
-				auto c = cmp(left,right);
-				if (c > 0)
-					added.add(right);
-				else if (c < 0)
-					removed.add(left);
-				return c;
-			}
 		});
-
-
+		auto newOrdered = oldOrdered.sort(newSet);
+		Value added = newOrdered.complement(oldOrdered);
+		Value removed = oldOrdered.complement(newOrdered);
 		Value w = Object("added",added)("removed",removed);
 		w.toStream(out);
 	};
@@ -905,10 +888,10 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 			return a.getNumber()-b.getNumber();
 		};
 
-		Value w = leftSet.sort(cmp).makeIntersection(rightSet.sort(cmp),cmp);
+		Value w = leftSet.sort(cmp).intersection(rightSet.sort(cmp));
 		w.toStream(out);
 	};
-		tst.test("Operation.union","[-33,3,8,10,11,11,17,21,43,55,87,90,97,99]") >> [](std::ostream &out) {
+		tst.test("Operation.merge","[-33,3,8,10,11,11,17,21,43,55,87,90,97,99]") >> [](std::ostream &out) {
 		Value leftSet = {21,87,11,-33,43,90,11,8,3,97};
 		Value rightSet = {10,55,17,90,11,99,3,97,43,87};
 
@@ -917,7 +900,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 			return a.getNumber()-b.getNumber();
 		};
 
-		Value w = leftSet.sort(cmp).makeUnion(rightSet.sort(cmp),cmp);
+		Value w = leftSet.sort(cmp).merge(rightSet.sort(cmp));
 		w.toStream(out);
 	};
 
@@ -941,6 +924,19 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		};
 
 		Value res= testset.split(defSet);
+		res.toStream(out);
+	};
+
+	tst.test("Operation.group","[[12,14],[23,25,27,21,22],[34,36],[78]]") >> [](std::ostream &out) {
+		Value testset = {12,14,23,25,27,34,36,21,22,78};
+
+		auto defSet= [](const Value &a, const Value &b){
+			return a.getInt()/10 - b.getInt()/10;
+		};
+
+		Value res= testset.sort(defSet).group([](const Range<ValueIterator> &r){
+			return Value(r);
+		});
 		res.toStream(out);
 	};
 

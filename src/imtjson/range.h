@@ -26,7 +26,7 @@ public:
 	const Iter &begin() const {return b;}
 	const Iter &end() const {return e;}
 
-	std::size_t size() const {return std::distance(b,e);}
+	 typename std::iterator_traits<Iter>::difference_type size() const {return std::distance(b,e);}
 
 public:
 	Iter b;

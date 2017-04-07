@@ -307,4 +307,14 @@ namespace json {
 		}
 	};
 
+
+	///Create value from the range - it is declared here, because we need Array
+	template<typename  Iter>
+	Value::Value(const Range<Iter> &data) {
+		Array a;
+		a.reserve(data.size());
+		for (Value v : data) a.push_back(v);
+		*this = a;
+	}
+
 }

@@ -183,6 +183,9 @@ namespace json {
 		 */
 		Value(const std::initializer_list<Value> &data);
 
+		template<typename  Iter>
+		Value(const Range<Iter> &data);
+
 
 		///Create binary value
 		/** Binary values are not supported by JSON. They are emulated through encoding
@@ -962,8 +965,16 @@ protected:
 		}
 		ValueIterator &operator+=(int p) {index+=p;return *this;}
 		ValueIterator &operator-=(int p) {index-=p;return *this;}
-		ValueIterator operator+(int p) {return ValueIterator(v,index+p);}
-		ValueIterator operator-(int p) {return ValueIterator(v,index-p);}
+		ValueIterator operator+(int p) const {return ValueIterator(v,index+p);}
+		ValueIterator operator-(int p) const {return ValueIterator(v,index-p);}
+		std::intptr_t operator-(ValueIterator &other) const {return index - other.index;}
+
+		typedef std::random_access_iterator_tag iterator_category;
+	    typedef Value        value_type;
+	    typedef Value *        pointer;
+	    typedef Value &        reference;
+	    typedef std::intptr_t  difference_type;
+
 	};
 
 
@@ -991,6 +1002,7 @@ protected:
 
 	};
 	extern KeyStart key;
+
 
 }
 
