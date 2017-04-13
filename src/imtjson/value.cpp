@@ -618,6 +618,23 @@ namespace json {
 	}
 
 
+	std::size_t Value::indexOf(const Value &v, std::size_t start) const {
+		std::size_t len = size();
+		for (std::size_t i = start; i < len; i++) {
+			if ((*this)[i] == v) return i;
+		}
+		return npos;
+
+	}
+	std::size_t Value::lastIndexOf(const Value &v, std::size_t start) const {
+
+		for (std::size_t i = std::min(start,size()); i > 0; ){
+			--i;
+			if ((*this)[i] == v) return i;
+		}
+		return npos;
+
+	}
 
 }
 

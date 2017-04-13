@@ -895,6 +895,23 @@ namespace json {
 		static int compare(const Value &a, const Value &b);
 
 
+		static const std::size_t npos = (std::size_t)-1;
+
+		///Finds first occurence of first value in the container
+		/**
+		 * @param v value to search
+		 * @param start starting position
+		 * @return index of found item, or npos if not found
+		 */
+		std::size_t indexOf(const Value &v, std::size_t start = 0) const;
+		///Finds occurence of first value in the container
+		/**
+		 * @param v value to search
+		 * @param start starting position
+		 * @return index of found item, or npos if not found
+		 */
+		std::size_t lastIndexOf(const Value &v, std::size_t start = npos) const;
+
 public:
 
 		///Pointer to custom allocator
