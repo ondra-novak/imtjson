@@ -215,6 +215,15 @@ int testMain() {
 		}
 		Value(res).toStream(out);
 	};
+	tst.test("Serialize.binary.base64url","[\"\",\"Zg\",\"Zm8\",\"Zm9v\",\"Zm9vYg\",\"Zm9vYmE\",\"Zm9vYmFy\"]") >> [](std::ostream &out) {
+		//Tests whether binary values are properly encoded to base64url
+		StrViewA v[] = {"","f","fo","foo","foob","fooba","foobar"};
+		Array res;
+		for (auto x : v) {
+			res.push_back(Value(BinaryView(x),json::base64url));
+		}
+		Value(res).toStream(out);
+	};
 	tst.test("Serialize.valueHash", "13532798998175024480") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
 		std::hash<Value> hv;
@@ -230,6 +239,22 @@ int testMain() {
 		Binary e( v[4].getBinary(base64));
 		Binary f( v[5].getBinary(base64));
 		Binary g( v[6].getBinary(base64));
+
+		out << StrViewA(a) << "," << StrViewA(b)
+				<< "," << StrViewA(c) << "," << StrViewA(d)
+				<< "," << StrViewA(e) << "," << StrViewA(f)
+				<< "," << StrViewA(g);
+	};
+	tst.test("Parse.binary.base64url",",f,fo,foo,foob,fooba,foobar") >> [](std::ostream &out) {
+		//Tests whether base64 values are properly decoded to the Binary type
+		Value v = Value::fromString("[\"\",\"Zg\",\"Zm8\",\"Zm9v\",\"Zm9vYg\",\"Zm9vYmE\",\"Zm9vYmFy\"]");
+		Binary a( v[0].getBinary(base64url));
+		Binary b( v[1].getBinary(base64url));
+		Binary c( v[2].getBinary(base64url));
+		Binary d( v[3].getBinary(base64url));
+		Binary e( v[4].getBinary(base64url));
+		Binary f( v[5].getBinary(base64url));
+		Binary g( v[6].getBinary(base64url));
 
 		out << StrViewA(a) << "," << StrViewA(b)
 				<< "," << StrViewA(c) << "," << StrViewA(d)

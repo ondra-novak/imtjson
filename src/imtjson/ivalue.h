@@ -41,6 +41,7 @@ namespace json {
 	typedef const IBinaryEncoder *BinaryEncoding;
 
 	extern BinaryEncoding base64;
+	extern BinaryEncoding base64url;
 	extern BinaryEncoding directEncoding;
 	extern BinaryEncoding defaultBinaryEncoding;
 
