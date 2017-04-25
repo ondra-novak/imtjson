@@ -614,6 +614,22 @@ namespace json {
 		 */
 		Value replace(const Path &path, const Value &val) const;
 
+		///Replace value at given path (generates new value)
+		/**
+		 * @param key key to replace
+		 * @param val new value
+		 * @return
+		 */
+		Value replace(const StrViewA &key, const Value &val) const;
+
+		///Replace value at given path (generates new value)
+		/**
+		 * @param index of element in array
+		 * @param val new value
+		 * @return
+		 */
+		Value replace(const uintptr_t index, const Value &val) const;
+
 		///Merges to array (DEPRECATED)
 		/**
 		 * @param other other container

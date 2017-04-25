@@ -608,6 +608,14 @@ namespace json {
 
 	}
 
+	Value Value::replace(const StrViewA &key, const Value& val) const {
+		return replace(Path::root/key,val);
+
+	}
+	Value Value::replace(const uintptr_t index, const Value& val) const {
+		return replace(Path::root/index,val);
+	}
+
 
 	int Value::compare(const Value &a, const Value &b) {
 		return a.v->compare(b.v);
