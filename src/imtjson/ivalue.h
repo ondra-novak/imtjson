@@ -40,8 +40,9 @@ namespace json {
 	class IBinaryEncoder;
 	typedef const IBinaryEncoder *BinaryEncoding;
 
-	extern BinaryEncoding base64;
-	extern BinaryEncoding base64url;
+	extern BinaryEncoding base64;  ///< base64 standard encoding
+	extern BinaryEncoding base64url;  ///< base64 for urls and files (with "-" and "_" and without padding character)
+	extern BinaryEncoding urlEncoding; ///url encoding - for encoding uri components
 	extern BinaryEncoding directEncoding;
 	extern BinaryEncoding defaultBinaryEncoding;
 

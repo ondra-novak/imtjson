@@ -24,6 +24,8 @@ public:
 	virtual Value decodeBinaryValue(const StrViewA &string) const = 0;
 	///Function encodes a binary view and writes it through the given function
 	virtual void encodeBinaryValue(const BinaryView &binary, const WriteFn &fn) const = 0;
+	///Encode binary value and return it as string value
+	virtual Value encodeBinaryValue(const BinaryView &binary) const = 0;
 	///Retrieves name of the encoding type
 	/** This is handful if you need to put choosen encoding into the output*/
 	virtual StrViewA getName() const = 0;
@@ -63,6 +65,12 @@ protected:
 	}
 };
 
+
+class AbstractBinaryEncoder: public IBinaryEncoder {
+public:
+	using IBinaryEncoder::encodeBinaryValue;
+	virtual Value encodeBinaryValue(const BinaryView &binary) const override ;
+};
 
 
 }

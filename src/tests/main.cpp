@@ -224,6 +224,14 @@ int testMain() {
 		}
 		Value(res).toStream(out);
 	};
+	tst.test("Serialize.binary.urlencode","[\"\",\"normal\",\"digits924\",\"special_-*()\",\"reserver%40%23!%24%26%5B%5D%3D%26%25\",\"space%20space\",\"utf9%C4%8D%C4%9B%C5%A1%C3%A1%C4%9B%C3%AD%C4%8D\"]") >> [](std::ostream &out) {
+		StrViewA v[] = {"","normal","digits924","special_-*()","reserver@#!$&[]=&%","space space","utf9čěšáěíč"};
+		Array res;
+		for (auto x : v) {
+			res.push_back(Value(BinaryView(x),json::urlEncoding));
+		}
+		Value(res).toStream(out);
+	};
 	tst.test("Serialize.valueHash", "13532798998175024480") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
 		std::hash<Value> hv;
@@ -260,6 +268,23 @@ int testMain() {
 				<< "," << StrViewA(c) << "," << StrViewA(d)
 				<< "," << StrViewA(e) << "," << StrViewA(f)
 				<< "," << StrViewA(g);
+	};
+	tst.test("Parse.binary.urlencode",",normal,digits924,special_-*(),reserver@#!$&[]=&%,space space,utf9čěšáěíč,space space") >> [](std::ostream &out) {
+		//Tests whether base64 values are properly decoded to the Binary type
+		Value v = Value::fromString("[\"\",\"normal\",\"digits924\",\"special_-*()\",\"reserver%40%23!%24%26%5B%5D%3D%26%25\",\"space%20space\",\"utf9%C4%8D%C4%9B%C5%A1%C3%A1%C4%9B%C3%AD%C4%8D\",\"space+space%2\"]");
+		Binary a( v[0].getBinary(urlEncoding));
+		Binary b( v[1].getBinary(urlEncoding));
+		Binary c( v[2].getBinary(urlEncoding));
+		Binary d( v[3].getBinary(urlEncoding));
+		Binary e( v[4].getBinary(urlEncoding));
+		Binary f( v[5].getBinary(urlEncoding));
+		Binary g( v[6].getBinary(urlEncoding));
+		Binary h( v[7].getBinary(urlEncoding));
+
+		out << StrViewA(a) << "," << StrViewA(b)
+				<< "," << StrViewA(c) << "," << StrViewA(d)
+				<< "," << StrViewA(e) << "," << StrViewA(f)
+				<< "," << StrViewA(g) << "," << StrViewA(h);
 	};
 	tst.test("Parse.base64.keepEncoding","\"Zm9vYmFy\"") >> [](std::ostream &out) {
 		//Tests whether the encoding is remembered after decode and properly used to encode data back.
