@@ -111,6 +111,8 @@ namespace json {
 		public:
 			SplitFn(const StringView &source, const StringView &separator, unsigned int limit)
 				:source(source),separator(separator),startPos(0),limit(limit) {}
+
+			///returns next element
 			StringView operator()() {
 				std::size_t fnd = limit?source.indexOf(separator, startPos):npos;
 				std::size_t strbeg = startPos, strlen;
@@ -123,6 +125,10 @@ namespace json {
 					limit = limit -1;
 				}
 				return source.substr(strbeg, strlen);
+			}
+			///Returns rest of the string
+			operator StringView() const {
+				return source;
 			}
 		protected:
 			StringView source;
