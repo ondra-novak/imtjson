@@ -11,6 +11,11 @@ namespace json {
 	Array::Array() :  base(AbstractArrayValue::getEmptyArray())
 	{
 	}
+	Array::Array(const std::initializer_list<Value> &v) {
+		reserve(v.size());
+		for (auto &&x : v) push_back(x);
+	}
+
 	Array & Array::push_back(const Value & v)
 	{
 		changes.push_back(v.v);

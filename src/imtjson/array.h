@@ -14,6 +14,7 @@ namespace json {
 		Array(Value value);
 		Array(const Array &other);
 		Array(Array &&other);
+		Array(const std::initializer_list<Value> &v);
 		Array();
 		~Array();
 

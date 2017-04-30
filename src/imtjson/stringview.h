@@ -128,7 +128,7 @@ namespace json {
 			}
 			///Returns rest of the string
 			operator StringView() const {
-				return source;
+				return source.substr(startPos);
 			}
 		protected:
 			StringView source;
