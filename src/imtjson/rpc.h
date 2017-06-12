@@ -39,6 +39,26 @@ protected:
 	bool error;
 };
 
+
+namespace RpcFlags {
+
+	typedef unsigned int Type;
+	///Allow pre-response notify
+	/**sending notifications is allowed until the response is generatedm then notification are disabled
+	 *
+	 * Thsi could be case of HTTP response, when the connection is avaialable until the response is sent
+	 *
+	 * */
+	static const Type preResponseNotify= 1;
+	///Allow post-response notify
+	/**sending notifications is allowed only after the response is generated */
+	static const Type postResponseNotify = 2;
+	///Allow notifications at all
+	static const Type notify = 3;
+
+
+}
+
 ///Packs typical JSONRPC request into object. You can call RPC function with this object.
 /** Object can be copied, because it is internally shared. It can be stored when
  * the method is executed asynchronous way. Until the request is resolved, it
@@ -57,20 +77,24 @@ private:
 
 	struct RequestData: public RefCntObj {
 	public:
-		RequestData(const Value &request);
+		RequestData(const Value &request, RpcFlags::Type flags);
 		RequestData(const String &methodName,const Value &args,
-				const Value &id,const Value &context);
+				const Value &id,const Value &context, RpcFlags::Type flags);
 
 		String methodName;
 		Value args;
 		Value id;
 		Value context;
 		Value rejections;
+		Value jsonrpcver;
 		const IErrorFormatter *formatter = nullptr;
 		bool responseSent = false;
+		bool notifyEnabled = false;
+		RpcFlags::Type flags;
 		virtual void response(const Value &result) = 0;
 
 		void setResponse(const Value &v);
+		bool sendNotify(const Value &v);
 		virtual ~RequestData() {}
 
 	};
@@ -89,17 +113,17 @@ public:
 	 *    a response prepared to be serialized to the output stream. Note that
 	 *    this argument can be set to "undefined" in case, that method did not produced
 	 *    a result.
+	 * @param flags some extra settings of the request
 	 * @return RpcRequest instance. Value can be copied.
 	 */
 	template<typename Fn>
-	static RpcRequest create(const Value &request, const Fn &fn);
-
-
-	template<typename Fn>
-	static RpcRequest create(const String &methodName, const Value &args,const Value& id,  const Value &context, const Fn &fn);
+	static RpcRequest create(const Value &request, const Fn &fn, RpcFlags::Type flags = 0);
 
 	template<typename Fn>
-	static RpcRequest create(const String &methodName, const Value &args, const Fn &fn);
+	static RpcRequest create(const String &methodName, const Value &args,const Value& id,  const Value &context, const Fn &fn, RpcFlags::Type flags = 0);
+
+	template<typename Fn>
+	static RpcRequest create(const String &methodName, const Value &args, const Fn &fn, RpcFlags::Type flags = 0);
 
 	///Changes request's error formatter
 	/** Functions which helps to format error message will use this formatter.
@@ -120,6 +144,8 @@ public:
 	const Value &getId() const;
 	///Context (optional)
 	const Value &getContext() const;
+
+	const Value &getVer() const;
 	///access to arguments
 	Value operator[](unsigned int index) const;
 	///acfcess to context
@@ -158,7 +184,7 @@ public:
 	 *     allowed to signal optional arguments.
 	 * @param optionalArgs Rules for additional arguments.
 	 * @param customClasses contains validator's definition of custom rules. The default
-	 * rule don't need to be present, because the checkArgs doesn't use default rule
+	 * rule don't need to be present, because the checkArgs doesn't areuse default rule
 	 * @retval true arguments valid, false validation failed. To retrieve rejections, call
 	 * getRejections()
 	 */
@@ -190,6 +216,12 @@ public:
 	void setError(const Value &error);
 	///set error (can be called once only)
 	void setError(int code, String message, Value data = Value());
+	///Send notify - note that owner can disable notify, then this function fails
+	bool sendNotify(const String name, Value data);
+	///Determines whether notification is enabled
+	bool isSendNotifyEnabled() const;
+
+
 
 protected:
 	RpcRequest(RefCntPtr<RequestData> data):data(data) {}
@@ -201,11 +233,11 @@ protected:
 
 
 template<typename Fn>
-inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn) {
+inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn, RpcFlags::Type flags) {
 	class Call: public RequestData {
 	public:
-		Call(const Value &request,  const Fn &fn)
-			:RequestData(request)
+		Call(const Value &request,  const Fn &fn, RpcFlags::Type flags)
+			:RequestData(request,flags)
 			,fn(fn) {}
 		virtual void response(const Value &result) {fn(result);}
 		~Call() {
@@ -217,16 +249,16 @@ inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn) {
 		Fn fn;
 	};
 
-	return RpcRequest(new Call(request, fn));
+	return RpcRequest(new Call(request, fn, flags));
 }
 
 template<typename Fn>
 inline RpcRequest json::RpcRequest::create(const String& methodName,
-		const Value& args, const Value& id, const Value& context, const Fn& fn) {
+		const Value& args, const Value& id, const Value& context, const Fn& fn, RpcFlags::Type flags) {
 	class Call: public RequestData {
 	public:
-		Call(const String& methodName, const Value& args, const Value& id, const Value& context, const Fn& fn)
-			:RequestData(methodName,args,id,context)
+		Call(const String& methodName, const Value& args, const Value& id, const Value& context, const Fn& fn, RpcFlags::Type flags)
+			:RequestData(methodName,args,id,context,flags)
 			,fn(fn) {}
 		virtual void response(const Value &result) {fn(result);}
 		~Call() {
@@ -238,12 +270,12 @@ inline RpcRequest json::RpcRequest::create(const String& methodName,
 		Fn fn;
 	};
 
-	return RpcRequest(new Call(methodName, args,id,context,  fn));
+	return RpcRequest(new Call(methodName, args,id,context,  fn,flags));
 }
 
 template<typename Fn>
-inline RpcRequest json::RpcRequest::create(const String& methodName, const Value& args, const Fn& fn) {
-	return create(methodName, args, 0,Value(),fn);
+inline RpcRequest json::RpcRequest::create(const String& methodName, const Value& args, const Fn& fn, RpcFlags::Type flags) {
+	return create(methodName, args, 0,Value(),fn, flags);
 }
 
 

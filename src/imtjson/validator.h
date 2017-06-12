@@ -146,7 +146,7 @@ protected:
 
 	bool opRangeDef(const Value & subject, const Value & rule, std::size_t offset);
 
-	bool evalRuleArray(const Value & subject, const Value & rule, unsigned int tupleCnt);
+	bool evalRuleArray(const Value & subject, const Value & rule, unsigned int tupleCnt, unsigned int offset);
 
 	bool evalRuleAlternatives(const Value & subject, const Value & rule, unsigned int offset);
 

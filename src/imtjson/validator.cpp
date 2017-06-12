@@ -353,10 +353,10 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 		Value fn = rule[0];
 		if (fn.type() == array) {
 			if (fn.empty()) {
-				return evalRuleArray(subject, rule, 0);
+				return evalRuleArray(subject, rule, 0,1);
 			}
 			else if (fn.size() == 1 && fn[0].type() == number) {
-				return evalRuleArray(subject, rule, fn[0].getInt());
+				return evalRuleArray(subject, rule, fn[0].getInt(),1);
 			}
 			else {
 				return evalRuleAlternatives(subject, rule, 0);
@@ -463,15 +463,15 @@ bool Validator::opRangeDef(const Value& subject, const Value& rule, std::size_t 
 }
 
 
-bool Validator::evalRuleArray(const Value& subject, const Value& rule, unsigned int tupleCnt) {
+bool Validator::evalRuleArray(const Value& subject, const Value& rule, unsigned int tupleCnt, unsigned int offset) {
 	if (subject.type() != array) return false;
 
 	for (unsigned int i = 0; i < tupleCnt; i++) {
-		if (!evalRuleSubObj(subject[i], rule[i + 1], i)) return false;
+		if (!evalRuleSubObj(subject[i], rule[i + offset], i)) return false;
 	}
 	if (subject.size() >= tupleCnt) {
 		for (std::size_t i = tupleCnt; i < subject.size(); ++i) {
-			if (!evalRuleSubObj(subject[i], rule, i, tupleCnt + 1)) return false;
+			if (!evalRuleSubObj(subject[i], rule, i, tupleCnt + offset)) return false;
 		}
 	}
 	return true;

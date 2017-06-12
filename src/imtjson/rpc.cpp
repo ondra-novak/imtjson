@@ -16,11 +16,16 @@
 namespace json {
 
 
-RpcRequest::RequestData::RequestData(const Value& request) {
+RpcRequest::RequestData::RequestData(const Value& request, RpcFlags::Type flags)
+	:flags(flags)
+{
 	methodName = String(request["method"]);
 	args = request["params"];
 	id = request["id"];
 	context = request["context"];
+	jsonrpcver = request["jsonrpc"];
+	if (args.type() != json::array) args = Value(json::array, {args});
+	if (flags & RpcFlags::preResponseNotify) notifyEnabled = true;
 }
 
 const String& RpcRequest::getMethodName() const {
@@ -39,6 +44,10 @@ const Value& RpcRequest::getContext() const {
 	return data->context;
 }
 
+const Value& RpcRequest::getVer() const {
+	return data->jsonrpcver;
+}
+
 
 void RpcRequest::setResult(const Value& result) {
 	setResult(result, undefined);
@@ -46,21 +55,23 @@ void RpcRequest::setResult(const Value& result) {
 }
 
 void RpcRequest::setResult(const Value& result, const Value& context) {
-	Value resp (object,{
-			key/"id"=data->id,
-			key/"result"=result,
-			key/"error"=nullptr,
-			key/"context"=context.empty()?Value(undefined):context});
-	data->setResponse(resp);
+	Object obj;
+	obj("id", data->id)
+	   ("result", result)
+	   ("error", nullptr)
+	   ("jsonrpc", data->jsonrpcver)
+	   ("context", context.empty()?Value():context);
+	data->setResponse(obj);
 
 }
 
 void RpcRequest::setError(const Value& error) {
-	Value resp (object,{
-			key/"id"=data->id,
-			key/"result"=nullptr,
-			key/"error"=error});
-	data->setResponse(resp);
+	Object obj;
+	obj("id", data->id)
+	   ("error", error)
+	   ("result",nullptr)
+	   ("jsonrpc",data->jsonrpcver);
+	data->setResponse(obj);
 }
 
 
@@ -80,7 +91,7 @@ public:
 
 	bool checkArgs(const Value &subject, const Value &pattern) {
 		curPath = &Path::root;
-		return evalRuleArray(subject, pattern, pattern.size());
+		return evalRuleArray(subject, pattern, pattern.size(),0);
 	}
 	bool checkArgs(const Value &subject, const Value &pattern, const Value &alt) {
 		Value::TwoValues s = subject.splitAt(pattern.size());
@@ -95,12 +106,14 @@ bool RpcRequest::checkArgs(const Value& argDefTuple) {
 	RpcArgValidator val;
 	if (val.checkArgs(data->args, argDefTuple)) return true;
 	data->rejections = val.getRejections();
+	return false;
 }
 
 bool RpcRequest::checkArgs(const Value& argDefTuple, const Value& optionalArgs) {
 	RpcArgValidator val;
 	if (val.checkArgs(data->args, argDefTuple, optionalArgs)) return true;
 	data->rejections = val.getRejections();
+	return false;
 }
 
 bool RpcRequest::checkArgs(const Value& argDefTuple, const Value& optionalArgs,
@@ -108,6 +121,7 @@ bool RpcRequest::checkArgs(const Value& argDefTuple, const Value& optionalArgs,
 	RpcArgValidator val(customClasses);
 	if (val.checkArgs(data->args, argDefTuple, optionalArgs)) return true;
 	data->rejections = val.getRejections();
+	return false;
 }
 
 Value RpcRequest::getRejections() const {
@@ -120,6 +134,10 @@ void RpcRequest::setArgError(Value rejections) {
 			key/"message"="Invalid parameters",
 			key/"rejections" = rejections
 	}));
+}
+
+void RpcRequest::setArgError() {
+	setArgError(getRejections());
 }
 
 void RpcRequest::setError(int code, String message, Value d) {
@@ -137,6 +155,7 @@ void RpcRequest::setError(int code, String message, Value d) {
 void RpcRequest::RequestData::setResponse(const Value& v) {
 	if (responseSent) return;
 	responseSent = true;
+	notifyEnabled =  (flags & RpcFlags::postResponseNotify) != 0;
 	response(v);
 }
 
@@ -146,7 +165,10 @@ void RpcServer::operator ()(RpcRequest req) const throw() {
 		Value name = req.getMethodName();
 		Value args = req.getArgs();
 		Value context = req.getContext();
-		if (name.defined() && args.defined() && name.type() == string && args.type() == array
+		Value ver = req.getVer();
+		if (ver.defined() && ver.getString() != "2.0") {
+			req.setError(errorInvalidRequest,"Unsupported version");
+		} else if (name.defined() && args.defined() && name.type() == string && (args.type() == array || args.type() == object)
 				&& (!context.defined() || context.type() == object)) {
 			AbstractMethodReg *m = find(req.getMethodName());
 			if (m == nullptr) {
@@ -369,11 +391,10 @@ AbstractRpcClient::PreparedCall::operator RpcResult() {
 
 AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName, Value args) {
 	unsigned int id = ++idCounter;
-	return PreparedCall(*this,id,Value(object,{
-			key/"method"=methodName,
-			key/"params"=args,
-			key/"id"=id,
-			key/"context"=context.empty()?Value(undefined):context}));
+	return PreparedCall(*this,id, Object("method",methodName)
+									   ("params",args)
+									   ("id",id)
+									   ("context",context.empty()?Value(undefined):context));
 }
 
 bool AbstractRpcClient::cancelAsyncCall(unsigned int id, RpcResult result) {
@@ -438,8 +459,10 @@ void AbstractRpcClient::addPendingCall(unsigned int id, PPendingCall &&pcall) {
 }
 
 RpcRequest::RequestData::RequestData(const String& methodName,
-		const Value& args, const Value& id, const Value& context)
-	:methodName(methodName), args(args), id(id), context(context) {}
+		const Value& args, const Value& id, const Value& context, RpcFlags::Type flags)
+	:methodName(methodName), args(args), id(id), context(context),flags(flags) {
+	if (flags & RpcFlags::preResponseNotify) notifyEnabled = true;
+}
 
 
 Value RpcServer::formatError(int code,
@@ -473,6 +496,33 @@ void RpcRequest::setInternalError(const char *what) {
 	Value err = data->formatter->formatError(RpcServer::errorInternalError,what);
 	setError(err);
 }
+
+///Send notify - note that owner can disable notify, then this function fails
+bool RpcRequest::sendNotify(const String name, Value data) {
+	Object obj;
+	obj("id", nullptr)
+	   ("method", name)
+	   ("params", data)
+	   ("jsonrpc", this->data->jsonrpcver);
+
+	return this->data->sendNotify(obj);
+
+
+}
+///Determines whether notification is enabled
+bool RpcRequest::isSendNotifyEnabled() const {
+		return data->notifyEnabled;
+}
+
+bool RpcRequest::RequestData::sendNotify(const Value& v) {
+	if (notifyEnabled) {
+		response(v);
+		return true;
+	} else {
+		return false;
+	}
+}
+
 }
 
 
