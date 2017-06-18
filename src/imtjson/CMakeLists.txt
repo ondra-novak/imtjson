@@ -10,4 +10,4 @@ install(TARGETS imtjson
         ) 
 INSTALL(FILES ${imtjson_HDR}
         DESTINATION "include/imtjson" 
-        )   
+        )    
