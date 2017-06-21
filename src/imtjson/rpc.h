@@ -151,6 +151,7 @@ public:
 	///acfcess to context
 	Value operator[](const StrViewA name) const;
 
+
 	///Checks arguments
 	/** Perform argument checking's.
 	 *
