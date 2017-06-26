@@ -202,6 +202,26 @@ int testMain() {
 		Value v = 50.0075;
 		v.toStream(out);
 	};
+	tst.test("Serialize.neg_number", "-50.0075") >> [](std::ostream &out) {
+		Value v = -50.0075;
+		v.toStream(out);
+	};
+	tst.test("Serialize.smallNumber", "0.75") >> [](std::ostream &out) {
+		Value v = 0.75;
+		v.toStream(out);
+	};
+	tst.test("Serialize.small_neg_number", "-0.75") >> [](std::ostream &out) {
+		Value v = -0.75;
+		v.toStream(out);
+	};
+	tst.test("Serialize.verySmallNumber", "7.5e-8") >> [](std::ostream &out) {
+		Value v = 0.000000075;
+		v.toStream(out);
+	};
+	tst.test("Serialize.very_small_neg_number", "-7.5e-8") >> [](std::ostream &out) {
+		Value v = -0.000000075;
+		v.toStream(out);
+	};
 	tst.test("Serialize.objects", "{\"a\":7,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6}}") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
 		v.toStream(out);

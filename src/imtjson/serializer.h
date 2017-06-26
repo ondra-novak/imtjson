@@ -234,8 +234,10 @@ namespace json {
 		double fint;
 		//separate number to integer and fraction
 		double frac = std::abs(modf(value, &fint));
-		//integer will fit to intptr, so convert it directly
-		writeSigned(std::intptr_t(fint));
+		//write signum for negative number
+		if (value < 0) target('-');
+		//write absilute integer number (remove sign)
+		writeUnsigned(std::uintptr_t(fabs(fint)));
 		//if frac is not zero (exactly)
 		if (frac != 0.0) {
 			//put dot
