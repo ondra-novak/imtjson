@@ -334,44 +334,29 @@ public:
 	}
 
 	LocalPendingCall()
-		:received(false),trig(nullptr) {}
+		:received(false) {}
 
 	void release() {
 		//when the storage is destroyed - set received to true
 		received = true;
-		//if the pointer is valid
-		if (trig != nullptr)
-			//notify conditional variable
-			trig->notify_one();
+		//notify conditional variable
+		trig.notify_one();
 	}
 
 	RpcResult res;
 	bool received;
-	std::condition_variable * trig;
+	std::condition_variable_any trig;
 };
-
-void  AbstractRpcClient::onWait(LocalPendingCall &lpc) throw() {
-	//setup conditional variable
-	std::condition_variable t;
-	//set pointer - from now other thread must notify the conditional variable (if arrived soon, received is already true)
-	lpc.trig = &t;
-
-	//create mutex
-	std::mutex lock;
-	//lock the mutext
-	std::unique_lock<std::mutex> guard(lock);
-
-	//wait for receiving
-	t.wait(guard, [&] {return lpc.received;});
-	//received here
-}
 
 
 
 AbstractRpcClient::PreparedCall::operator RpcResult() {
 
 	if (executed) return RpcResult();
+
 	executed = true;
+
+	Sync _(owner.lock);
 
 	//declare storage here
 	LocalPendingCall lpc;
@@ -380,16 +365,17 @@ AbstractRpcClient::PreparedCall::operator RpcResult() {
 		static_cast<LocalPendingCall *>(d)->release();}));
 	//send request now
 	owner.sendRequest(msg);
-	//in case that result has not been received here (will arrive later)
-	if (!lpc.received) {
-		owner.onWait(lpc);
-	}
+
+
+	lpc.trig.wait(_,[&]{return !lpc.received;});
+
 
 	//return received result
 	return lpc.res;
 }
 
 AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName, Value args) {
+	Sync _(lock);
 	unsigned int id = ++idCounter;
 	return PreparedCall(*this,id, Object("method",methodName)
 									   ("params",args)

@@ -11,8 +11,8 @@
 
 #ifndef SRC_IMTJSON_RPCSERVER_H_
 #define SRC_IMTJSON_RPCSERVER_H_
+#include <condition_variable>
 #include <map>
-#include <atomic>
 #include <memory>
 #include <functional>
 #include "refcnt.h"
@@ -409,9 +409,7 @@ inline void RpcServer::add(const String& name, ObjPtr objPtr,
  *  inherited and the function sendRequest must be implemented.
  *
  *  Receiving response is done by processResponse.
- *
- *  @note The class is not MT Safe. To achieve MT safety, you need to wrap all calls by a lock.
- *  The function onWait must release lock before it is called, and acquire the lock on return
+
  */
 class AbstractRpcClient {
 public:
@@ -508,25 +506,15 @@ protected:
 	class LocalPendingCall;
 
 	///Implements serializing and sending the request to the output channel.
-	virtual void sendRequest(Value request) = 0;
-	///Function must be overriden when it is wrapped by locks
-	/** This function is called when a thread is blocked during synchronous call. If
-	 * the locks are used, the function must release locks before it is called and acquire
-	 * lock after return
+	/**
+	 * @param request request which must be serialized to the output stream
 	 *
-	 * @param lcp handle to pending call. The value must be only passed to original function
-	 *
-	 * @code
-	 * void MyRpcClient::onWait(LocalPendingCall &lpc) {
-	 *    lk.unlock();
-	 *    AbstractRpcClient::onWait(lpc);
-	 *    lk.lock();
-	 * }
-	 * @endcode
+	 * @note It is possible to use the client during sendRequest as the function
+	 * can be recursive. You can for example connect the target server, and call several
+	 * methods before the requested method is called. However during this phase, you need
+	 * to avoid using synchronous calls.
 	 */
-	virtual void onWait(LocalPendingCall &lcp) throw() ;
-
-
+	virtual void sendRequest(Value request) = 0;
 
 	class PendingCall {
 	public:
@@ -541,9 +529,15 @@ protected:
 	typedef CallMap::value_type CallItemType;
 	CallMap callMap;
 
-	std::atomic<unsigned int> idCounter;
+	std::recursive_mutex lock;
+	typedef std::unique_lock<std::recursive_mutex> Sync;
+	typedef std::condition_variable_any CondVar;
+
+
+	unsigned int idCounter;
 
 	void addPendingCall(unsigned int id, PPendingCall &&pcall);
+
 
 
 };
@@ -551,26 +545,26 @@ protected:
 template<typename Fn>
 inline unsigned int AbstractRpcClient::PreparedCall::operator >>(const Fn& fn) {
 	if (!executed) {
+
 		class PC: public PendingCall {
 		public:
 			PC(const Fn &fn):fn(fn) {}
 			virtual void onResponse(RpcResult response) override {
-				executed = true;
-				fn(response);
+				res = response;
 			}
 			~PC() {
-				if (!executed)
-					try {
-						fn(RpcResult(undefined, true,undefined));
-					} catch (...) {
+				try {
+					fn(res);
+				} catch (...) {
 
-					}
 				}
+			}
 		protected:
 			Fn fn;
-			bool executed = false;
+			RpcResult res;
 		};
 
+		Sync _(owner.lock);
 		owner.addPendingCall(id,PPendingCall(new PC(fn),[](PendingCall *p){delete p;}));
 		owner.sendRequest(msg);
 		executed = true;
