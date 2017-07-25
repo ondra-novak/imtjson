@@ -1,5 +1,5 @@
 /*
- * @file Basic support for JSONRPC client/server. Version 1.0 is implemented extended by
+0 * @file Basic support for JSONRPC client/server. Version 1.0 is implemented extended by
  * special section "context" which allows to server store some data on client like a cookie. These data
  * are later send back with each request of the same client
  *
@@ -12,6 +12,7 @@
 #ifndef SRC_IMTJSON_RPCSERVER_H_
 #define SRC_IMTJSON_RPCSERVER_H_
 #include <condition_variable>
+#include <mutex>
 #include <map>
 #include <memory>
 #include <functional>
@@ -56,6 +57,25 @@ namespace RpcFlags {
 	///Allow notifications at all
 	static const Type notify = 3;
 
+	///Enable named parameters
+	/** This option is disabled by default to achieve best compatibility with version 1.0. Request
+	 * which uses named parameters is converted to request containing one parameter which
+	 * contains object with named parameters. Set this flag if you need to disable this conversion.
+	 */
+	static const Type namedParams = 4;
+
+
+}
+
+namespace RpcVersion {
+
+enum Type {
+	///protocol version 1.0 or unspecified
+	ver1,
+	///protocol version 2.0
+	ver2
+};
+
 
 }
 
@@ -86,7 +106,7 @@ private:
 		Value id;
 		Value context;
 		Value rejections;
-		Value jsonrpcver;
+		RpcVersion::Type ver;
 		const IErrorFormatter *formatter = nullptr;
 		bool responseSent = false;
 		bool notifyEnabled = false;
@@ -98,6 +118,7 @@ private:
 		virtual ~RequestData() {}
 
 	};
+
 
 public:
 
@@ -145,7 +166,7 @@ public:
 	///Context (optional)
 	const Value &getContext() const;
 
-	const Value &getVer() const;
+	StrViewA getVer() const;
 	///access to arguments
 	Value operator[](unsigned int index) const;
 	///acfcess to context
@@ -414,6 +435,9 @@ inline void RpcServer::add(const String& name, ObjPtr objPtr,
 class AbstractRpcClient {
 public:
 
+
+	AbstractRpcClient(RpcVersion::Type version);
+
 	enum ReceiveStatus {
 		///response has been received and processed
 		success,
@@ -478,6 +502,15 @@ public:
 	 */
 	PreparedCall operator()(String methodName, Value args);
 
+	///Send notify to the server
+	/**
+	 * @param notifyName name of notify (or method)
+	 * @param args arguments
+	 *
+	 * @nore notify is always asynchronous.
+	 */
+	void notify(String notifyName, Value args);
+
 	///Cancels asynchronous call
 	bool cancelAsyncCall(unsigned int id, RpcResult result);
 
@@ -496,7 +529,6 @@ public:
 	void updateContext(const Value &value);
 	static Value updateContext(const Value &context, const Value &value);
 
-	AbstractRpcClient(): idCounter(0){}
 	virtual ~AbstractRpcClient() {}
 	AbstractRpcClient(const AbstractRpcClient &other):idCounter(0) {}
 
@@ -536,7 +568,15 @@ protected:
 
 	unsigned int idCounter;
 
+	RpcVersion::Type ver;
+
 	void addPendingCall(unsigned int id, PPendingCall &&pcall);
+
+	///call this function if you need to reject all pending calls
+	/** this can be needed when client lost connection so all pending calls are lost. Rejected
+	 * pending calls can be repeated, but it isn't often good idea
+	 */
+	void rejectAllPendingCalls();
 
 
 
@@ -571,6 +611,16 @@ inline unsigned int AbstractRpcClient::PreparedCall::operator >>(const Fn& fn) {
 	}
 	return id;
 }
+
+///Simple object which can be used to store notification which arrived from the client
+/** you can construct Notify from the JSON. You can later convert it to RpcRequest */
+struct Notify {
+	String eventName;
+	Value data;
+
+	explicit Notify(Value js);
+	RpcRequest asRequest() const;
+};
 
 
 

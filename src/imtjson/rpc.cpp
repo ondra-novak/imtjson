@@ -23,8 +23,19 @@ RpcRequest::RequestData::RequestData(const Value& request, RpcFlags::Type flags)
 	args = request["params"];
 	id = request["id"];
 	context = request["context"];
-	jsonrpcver = request["jsonrpc"];
-	if (args.type() != json::array) args = Value(json::array, {args});
+	Value jsonrpcver = request["jsonrpc"];
+	if (jsonrpcver.defined()) {
+		if (jsonrpcver.getString() == "2.0") {
+			ver = RpcVersion::ver2;
+		} else if (jsonrpcver.getString() == "1.0") {
+			ver = RpcVersion::ver1;
+		} else {
+			throw std::runtime_error("Unknown JSONRPC version");
+		}
+	} else {
+		ver = RpcVersion::ver1;
+	}
+	if (args.type() != json::array && (flags & RpcFlags::namedParams) == 0) args = Value(json::array, {args});
 	if (flags & RpcFlags::preResponseNotify) notifyEnabled = true;
 }
 
@@ -44,8 +55,11 @@ const Value& RpcRequest::getContext() const {
 	return data->context;
 }
 
-const Value& RpcRequest::getVer() const {
-	return data->jsonrpcver;
+StrViewA RpcRequest::getVer() const {
+	switch (data->ver) {
+	case RpcVersion::ver1: return StrViewA("1.0");
+	case RpcVersion::ver2: return StrViewA("2.0");
+	}
 }
 
 
@@ -55,23 +69,45 @@ void RpcRequest::setResult(const Value& result) {
 }
 
 void RpcRequest::setResult(const Value& result, const Value& context) {
-	Object obj;
-	obj("id", data->id)
-	   ("result", result)
-	   ("error", nullptr)
-	   ("jsonrpc", data->jsonrpcver)
-	   ("context", context.empty()?Value():context);
-	data->setResponse(obj);
+
+	Value resp;
+	Value ctxch = context.empty()?Value():context;
+	switch (data->ver) {
+	case RpcVersion::ver1:
+		resp = Object("id",data->id)
+				("result",result)
+				("error",nullptr)
+				("context", ctxch);
+		break;
+	case RpcVersion::ver2:
+		resp = Object("id",data->id)
+				("result",result)
+				("jsonrpc","2.0")
+				("context", ctxch);
+		break;
+	}
+
+	data->setResponse(resp);
+
 
 }
 
 void RpcRequest::setError(const Value& error) {
-	Object obj;
-	obj("id", data->id)
-	   ("error", error)
-	   ("result",nullptr)
-	   ("jsonrpc",data->jsonrpcver);
-	data->setResponse(obj);
+	Value resp;
+	switch (data->ver) {
+	case RpcVersion::ver1:
+		resp = Object("id",data->id)
+				("result",nullptr)
+				("error",error);;
+		break;
+	case RpcVersion::ver2:
+		resp = Object("id",data->id)
+				("error",error)
+				("jsonrpc","2.0");
+		break;
+	}
+
+	data->setResponse(resp);
 }
 
 
@@ -377,10 +413,21 @@ AbstractRpcClient::PreparedCall::operator RpcResult() {
 AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName, Value args) {
 	Sync _(lock);
 	unsigned int id = ++idCounter;
-	return PreparedCall(*this,id, Object("method",methodName)
-									   ("params",args)
-									   ("id",id)
-									   ("context",context.empty()?Value(undefined):context));
+	Value ctx = context.empty()?Value():context;
+	switch (ver) {
+	case RpcVersion::ver1:
+		return PreparedCall(*this, id, Object("method", methodName)
+											 ("params",args)
+											 ("id",id)
+											 ("context",ctx));
+	case RpcVersion::ver2:
+		return PreparedCall(*this, id, Object("method", methodName)
+											 ("params",args)
+											 ("id",id)
+											 ("jsonrpc","2.0")
+											 ("context",ctx));
+	};
+	throw std::runtime_error("Invalid JSONRPC version (client-call)");
 }
 
 bool AbstractRpcClient::cancelAsyncCall(unsigned int id, RpcResult result) {
@@ -483,14 +530,22 @@ void RpcRequest::setInternalError(const char *what) {
 	setError(err);
 }
 
+static Value formatNotify(RpcVersion::Type ver, const String name, Value data) {
+	Value obj;
+	switch (ver) {
+	case RpcVersion::ver1:
+		obj = Object("id", nullptr)("method", name)("params", data);
+		break;
+	case RpcVersion::ver2:
+		obj = Object("method", name)("params", data)("jsonrpc", "2.0");
+		break;
+	}
+	return obj;
+}
+
 ///Send notify - note that owner can disable notify, then this function fails
 bool RpcRequest::sendNotify(const String name, Value data) {
-	Object obj;
-	obj("id", nullptr)
-	   ("method", name)
-	   ("params", data)
-	   ("jsonrpc", this->data->jsonrpcver);
-
+	Value obj= formatNotify(this->data->ver, name, data);
 	return this->data->sendNotify(obj);
 
 
@@ -509,6 +564,30 @@ bool RpcRequest::RequestData::sendNotify(const Value& v) {
 	}
 }
 
+void AbstractRpcClient::notify(String notifyName, Value args) {
+	Sync _(lock);
+	sendRequest(formatNotify(ver, notifyName, args));
+}
+
+AbstractRpcClient::AbstractRpcClient(RpcVersion::Type version)
+: idCounter(0)
+, ver(version)
+{
+}
+
+void AbstractRpcClient::rejectAllPendingCalls() {
+	callMap.clear();
 }
 
 
+Notify::Notify(Value js)
+	:eventName(String(js["method"]))
+	,data(js["params"])
+{
+}
+
+RpcRequest Notify::asRequest() const {
+	return RpcRequest::create(eventName, data, nullptr, Value(), [](Value){}, 0);
+}
+
+}
