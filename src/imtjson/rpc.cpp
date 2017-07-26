@@ -201,10 +201,7 @@ void RpcServer::operator ()(RpcRequest req) const throw() {
 		Value name = req.getMethodName();
 		Value args = req.getArgs();
 		Value context = req.getContext();
-		Value ver = req.getVer();
-		if (ver.defined() && ver.getString() != "2.0") {
-			req.setError(errorInvalidRequest,"Unsupported version");
-		} else if (name.defined() && args.defined() && name.type() == string && (args.type() == array || args.type() == object)
+		if (name.defined() && name.type() == string && (args.type() == array || args.type() == object || args.type() == undefined)
 				&& (!context.defined() || context.type() == object)) {
 			AbstractMethodReg *m = find(req.getMethodName());
 			if (m == nullptr) {
@@ -369,10 +366,11 @@ public:
 		res = response;
 	}
 
-	LocalPendingCall()
-		:received(false) {}
+	LocalPendingCall(std::recursive_mutex &lock)
+		:received(false),lock(lock) {}
 
 	void release() {
+		std::unique_lock<std::recursive_mutex> _(lock);
 		//when the storage is destroyed - set received to true
 		received = true;
 		//notify conditional variable
@@ -382,6 +380,7 @@ public:
 	RpcResult res;
 	bool received;
 	std::condition_variable_any trig;
+	std::recursive_mutex &lock;
 };
 
 
@@ -395,7 +394,7 @@ AbstractRpcClient::PreparedCall::operator RpcResult() {
 	Sync _(owner.lock);
 
 	//declare storage here
-	LocalPendingCall lpc;
+	LocalPendingCall lpc(owner.lock);
 	//register the storage (under its id)
 	owner.addPendingCall(id,PPendingCall(&lpc, [](PendingCall *d){
 		static_cast<LocalPendingCall *>(d)->release();}));
@@ -403,7 +402,7 @@ AbstractRpcClient::PreparedCall::operator RpcResult() {
 	owner.sendRequest(msg);
 
 
-	lpc.trig.wait(_,[&]{return !lpc.received;});
+	lpc.trig.wait(_,[&]{return lpc.received;});
 
 
 	//return received result
@@ -441,17 +440,17 @@ bool AbstractRpcClient::cancelAsyncCall(unsigned int id, RpcResult result) {
 
 AbstractRpcClient::ReceiveStatus AbstractRpcClient::processResponse(Value response) {
 	Value id = response["id"];
-	if (id.defined()) {
+	if (id.defined() && !id.isNull()) {
 		Value result = response["result"];
 		Value error = response["error"];
-		if (id.type() == number && result.defined() && response.defined()) {
+		if (id.type() == number && (result.defined() || error.defined())) {
 			unsigned int nid = id.getUInt();
 			Value ctx = response["context"];
 			updateContext(ctx);
-			if (error.isNull())  {
+			if (result.defined() && (!error.defined() || error.isNull()))  {
 				if (!cancelAsyncCall(nid,RpcResult(result,false,ctx))) return unexpected;
 			} else {
-				if (!cancelAsyncCall(nid,RpcResult(error,true,undefined))) return unexpected;
+				if (!cancelAsyncCall(nid,RpcResult(error,true,ctx))) return unexpected;
 			}
 
 		} else {
