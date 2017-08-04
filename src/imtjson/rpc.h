@@ -1,5 +1,5 @@
 /*
- * @file Basic support for JSONRPC client/server. Version 1.0 is implemented extended by
+0 * @file Basic support for JSONRPC client/server. Version 1.0 is implemented extended by
  * special section "context" which allows to server store some data on client like a cookie. These data
  * are later send back with each request of the same client
  *
@@ -11,8 +11,9 @@
 
 #ifndef SRC_IMTJSON_RPCSERVER_H_
 #define SRC_IMTJSON_RPCSERVER_H_
+#include <condition_variable>
+#include <mutex>
 #include <map>
-#include <atomic>
 #include <memory>
 #include <functional>
 #include "refcnt.h"
@@ -56,6 +57,25 @@ namespace RpcFlags {
 	///Allow notifications at all
 	static const Type notify = 3;
 
+	///Enable named parameters
+	/** This option is disabled by default to achieve best compatibility with version 1.0. Request
+	 * which uses named parameters is converted to request containing one parameter which
+	 * contains object with named parameters. Set this flag if you need to disable this conversion.
+	 */
+	static const Type namedParams = 4;
+
+
+}
+
+namespace RpcVersion {
+
+enum Type {
+	///protocol version 1.0 or unspecified
+	ver1,
+	///protocol version 2.0
+	ver2
+};
+
 
 }
 
@@ -86,7 +106,7 @@ private:
 		Value id;
 		Value context;
 		Value rejections;
-		Value jsonrpcver;
+		RpcVersion::Type ver;
 		const IErrorFormatter *formatter = nullptr;
 		bool responseSent = false;
 		bool notifyEnabled = false;
@@ -98,6 +118,7 @@ private:
 		virtual ~RequestData() {}
 
 	};
+
 
 public:
 
@@ -145,7 +166,7 @@ public:
 	///Context (optional)
 	const Value &getContext() const;
 
-	const Value &getVer() const;
+	StrViewA getVer() const;
 	///access to arguments
 	Value operator[](unsigned int index) const;
 	///acfcess to context
@@ -409,12 +430,13 @@ inline void RpcServer::add(const String& name, ObjPtr objPtr,
  *  inherited and the function sendRequest must be implemented.
  *
  *  Receiving response is done by processResponse.
- *
- *  @note The class is not MT Safe. To achieve MT safety, you need to wrap all calls by a lock.
- *  The function onWait must release lock before it is called, and acquire the lock on return
+
  */
 class AbstractRpcClient {
 public:
+
+
+	AbstractRpcClient(RpcVersion::Type version);
 
 	enum ReceiveStatus {
 		///response has been received and processed
@@ -480,6 +502,15 @@ public:
 	 */
 	PreparedCall operator()(String methodName, Value args);
 
+	///Send notify to the server
+	/**
+	 * @param notifyName name of notify (or method)
+	 * @param args arguments
+	 *
+	 * @nore notify is always asynchronous.
+	 */
+	void notify(String notifyName, Value args);
+
 	///Cancels asynchronous call
 	bool cancelAsyncCall(unsigned int id, RpcResult result);
 
@@ -498,7 +529,6 @@ public:
 	void updateContext(const Value &value);
 	static Value updateContext(const Value &context, const Value &value);
 
-	AbstractRpcClient(): idCounter(0){}
 	virtual ~AbstractRpcClient() {}
 	AbstractRpcClient(const AbstractRpcClient &other):idCounter(0) {}
 
@@ -508,25 +538,15 @@ protected:
 	class LocalPendingCall;
 
 	///Implements serializing and sending the request to the output channel.
-	virtual void sendRequest(Value request) = 0;
-	///Function must be overriden when it is wrapped by locks
-	/** This function is called when a thread is blocked during synchronous call. If
-	 * the locks are used, the function must release locks before it is called and acquire
-	 * lock after return
+	/**
+	 * @param request request which must be serialized to the output stream
 	 *
-	 * @param lcp handle to pending call. The value must be only passed to original function
-	 *
-	 * @code
-	 * void MyRpcClient::onWait(LocalPendingCall &lpc) {
-	 *    lk.unlock();
-	 *    AbstractRpcClient::onWait(lpc);
-	 *    lk.lock();
-	 * }
-	 * @endcode
+	 * @note It is possible to use the client during sendRequest as the function
+	 * can be recursive. You can for example connect the target server, and call several
+	 * methods before the requested method is called. However during this phase, you need
+	 * to avoid using synchronous calls.
 	 */
-	virtual void onWait(LocalPendingCall &lcp) throw() ;
-
-
+	virtual void sendRequest(Value request) = 0;
 
 	class PendingCall {
 	public:
@@ -541,9 +561,23 @@ protected:
 	typedef CallMap::value_type CallItemType;
 	CallMap callMap;
 
-	std::atomic<unsigned int> idCounter;
+	std::recursive_mutex lock;
+	typedef std::unique_lock<std::recursive_mutex> Sync;
+	typedef std::condition_variable_any CondVar;
+
+
+	unsigned int idCounter;
+
+	RpcVersion::Type ver;
 
 	void addPendingCall(unsigned int id, PPendingCall &&pcall);
+
+	///call this function if you need to reject all pending calls
+	/** this can be needed when client lost connection so all pending calls are lost. Rejected
+	 * pending calls can be repeated, but it isn't often good idea
+	 */
+	void rejectAllPendingCalls();
+
 
 
 };
@@ -551,32 +585,42 @@ protected:
 template<typename Fn>
 inline unsigned int AbstractRpcClient::PreparedCall::operator >>(const Fn& fn) {
 	if (!executed) {
+
 		class PC: public PendingCall {
 		public:
 			PC(const Fn &fn):fn(fn) {}
 			virtual void onResponse(RpcResult response) override {
-				executed = true;
-				fn(response);
+				res = response;
 			}
 			~PC() {
-				if (!executed)
-					try {
-						fn(RpcResult(undefined, true,undefined));
-					} catch (...) {
+				try {
+					fn(res);
+				} catch (...) {
 
-					}
 				}
+			}
 		protected:
 			Fn fn;
-			bool executed = false;
+			RpcResult res;
 		};
 
+		Sync _(owner.lock);
 		owner.addPendingCall(id,PPendingCall(new PC(fn),[](PendingCall *p){delete p;}));
 		owner.sendRequest(msg);
 		executed = true;
 	}
 	return id;
 }
+
+///Simple object which can be used to store notification which arrived from the client
+/** you can construct Notify from the JSON. You can later convert it to RpcRequest */
+struct Notify {
+	String eventName;
+	Value data;
+
+	explicit Notify(Value js);
+	RpcRequest asRequest() const;
+};
 
 
 
