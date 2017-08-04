@@ -192,7 +192,7 @@ void RpcRequest::RequestData::setResponse(const Value& v) {
 	if (responseSent) return;
 	responseSent = true;
 	notifyEnabled =  (flags & RpcFlags::postResponseNotify) != 0;
-	response(v);
+	if (!id.isNull()) response(v);
 }
 
 void RpcServer::operator ()(RpcRequest req) const throw() {
