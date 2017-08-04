@@ -556,7 +556,7 @@ bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 		return opDigits(subject.toString());
 	}
 	else if (name == strInteger) {
-		return opIsInteger(subject.toString());
+		return opIsInteger(subject);
 	}
 	else if (name == strIdentifier) {
 		return opIsIdentifier(subject.toString());
