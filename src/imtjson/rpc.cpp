@@ -452,6 +452,7 @@ AbstractRpcClient::ReceiveStatus AbstractRpcClient::processResponse(Value respon
 			} else {
 				if (!cancelAsyncCall(nid,RpcResult(error,true,ctx))) return unexpected;
 			}
+			return success;
 
 		} else {
 			return request;
