@@ -99,6 +99,10 @@ namespace json {
 			}
 
 			Reader(const Fn &fn) :source(fn), loaded(false) {}
+
+			int getLastInput() const {
+				return c;
+			}
 		};
 
 		Reader rd;
@@ -159,17 +163,31 @@ namespace json {
 
 	class ParseError:public std::exception {
 	public:
-		ParseError(std::string msg) :msg(msg) {}
+		ParseError(std::string msg, int lastInput = -100) :msg(msg), lastInput(lastInput) {}
 
 		virtual char const* what() const throw() {
 			if (whatmsg.empty()) {
-				whatmsg = "Parse error: '" + msg + "' at <root>";
+				std::ostringstream fmt;
+				fmt << "Parse error: '" + msg + "' at <root>";
 				std::size_t pos = callstack.size();
 				while (pos) {
 					--pos;
-					whatmsg.append("/");
-					whatmsg.append(callstack[pos]);
+					fmt << "/" << callstack[pos];
 				}
+				if (lastInput != -100) {
+					fmt << ". Last input: " << lastInput << "(";
+					if (lastInput == -1) {
+						fmt << "EOF";
+					} else {
+						char c = (char)lastInput;
+						fmt << "'" << c << "'";
+					}
+					fmt << ").";
+				} else {
+					fmt<< ". Last input not given.";
+				}
+
+				whatmsg = fmt.str();
 
 			}
 			return whatmsg.c_str();
@@ -185,6 +203,7 @@ namespace json {
 		std::string msg;
 		std::vector<std::string> callstack;
 		mutable std::string whatmsg;
+		int lastInput;
 
 
 	};
@@ -225,7 +244,7 @@ namespace json {
 		bool cont;
 		do {
 			if (c != '"') 
-				throw ParseError("Expected a key (string)");
+				throw ParseError("Expected a key (string)", rd.getLastInput());
 			rd.commit();
 			try {
 				name = readString();
@@ -236,7 +255,7 @@ namespace json {
 			}
 			try {
 				if (rd.nextWs() != ':') 
-					throw ParseError("Expected ':'");
+					throw ParseError("Expected ':'", rd.getLastInput());
 				rd.commit();
 				Value v = parse();
 				tmpArr.push_back(Value(getString(name),v));
@@ -257,7 +276,7 @@ namespace json {
 				c = rd.nextWs();
 			} 
 			else {
-				throw ParseError("Expected ',' or '}'");
+				throw ParseError("Expected ',' or '}'", rd.getLastInput());
 			}
 		} while (cont);		
 		StringView<Value> data = tmpArr;
@@ -296,7 +315,7 @@ namespace json {
 					cont = true;
 				}
 				else {
-					throw ParseError("Expected ',' or ']'");
+					throw ParseError("Expected ',' or ']'", rd.getLastInput());
 				}
 			}
 			catch (ParseError &e) {
@@ -360,7 +379,7 @@ namespace json {
 			if (isdigit(c)) uchar += (c - '0');
 			else if (c >= 'A' && c <= 'F') uchar += (c - 'A' + 10);
 			else if (c >= 'a' && c <= 'f') uchar += (c - 'a' + 10);
-			else ParseError("Expected '0'...'9' or 'A'...'F' after the escape sequence \\u: ("+tmpstr+")");
+			else ParseError("Expected '0'...'9' or 'A'...'F' after the escape sequence \\u: ("+tmpstr+")", rd.getLastInput());
 		}
 		storeUnicode(uchar);
 	}
@@ -383,7 +402,7 @@ namespace json {
 		char c = rd.next();
 		//it should be digit or dot (because .3 is valid number)
 		if (!isdigit(c) && c != '.') 
-			throw ParseError("Expected '0'...'9', '.', '+' or '-'");
+			throw ParseError("Expected '0'...'9', '.', '+' or '-'", rd.getLastInput());
 		//declared dummy var (we don't need counter here)
 		int counter;
 		//parse sequence of numbers as unsigned integer
@@ -445,7 +464,7 @@ namespace json {
 				do {
 					int c = rd.nextCommit();
 					if (c == -1) {
-						throw ParseError("Unexpected end of file");
+						throw ParseError("Unexpected end of file", rd.getLastInput());
 					}
 					else if (c == '"') {
 						return -1;
@@ -463,7 +482,7 @@ namespace json {
 						case 't': tmpstr.push_back('\t'); break;
 						case 'u': parseUnicode();break;
 						default:
-							throw ParseError("Unexpected escape sequence in the string");
+							throw ParseError("Unexpected escape sequence in the string", rd.getLastInput());
 						}
 					}
 					else {
@@ -488,7 +507,7 @@ namespace json {
 		for (std::size_t i = 0; i < str.length; ++i) {
 			char c = rd.next();
 			rd.commit();
-			if (c != str.data[i]) throw ParseError("Unknown keyword");
+			if (c != str.data[i]) throw ParseError("Unknown keyword", rd.getLastInput());
 		}
 	}
 
@@ -546,7 +565,7 @@ namespace json {
 			//this should reduce rounding errors because count of multiplies will be minimal
 			res = res * pow(10.0, cnt) + double(part);
 
-			if (std::isinf(res)) throw ParseError("Too long number");
+			if (std::isinf(res)) throw ParseError("Too long number", rd.getLastInput());
 		}
 		//return the result
 		return res;
@@ -596,7 +615,7 @@ namespace json {
 			}
 			else {
 				//throw exception that next character is not digit
-				throw ParseError("Expected '0'...'9' after '.'");
+				throw ParseError("Expected '0'...'9' after '.'", rd.getLastInput());
 			}
 		}
 		//next character is 'E' (exponent part)
@@ -612,11 +631,11 @@ namespace json {
 			//next character must be a digit
 			if (!isdigit(rd.next()))
 				//throw exception is doesn't it
-				throw ParseError("Expected '0'...'9' after 'E'");
+				throw ParseError("Expected '0'...'9' after 'E'", rd.getLastInput());
 			//parse the exponent
 			if (!parseUnsigned(expn, counter))
 				//complain about too large exponent (two or three digits must match to std::uintptr_t)
-				throw ParseError("Exponent is too large");
+				throw ParseError("Exponent is too large", rd.getLastInput());
 			//if exponent is negative
 			if (negexp) {
 				//calculate d * 0.1^expn

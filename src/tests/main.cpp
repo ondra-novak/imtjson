@@ -129,7 +129,7 @@ int testMain() {
 	tst.test("Parse.numberDoubleLargeE","-1.024e+203") >> [](std::ostream &out) {
 		out << Value::fromString("-1024e200").getNumber();
 	};
-	tst.test("Parse.numberLong","Parse error: 'Too long number' at <root>") >> [](std::ostream &out) {
+	tst.test("Parse.numberLong","Parse error: 'Too long number' at <root>. Last input: 48('0').") >> [](std::ostream &out) {
 		int counter = 0;
 		try {
 			out << Value::parse([&](){
@@ -577,28 +577,28 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	};
 
 
-	tst.test("parse.corruptedFile.string","Parse error: 'Unexpected end of file' at <root>") >> [](std::ostream &out) {
+	tst.test("parse.corruptedFile.string","Parse error: 'Unexpected end of file' at <root>. Last input: 34('\"').") >> [](std::ostream &out) {
 		try {
 			Value v = Value::fromString("\"qweqweq");
 		} catch (std::exception &e) {
 			out << e.what();
 		}
 	};
-	tst.test("parse.corruptedFile.token","Parse error: 'Unknown keyword' at <root>") >> [](std::ostream &out) {
+	tst.test("parse.corruptedFile.token","Parse error: 'Unknown keyword' at <root>. Last input: -1(EOF).") >> [](std::ostream &out) {
 		try {
 			Value v = Value::fromString("tru");
 		} catch (std::exception &e) {
 			out << e.what();
 		}
 	};
-	tst.test("parse.corruptedFile.array","Parse error: 'Expected ',' or ']'' at <root>/[4]") >> [](std::ostream &out) {
+	tst.test("parse.corruptedFile.array","Parse error: 'Expected ',' or ']'' at <root>/[4]. Last input: -1(EOF).") >> [](std::ostream &out) {
 		try {
 			Value v = Value::fromString("[10,20,[30,40],30");
 		} catch (std::exception &e) {
 			out << e.what();
 		}
 	};
-	tst.test("parse.corruptedFile.object","Parse error: 'Expected ':'' at <root>/xyz") >> [](std::ostream &out) {
+	tst.test("parse.corruptedFile.object","Parse error: 'Expected ':'' at <root>/xyz. Last input: -1(EOF).") >> [](std::ostream &out) {
 		try {
 			Value v = Value::fromString("{\"abc\":123,\"xyz\"");
 		} catch (std::exception &e) {
