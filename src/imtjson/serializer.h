@@ -240,17 +240,20 @@ namespace json {
 		writeUnsigned(std::uintptr_t(fabs(fint)));
 		//if frac is not zero (exactly)
 		if (frac != 0.0) {
-			//put dot
-			target('.');
 
 			double fractMultiply = pow(10, maxPrecisionDigits);
 			std::uintptr_t digits = maxPrecisionDigits;
 			//multiply fraction by maximum fit to integer
 			std::uintptr_t m = (std::uintptr_t)floor(frac * fractMultiply +0.5);
-			//remove any rightmost zeroes
-			while (m && (m % 10) == 0) {m = m / 10;--digits;}
-			//write final number
-			writeUnsigned(m, digits);
+
+			if (m) {
+				//put dot
+				target('.');
+				//remove any rightmost zeroes
+				while (m && (m % 10) == 0) {m = m / 10;--digits;}
+				//write final number
+				writeUnsigned(m, digits);
+			}
 		}
 		//if exponent is set
 		if (iexp) {
