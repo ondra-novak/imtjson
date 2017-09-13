@@ -152,7 +152,7 @@ namespace json {
 	{
 		StringView<char> str = ptr->getString();
 		if (ptr->flags()  & binaryString) {
-			BinaryEncoding enc = Binary::getEncoding(ptr);
+			BinaryEncoding enc = Binary::getEncoding(ptr->unproxy());
 			target('"');
 			enc->encodeBinaryValue(BinaryView(str), [&](const StrViewA &str) {writeStringBody(str);});
 			target('"');
