@@ -85,24 +85,26 @@ namespace json {
 			}
 
 			int nextCommit() {
-				//if not loaded
-				if (!loaded) {
-					//load it but keep in not-loaded state, this does mean 'autocommit'
-					return source();
-				} 
-				else {
-					//commit the character
+				if (loaded) {
 					loaded = false;
-					//return it
 					return c;
+				} else {
+					return source();
 				}
+			}
+
+			///slightly faster read, because it returns character directly from the stream
+			/**
+			 * Note that previous character must be commited"
+			 * @return next character in the stream;
+			 */
+
+			int readFast() {
+				return source();
 			}
 
 			Reader(const Fn &fn) :source(fn), loaded(false) {}
 
-			int getLastInput() const {
-				return c;
-			}
 		};
 
 		Reader rd;
@@ -235,7 +237,7 @@ namespace json {
 	inline Value Parser<Fn>::parseObject()
 	{
 		std::size_t tmpArrPos = tmpArr.size();
-		char c = rd.nextWs();
+		int c = rd.nextWs();
 		if (c == '}') {
 			rd.commit();
 			return Value(object);
@@ -244,7 +246,7 @@ namespace json {
 		bool cont;
 		do {
 			if (c != '"') 
-				throw ParseError("Expected a key (string)", rd.getLastInput());
+				throw ParseError("Expected a key (string)", c);
 			rd.commit();
 			try {
 				name = readString();
@@ -254,8 +256,9 @@ namespace json {
 				throw;
 			}
 			try {
-				if (rd.nextWs() != ':') 
-					throw ParseError("Expected ':'", rd.getLastInput());
+				c = rd.nextWs();
+				if (c != ':')
+					throw ParseError("Expected ':'", c);
 				rd.commit();
 				Value v = parse();
 				tmpArr.push_back(Value(getString(name),v));
@@ -276,7 +279,7 @@ namespace json {
 				c = rd.nextWs();
 			} 
 			else {
-				throw ParseError("Expected ',' or '}'", rd.getLastInput());
+				throw ParseError("Expected ',' or '}'", c);
 			}
 		} while (cont);		
 		StringView<Value> data = tmpArr;
@@ -289,7 +292,7 @@ namespace json {
 	inline Value Parser<Fn>::parseArray()
 	{
 		std::size_t tmpArrPos = tmpArr.size();
-		char c = rd.nextWs();
+		int c = rd.nextWs();
 		if (c == ']') {
 			rd.commit();
 			return Value(array);
@@ -315,7 +318,7 @@ namespace json {
 					cont = true;
 				}
 				else {
-					throw ParseError("Expected ',' or ']'", rd.getLastInput());
+					throw ParseError("Expected ',' or ']'", c);
 				}
 			}
 			catch (ParseError &e) {
@@ -374,12 +377,12 @@ namespace json {
 		// and it is stored as UTF-8 (which can be 1...3 bytes)
 		std::uintptr_t uchar = 0;
 		for (int i = 0; i < 4; i++) {
-			char c = rd.nextCommit();
+			int c = rd.readFast();
 			uchar *= 16;
 			if (isdigit(c)) uchar += (c - '0');
 			else if (c >= 'A' && c <= 'F') uchar += (c - 'A' + 10);
 			else if (c >= 'a' && c <= 'f') uchar += (c - 'a' + 10);
-			else ParseError("Expected '0'...'9' or 'A'...'F' after the escape sequence \\u: ("+tmpstr+")", rd.getLastInput());
+			else ParseError("Expected '0'...'9' or 'A'...'F' after the escape sequence \\u: ("+tmpstr+")", c);
 		}
 		storeUnicode(uchar);
 	}
@@ -399,10 +402,10 @@ namespace json {
 		//read sign and return true whether it is '-' (discard '+')
 		bool isneg = readSign();
 		//test next character
-		char c = rd.next();
+		int c = rd.next();
 		//it should be digit or dot (because .3 is valid number)
 		if (!isdigit(c) && c != '.') 
-			throw ParseError("Expected '0'...'9', '.', '+' or '-'", rd.getLastInput());
+			throw ParseError("Expected '0'...'9', '.', '+' or '-'", c);
 		//declared dummy var (we don't need counter here)
 		int counter;
 		//parse sequence of numbers as unsigned integer
@@ -462,15 +465,15 @@ namespace json {
 			Utf8ToWide conv;
 			conv([&]{
 				do {
-					int c = rd.nextCommit();
+					int c = rd.readFast();
 					if (c == -1) {
-						throw ParseError("Unexpected end of file", rd.getLastInput());
+						throw ParseError("Unexpected end of file", c);
 					}
 					else if (c == '"') {
 						return -1;
 					}else if (c == '\\') {
 						//parse escape sequence
-						c = rd.nextCommit();
+						c = rd.readFast();
 						switch (c) {
 						case '"':
 						case '\\':
@@ -482,7 +485,7 @@ namespace json {
 						case 't': tmpstr.push_back('\t'); break;
 						case 'u': parseUnicode();break;
 						default:
-							throw ParseError("Unexpected escape sequence in the string", rd.getLastInput());
+							throw ParseError("Unexpected escape sequence in the string", c);
 						}
 					}
 					else {
@@ -504,10 +507,12 @@ namespace json {
 	template<typename Fn>
 	inline void Parser<Fn>::checkString(const StringView<char>& str)
 	{
-		for (std::size_t i = 0; i < str.length; ++i) {
-			char c = rd.next();
-			rd.commit();
-			if (c != str.data[i]) throw ParseError("Unknown keyword", rd.getLastInput());
+		int c = rd.next();
+		rd.commit();
+		if (c != str[0]) throw ParseError("Unknown keyword", c);
+		for (std::size_t i = 1; i < str.length; ++i) {
+			int c = rd.readFast();
+			if (c != str.data[i]) throw ParseError("Unknown keyword", c);
 		}
 	}
 
@@ -554,7 +559,10 @@ namespace json {
 		//starts with given integer part - convert to double
 		double res = (double)intPart;
 		//read while there are digits
-		while (isdigit(rd.next())) {
+
+		int c;
+
+		while (isdigit(c = rd.next())) {
 			//prepare next unsigned integer
 			std::uintptr_t part;
 			//prepare counter
@@ -565,7 +573,7 @@ namespace json {
 			//this should reduce rounding errors because count of multiplies will be minimal
 			res = res * pow(10.0, cnt) + double(part);
 
-			if (std::isinf(res)) throw ParseError("Too long number", rd.getLastInput());
+			if (std::isinf(res)) throw ParseError("Too long number", c);
 		}
 		//return the result
 		return res;
@@ -602,12 +610,14 @@ namespace json {
 		//sign is stored in neg
 		//complete to reading integer part
 		double d = parseLargeUnsigned(intpart);
+
+		int c = rd.next();
 		//if next char is dot
-		if (rd.next() == '.') {
+		if (c == '.') {
 			//commit dot
 			rd.commit();
 			//next character must be a digit
-			if (isdigit(rd.next())) {
+			if (isdigit(c = rd.next())) {
 				//so parse decimal part
 				double frac = parseDecimalPart();
 				//combine with integer part
@@ -615,11 +625,12 @@ namespace json {
 			}
 			else {
 				//throw exception that next character is not digit
-				throw ParseError("Expected '0'...'9' after '.'", rd.getLastInput());
+				throw ParseError("Expected '0'...'9' after '.'", c);
 			}
+			c = rd.next();
 		}
 		//next character is 'E' (exponent part)
-		if (toupper(rd.next()) == 'E') {
+		if (toupper(c) == 'E') {
 			//commit the 'E'
 			rd.commit();
 			//read and discard any possible sign
@@ -629,13 +640,13 @@ namespace json {
 			//prepare counter (we don't need it)
 			int counter;
 			//next character must be a digit
-			if (!isdigit(rd.next()))
+			if (!isdigit(c = rd.next()))
 				//throw exception is doesn't it
-				throw ParseError("Expected '0'...'9' after 'E'", rd.getLastInput());
+				throw ParseError("Expected '0'...'9' after 'E'", c);
 			//parse the exponent
 			if (!parseUnsigned(expn, counter))
 				//complain about too large exponent (two or three digits must match to std::uintptr_t)
-				throw ParseError("Exponent is too large", rd.getLastInput());
+				throw ParseError("Exponent is too large", c);
 			//if exponent is negative
 			if (negexp) {
 				//calculate d * 0.1^expn

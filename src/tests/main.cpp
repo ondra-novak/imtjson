@@ -577,7 +577,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	};
 
 
-	tst.test("parse.corruptedFile.string","Parse error: 'Unexpected end of file' at <root>. Last input: 34('\"').") >> [](std::ostream &out) {
+	tst.test("parse.corruptedFile.string","Parse error: 'Unexpected end of file' at <root>. Last input: -1(EOF).") >> [](std::ostream &out) {
 		try {
 			Value v = Value::fromString("\"qweqweq");
 		} catch (std::exception &e) {
@@ -1178,7 +1178,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 
 
 	runValidatorTests(tst);
-	runRpcTests(tst);
+	//runRpcTests(tst);
 
 
 	tst.test("binary.basic", "ok") >> [](std::ostream &out) {
