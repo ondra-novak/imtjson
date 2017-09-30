@@ -386,7 +386,7 @@ StringView<PValue> Object::getItems(const Value& v) {
 }
 
 std::size_t Object::size() const {
-	return base.size() + (ordered == nullptr?0:ordered->size())+unordered->size();
+	return base.size() + (ordered == nullptr?0:ordered->size())+(ordered == nullptr?0:unordered->size());
 }
 
 ObjectValue *Object::commitAsDiffObject() const {
