@@ -24,7 +24,7 @@ namespace json {
 		}
 
 
-	protected:
+	private:
 		mutable std::atomic_int counter;
 
 	};

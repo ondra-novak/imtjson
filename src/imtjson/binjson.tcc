@@ -11,6 +11,8 @@
 #include "arrayValue.h"
 #include "stringValue.h"
 
+#pragma once
+
 namespace json {
 
 namespace opcode {

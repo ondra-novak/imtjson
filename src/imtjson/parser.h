@@ -221,7 +221,7 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parse()
 	{
-		char c = rd.nextWs();
+		int c = rd.nextWs();
 		switch (c) {
 			case '{': rd.commit(); return parseObject();
 			case '[': rd.commit(); return parseArray();
@@ -229,7 +229,12 @@ namespace json {
 			case 't': return parseTrue();
 			case 'f': return parseFalse();
 			case 'n': return parseNull();
-			default: return parseNumber();
+			case -1: throw ParseError("Unexpected end of stream",c);
+			default: if (isdigit(c) || c == '+' || c == '-' || c == '.')
+							return parseNumber();
+						else
+							throw ParseError("Unexpected data",c);
+
 		}
 	}
 
