@@ -17,3 +17,4 @@ add_compile_options(-std=c++11)
 add_custom_target( test bin/imtjson_test DEPENDS bin/imtjson_test)
 cmake_policy(POP) 
 
+ 
