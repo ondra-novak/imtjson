@@ -94,6 +94,7 @@ void RpcRequest::setResult(const Value& result, const Value& context) {
 
 void RpcRequest::setError(const Value& error) {
 	Value resp;
+	data->errorSent = true;
 	switch (data->ver) {
 	case RpcVersion::ver1:
 		resp = Object("id",data->id)
@@ -511,6 +512,7 @@ Value RpcServer::formatError(int code,
 
 void RpcRequest::setNoResultError(RequestData *r) {
 	Value err =r->formatter->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
+	r->errorSent = true;
 	r->setResponse(Value(object,{
 		key/"error"=err,
 		key/"result"=nullptr,
@@ -591,5 +593,28 @@ Notify::Notify(Value js)
 RpcRequest Notify::asRequest() const {
 	return RpcRequest::create(eventName, data, nullptr, Value(), [](Value){}, 0);
 }
+
+void RpcRequest::setDiagData(Value v) {
+	data->diagData = v;
+}
+///Retrieve diagnostic data
+const Value &RpcRequest::getDiagData() const {
+	return data->diagData;
+}
+///allows to modify args, for example if the request is forwarded to different method
+void RpcRequest::setArgs(Value args) {
+	data->args = args;
+}
+
+
+bool RpcRequest::isResponseSent() const {
+	return data->responseSent;
+}
+
+bool RpcRequest::isErrorSent() const {
+	return data->errorSent;
+}
+
+
 
 }
