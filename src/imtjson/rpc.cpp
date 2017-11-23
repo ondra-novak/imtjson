@@ -430,10 +430,12 @@ AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName
 }
 
 bool AbstractRpcClient::cancelAsyncCall(unsigned int id, RpcResult result) {
+	Sync _(lock);
 	auto it = callMap.find(id);
 	if (it == callMap.end()) return false;
 	PPendingCall pc = std::move(it->second);
 	callMap.erase(it);
+	_.unlock();
 	pc->onResponse(result);
 	return true;
 }
