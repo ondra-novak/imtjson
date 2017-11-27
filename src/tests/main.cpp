@@ -210,6 +210,14 @@ int testMain() {
 		Value v = 0.75;
 		v.toStream(out);
 	};
+	tst.test("Serialize.smallNumber2", "5e-4") >> [](std::ostream &out) {
+		Value v = 0.0005;
+		v.toStream(out);
+	};
+	tst.test("Serialize.smallNumber3", "1e-4") >> [](std::ostream &out) {
+		Value v = 0.0001;
+		v.toStream(out);
+	};
 	tst.test("Serialize.small_neg_number", "-0.75") >> [](std::ostream &out) {
 		Value v = -0.75;
 		v.toStream(out);
@@ -1187,12 +1195,12 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	tst.test("binary.utf-8","ok") >> [](std::ostream &out) {
 		if (binTest("src/tests/test2.json")) out << "ok"; else out << "not same";
 	};
-	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
+/*	tst.test("compress.basic", "ok") >> [](std::ostream &out) {
 		if (compressTest("src/tests/test.json")) out << "ok"; else out << "not same";
 	};
 	tst.test("compress.utf-8","ok") >> [](std::ostream &out) {
 		if (compressTest("src/tests/test2.json")) out << "ok"; else out << "not same";
-	};
+	};*/
 
 
 	return tst.didFail()?1:0;

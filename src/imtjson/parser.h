@@ -576,7 +576,7 @@ namespace json {
 			parseUnsigned(part, cnt);
 			//now res = res * 10^cnt + part 
 			//this should reduce rounding errors because count of multiplies will be minimal
-			res = res * pow(10.0, cnt) + double(part);
+			res = floor(res * pow(10.0, cnt) + double(part));
 
 			if (std::isinf(res)) throw ParseError("Too long number", c);
 		}
@@ -584,27 +584,40 @@ namespace json {
 		return res;
 	}
 
+
 	template<typename Fn>
 	inline double Parser<Fn>::parseDecimalPart()
 	{
 		//parses decimal part as series of unsigned number each is multipled by its position
 		double res = 0;
-		//current position
-		int curpos = 0;
-		//read while there all digites
+		unsigned int pos = 0;
+		//lookup table is slightly faster
+		static double numbers[10] = {0.0, 1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0};
+
+		//first, read digits and create large number
+		//count of decimals
+		//collect all numbers
 		while (isdigit(rd.next())) {
-			//prepare integer part
-			std::uintptr_t part;
-			//prepare counter
-			int cnt;
-			//read sequence of digiths as integer
-			parseUnsigned(part, cnt);
-			//update position of this part
-			curpos += cnt;
-			//combine part with result
-			res = res + (double(part) * pow(0.1, curpos));
+
+			//pick digit ascii
+			char c = rd.nextCommit();
+
+			//convert to index
+			unsigned int n = c - '0';
+
+			//calculate 10*prev_value + number
+			//always truncate the number to prevent rounding errors
+			res = floor(res * 10 + numbers[n]);
+
+			//increase count of decimals
+			pos ++;
 		}
-		//there goes result
+		//finally, calculate decimal point shift (as number 10^digits)
+		//we use 10 because it doesn't generate rounding errors
+		double m = pow(10,pos);
+		//one operation divide large number by m, to shift whole number behind deximal page
+		res = res / m;
+		//result
 		return res;
 	}
 

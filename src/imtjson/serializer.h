@@ -217,6 +217,9 @@ namespace json {
 	template<typename Fn>
 	inline void Serializer<Fn>::writeDouble(double value)
 	{
+		bool sign = value < 0;
+
+		value = std::abs(value);
 		//calculate exponent of value
 		//123897 -> 5 (1.23897e5)
 		//0.001248 -> 3 (1.248e-3)
@@ -233,27 +236,44 @@ namespace json {
 		}		
 		double fint;
 		//separate number to integer and fraction
-		double frac = std::abs(modf(value, &fint));
-		//write signum for negative number
-		if (value < 0) target('-');
-		//write absilute integer number (remove sign)
-		writeUnsigned(std::uintptr_t(fabs(fint)));
-		//if frac is not zero (exactly)
-		if (frac != 0.0) {
+		double frac = modf(value, &fint);
+		//calculate multiplication of fraction
+		double fractMultiply = pow(10, maxPrecisionDigits);
+		//multiplicate fraction to receive best rounded number to given decimal places
+		double fm = floor(frac * fractMultiply +0.5);
+		//convert finteger to integer
+		std::uintptr_t intp(fint);
 
-			double fractMultiply = pow(10, maxPrecisionDigits);
-			std::uintptr_t digits = maxPrecisionDigits;
-			//multiply fraction by maximum fit to integer
-			std::uintptr_t m = (std::uintptr_t)floor(frac * fractMultiply +0.5);
-
-			if (m) {
-				//put dot
-				target('.');
-				//remove any rightmost zeroes
-				while (m && (m % 10) == 0) {m = m / 10;--digits;}
-				//write final number
-				writeUnsigned(m, digits);
+		//if floating multiplied fraction is above or equal fractMultiply
+		//something very bad happen, probably rounding error happened, so we need adjust
+		if (fm >= fractMultiply) {
+			//increment integer part number
+			intp = intp+1;
+			//decrease fm
+			fm-=fractMultiply;
+			//if integer part is equal or above 10
+			if (intp >= 10 && iexp) {
+				//remove ten
+				intp-=10;
+				//increase exponent
+				iexp++;
 			}
+		}
+
+		//write signum for negative number
+		if (sign) target('-');
+		//write absolute integer number (remove sign)
+		writeUnsigned(intp);
+		std::uintptr_t digits = maxPrecisionDigits;
+		std::uintptr_t m(fm);
+
+		if (m) {
+			//put dot
+			target('.');
+			//remove any rightmost zeroes
+			while (m && (m % 10) == 0) {m = m / 10;--digits;}
+			//write final number
+			writeUnsigned(m, digits);
 		}
 		//if exponent is set
 		if (iexp) {
