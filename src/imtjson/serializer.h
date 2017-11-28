@@ -11,10 +11,7 @@ namespace json {
 
 	///Configures precision of floating numbers
 	/** Global variable specifies count of decimal digits of float numbers. 
-	The default value is 4 for 16bit platform, 8 for 32bit platform and 9 for
-	64bit platform. It can be changed, however, maximum digits is limited
-	to size of uintptr_t type. This limits count of digits max to 10digits on
-	32bit platform and 21 digits on 64bit platform 
+	The default value is 9 and 9 is also maximum.
 	*/
 	extern uintptr_t maxPrecisionDigits;
 	///Specifies default output format for unicode character during serialization
@@ -217,7 +214,21 @@ namespace json {
 	template<typename Fn>
 	inline void Serializer<Fn>::writeDouble(double value)
 	{
+		static std::uintptr_t fracMultTable[10] = {
+				1, //0
+				10, //1
+				100, //2
+				1000, //3
+				10000, //4
+				100000, //5
+				1000000, //6
+				10000000, //7
+				100000000, //8
+ 				1000000000 //9
+		};
+
 		bool sign = value < 0;
+		std::uintptr_t precisz = std::min<std::uintptr_t>(maxPrecisionDigits, 9);
 
 		value = std::abs(value);
 		//calculate exponent of value
@@ -238,19 +249,23 @@ namespace json {
 		//separate number to integer and fraction
 		double frac = modf(value, &fint);
 		//calculate multiplication of fraction
-		double fractMultiply = pow(10, maxPrecisionDigits);
+		std::uintptr_t fractMultiply = fracMultTable[precisz];
 		//multiplicate fraction to receive best rounded number to given decimal places
 		double fm = floor(frac * fractMultiply +0.5);
+
 		//convert finteger to integer
 		std::uintptr_t intp(fint);
+		//mantisa as integer number (without left zeroes)
+		std::uintptr_t m(fm);
+
 
 		//if floating multiplied fraction is above or equal fractMultiply
 		//something very bad happen, probably rounding error happened, so we need adjust
-		if (fm >= fractMultiply) {
+		if (m >= fractMultiply) {
 			//increment integer part number
 			intp = intp+1;
 			//decrease fm
-			fm-=fractMultiply;
+			m-=fractMultiply;
 			//if integer part is equal or above 10
 			if (intp >= 10 && iexp) {
 				//set  integer part to 1 (because 9.99999 -> 10 -> 1e1)
@@ -264,8 +279,7 @@ namespace json {
 		if (sign) target('-');
 		//write absolute integer number (remove sign)
 		writeUnsigned(intp);
-		std::uintptr_t digits = maxPrecisionDigits;
-		std::uintptr_t m(fm);
+		std::uintptr_t digits = precisz;
 
 		if (m) {
 			//put dot

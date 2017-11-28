@@ -300,7 +300,7 @@ namespace json {
 	{
 	}
 
-	uintptr_t maxPrecisionDigits = sizeof(uintptr_t) < 4 ? 4 : (sizeof(uintptr_t) < 8 ? 9 : 12);
+	uintptr_t maxPrecisionDigits = 9;
 	UnicodeFormat defaultUnicodeFormat = emitEscaped;
 
 	///const double maxMantisaMult = pow(10.0, floor(log10(std::uintptr_t(-1))));
