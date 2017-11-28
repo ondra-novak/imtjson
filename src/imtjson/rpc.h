@@ -106,9 +106,11 @@ private:
 		Value id;
 		Value context;
 		Value rejections;
+		Value diagData;
 		RpcVersion::Type ver;
 		const IErrorFormatter *formatter = nullptr;
 		bool responseSent = false;
+		bool errorSent = false;
 		bool notifyEnabled = false;
 		RpcFlags::Type flags;
 		virtual void response(const Value &result) = 0;
@@ -242,7 +244,16 @@ public:
 	bool sendNotify(const String name, Value data);
 	///Determines whether notification is enabled
 	bool isSendNotifyEnabled() const;
+	///Sets value which can be later send to the log. It can be any diagnostic data
+	void setDiagData(Value v);
+	///Retrieve diagnostic data
+	const Value &getDiagData() const;
+	///allows to modify args, for example if the request is forwarded to different method
+	void setArgs(Value args);
 
+	bool isResponseSent() const;
+
+	bool isErrorSent() const;
 
 
 protected:
@@ -254,6 +265,23 @@ protected:
 };
 
 
+namespace _details {
+
+	template<typename Fn>
+	auto callCB(Fn &&fn, const Value &v, const RpcRequest &req) -> decltype(std::declval<Fn>()(v)) {
+		return fn(v);
+	}
+	template<typename Fn>
+	auto callCB(Fn &&fn, const Value &v, const RpcRequest &req) -> decltype(std::declval<Fn>()(v,req)) {
+		return fn(v,req);
+	}
+
+	template<typename Fn>
+	auto callCB(Fn &&fn, const Value &v, const RpcRequest &req) -> decltype(std::declval<Fn>()(req,v)) {
+		return fn(req,v);
+	}
+}
+
 template<typename Fn>
 inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn, RpcFlags::Type flags) {
 	class Call: public RequestData {
@@ -261,7 +289,9 @@ inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn, RpcFlag
 		Call(const Value &request,  const Fn &fn, RpcFlags::Type flags)
 			:RequestData(request,flags)
 			,fn(fn) {}
-		virtual void response(const Value &result) {fn(result);}
+		virtual void response(const Value &result) {
+			_details::callCB(fn,result,RefCntPtr<RequestData>(this));
+		}
 		~Call() {
 			if (!responseSent) {
 				RpcRequest::setNoResultError(this);
@@ -282,7 +312,9 @@ inline RpcRequest json::RpcRequest::create(const String& methodName,
 		Call(const String& methodName, const Value& args, const Value& id, const Value& context, const Fn& fn, RpcFlags::Type flags)
 			:RequestData(methodName,args,id,context,flags)
 			,fn(fn) {}
-		virtual void response(const Value &result) {fn(result);}
+		virtual void response(const Value &result) {
+			_details::callCB(fn,result,RefCntPtr<RequestData>(this));
+		}
 		~Call() {
 			if (!responseSent) {
 				RpcRequest::setNoResultError(this);
