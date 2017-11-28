@@ -230,6 +230,62 @@ int testMain() {
 		Value v = -0.000000075;
 		v.toStream(out);
 	};
+	tst.test("Serialize.random_float_numbers", "ok") >> [](std::ostream &out) {
+		json::maxPrecisionDigits = 6;
+	    std::random_device rd;
+	    std::mt19937 gen(rd());
+	    std::normal_distribution<> tests[] = {
+	    		std::normal_distribution<>(0,20),
+	    		std::normal_distribution<>(0,1),
+	    		std::normal_distribution<>(0,0.1),
+	    		std::normal_distribution<>(0,0001),
+	    		std::normal_distribution<>(0,1e10),
+	    		std::normal_distribution<>(1e10,1e10)};
+
+	    auto test = [&](double v) {
+			Value vx(v);
+			String s = vx.toString();
+			Value vy = Value::fromString(s);
+			String ss = vy.toString();
+			if (s != ss) {
+				out << "Unstable serialization: " << s << " vs " << ss << " (original: " << v <<")" << std::endl;
+			}
+			double z = vy.getNumber();
+			double rd = std::pow(10,std::floor(std::log10(std::abs(v))));
+			double diff = (z/rd) - (v/rd);
+			double accuracy = std::round(diff* 10000);
+			if (accuracy != 0) {
+				out << "Inaccurate: " << z << " (original: " << v <<", diff: "<< diff <<")" << std::endl;
+			}
+	    };
+
+	    for (auto &&d : tests) {
+
+			for (int n = 0; n < 100000; ++n) {
+				double v = d(gen);
+				test(v);
+			}
+	    }
+	    test(0.001);
+	    test(0.0001);
+	    test(0.00001);
+	    test(0.00001);
+	    test(0.00002);
+	    test(0.00003);
+	    test(0.00004);
+	    test(0.00005);
+	    test(0.00006);
+	    test(0.00007);
+	    test(0.00008);
+	    test(0.00009);
+	    test(5e10);
+	    test(9e10);
+	    test(9.9999999999e10);
+	    test(9.9999999999e-10);
+	    test(0.9999999999);
+	    out << "ok";
+	    json::maxPrecisionDigits = 4;
+	};
 	tst.test("Serialize.objects", "{\"a\":7,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6}}") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
 		v.toStream(out);

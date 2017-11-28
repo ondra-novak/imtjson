@@ -253,8 +253,8 @@ namespace json {
 			fm-=fractMultiply;
 			//if integer part is equal or above 10
 			if (intp >= 10 && iexp) {
-				//remove ten
-				intp-=10;
+				//set  integer part to 1 (because 9.99999 -> 10 -> 1e1)
+				intp=1;
 				//increase exponent
 				iexp++;
 			}
