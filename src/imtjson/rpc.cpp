@@ -138,6 +138,14 @@ public:
 	}
 };
 
+void RpcRequest::setDiagData(Value v) {
+	data->diagData = v;
+}
+///Retrieve diagnostic data
+const Value &RpcRequest::getDiagData() const {
+	return data->diagData;
+}
+
 bool RpcRequest::checkArgs(const Value& argDefTuple) {
 	RpcArgValidator val;
 	if (val.checkArgs(data->args, argDefTuple)) return true;
@@ -468,6 +476,8 @@ Value AbstractRpcClient::getContext() const {
 	return context;
 }
 
+
+
 void AbstractRpcClient::setContext(const Value& value) {
 	context = value;
 }
@@ -591,5 +601,16 @@ Notify::Notify(Value js)
 RpcRequest Notify::asRequest() const {
 	return RpcRequest::create(eventName, data, nullptr, Value(), [](Value){}, 0);
 }
+
+
+bool RpcRequest::isResponseSent() const {
+	return data->responseSent;
+}
+
+bool RpcRequest::isErrorSent() const {
+	return data->errorSent;
+}
+
+
 
 }
