@@ -90,6 +90,15 @@ namespace json {
 	 */
 	const ValueTypeFlags binaryString = 32;
 
+	/// States that value contains a custom object
+	/** Value holds a custrom object, which won't be serialized. Using
+	 * standard API of the Value class returns data of a value supplied during
+	 * creation thus it is disconnected from the object carried by the value
+	 *
+	 * @see makeValue
+	 */
+	const ValueTypeFlags customObject = 64;
+
 
 	typedef int BinarySerializeFlags;
 
@@ -142,8 +151,6 @@ namespace json {
 		virtual bool equal(const IValue *other) const = 0;
 
 		virtual int compare(const IValue *other) const = 0;
-
-
 	};
 
 	class IEnumFn {

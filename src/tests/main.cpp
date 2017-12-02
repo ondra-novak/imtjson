@@ -22,6 +22,7 @@
 #include "../imtjson/streams.h"
 #include "../imtjson/valueref.h"
 #include "testClass.h"
+#include <random>
 
 using namespace json;
 
@@ -612,7 +613,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		v4.toStream(out);
 
 	};
-	tst.test("StackProtection","Attempt to work with already destroyed object") >> [](std::ostream &out){
+/*	tst.test("StackProtection","Attempt to work with already destroyed object") >> [](std::ostream &out){
 		try {
 			Object o;
 			{
@@ -623,7 +624,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		} catch (std::exception &e) {
 			out << e.what();
 		}
-	};
+	};*/
 	tst.test("refcnt","destroyed") >> [](std::ostream &out) {
 		class MyAbstractValue: public NumberValue {
 		public:
