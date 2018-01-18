@@ -60,6 +60,8 @@ StrViewA RpcRequest::getVer() const {
 	case RpcVersion::ver1: return StrViewA("1.0");
 	case RpcVersion::ver2: return StrViewA("2.0");
 	}
+	return StrViewA("unknown");
+
 }
 
 
@@ -262,7 +264,7 @@ public:
 	NextFn nextfn;
 	RpcServer &server;
 
-	MulticallContext(RpcServer &server, RpcRequest req, const NextFn &nextFn):server(server),req(req),nextfn(nextFn) {
+	MulticallContext(RpcServer &server, RpcRequest req, const NextFn &nextFn):req(req),nextfn(nextFn),server(server) {
 		context = req.getContext();
 
 	}
@@ -276,7 +278,7 @@ public:
 						[&](Value res) {
 							if (res.defined()) {
 								if (!res["error"].isNull() ) {
-									results.push_back(nullptr);
+									results.push_back(Value(nullptr));
 									errors.push_back(res["error"]);
 								} else {
 									results.push_back(res["result"]);
@@ -287,8 +289,8 @@ public:
 									}
 								}
 							} else {
-								results.push_back(nullptr);
-								errors.push_back(nullptr);
+								results.push_back(Value(nullptr));
+								errors.push_back(Value(nullptr));
 							}
 							if (++mtfork == 2) {
 								this->run();
@@ -316,7 +318,7 @@ void RpcServer::add_multicall(const String& name) {
 
 		if (req.getArgs().empty()) req.setError(errorInvalidParams,"Empty arguments");
 		else if (req[0].type() == json::string) {
-			int pos = 1;
+			std::size_t pos = 1;
 			MulticallContext *m = new MulticallContext(*this,req, [pos,req] () mutable {
 				if (pos < req.getArgs().size())
 					return std::make_pair(req[0],req[pos++]);
@@ -325,9 +327,9 @@ void RpcServer::add_multicall(const String& name) {
 			});
 			m->run();
 		} else if (req[0].type() == json::array) {
-			int pos = 0;
+			std::size_t pos = 0;
 			MulticallContext *m = new MulticallContext(*this,req,[pos,req] () mutable {
-				int x = pos++;
+				std::size_t x = pos++;
 				if (x < req.getArgs().size())
 					return std::make_pair(req[x][0],req[x][1]);
 				else
@@ -359,7 +361,7 @@ void RpcServer::add_help(const Value& helpContent, const String &name) {
 }
 
 RpcResult::RpcResult(Value result, bool isError, Value context)
-	:Value(result),error(isError),context(context)
+	:Value(result),context(context),error(isError)
 {}
 
 AbstractRpcClient::PreparedCall::PreparedCall(AbstractRpcClient& owner, unsigned int id, const Value& msg)

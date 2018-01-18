@@ -79,9 +79,9 @@ protected:
 
 template<typename T>
 inline Container<T>::Container(const AllocInfo &allocInfo)
-	:items(allocInfo.items)
-	,capacity(allocInfo.capacity)
+	:capacity(allocInfo.capacity)
 	,curSize(0)
+	,items(allocInfo.items)
 {
 
 }
@@ -175,12 +175,12 @@ inline void* Container<T>::operator new(std::size_t sz, AllocInfo &allocInfo) {
 }
 
 template<typename T>
-inline void Container<T>::operator delete(void* ptr, AllocInfo &allocInfo) {
+inline void Container<T>::operator delete(void* ptr, AllocInfo &) {
 	Allocator::getInstance()->dealloc(ptr);
 }
 
 template<typename T>
-inline void Container<T>::operator delete(void* ptr, std::size_t sz) {
+inline void Container<T>::operator delete(void* ptr, std::size_t ) {
 	Allocator::getInstance()->dealloc(ptr);
 }
 

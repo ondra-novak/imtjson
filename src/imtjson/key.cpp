@@ -27,7 +27,7 @@ void *ObjectProxy::operator new(std::size_t sz, const StringView<char> &str ) {
 void ObjectProxy::operator delete(void *ptr, const StringView<char> &) {
 	Value::allocator->dealloc(ptr);
 }
-void ObjectProxy::operator delete(void *ptr, std::size_t sz) {
+void ObjectProxy::operator delete(void *ptr, std::size_t ) {
 	Value::allocator->dealloc(ptr);
 }
 

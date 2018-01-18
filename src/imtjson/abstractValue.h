@@ -17,8 +17,8 @@ namespace json {
 		virtual bool getBool() const override { return false; }
 		virtual StringView<char> getString() const override { return StringView<char>(); }
 		virtual std::size_t size() const override { return 0; }
-		virtual const IValue *itemAtIndex(std::size_t index) const override { return getUndefined(); }
-		virtual const IValue *member(const StringView<char> &name) const override { return getUndefined(); }
+		virtual const IValue *itemAtIndex(std::size_t ) const override { return getUndefined(); }
+		virtual const IValue *member(const StringView<char> &) const override { return getUndefined(); }
 		virtual bool enumItems(const IEnumFn &) const override { return true; }
 
 		///some values are proxies with member name - this retrieves name
@@ -26,7 +26,7 @@ namespace json {
 		///some values are proxies with member name - this retrieve directly the internal value
 		virtual const IValue *unproxy() const override { return this; }
 
-		virtual bool equal(const IValue *other) const  override {return false;}
+		virtual bool equal(const IValue *) const  override {return false;}
 
 		///
 		/**

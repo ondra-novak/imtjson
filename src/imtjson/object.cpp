@@ -90,7 +90,7 @@ namespace json {
 
 
 void Object::set_internal(const Value& v) {
-	StringView<char> curName = v.getKey();
+//	StringView<char> curName = v.getKey();
 	lastIterSnapshot = Value();
 
 	if (unordered == nullptr) {
@@ -165,10 +165,11 @@ void Object::set_internal(const Value& v) {
 		return set(name, value);		
 	}
 
+	/*
 	static const Value &defaultConflictResolv(const Path &, const Value &, const Value &right) {
 		return right;
 	}
-
+*/
 	
 
 	void Object::optimize() const {
@@ -253,10 +254,10 @@ bool Object::createDiff(const Value oldObject, Value newObject, unsigned int rec
 	auto be = oldObject.end();
 	auto de = newObject.end();
 
-	auto merge = [](const Value &old, const Value &nw) {
+/*	auto merge = [](const Value &old, const Value &nw) {
 		if (nw.type() & valueDiff) return old.replace(Path::root,nw);
 		else return nw;
-	};
+	};*/
 
 	while (bp != be && dp != de) {
 		int cmp = (*bp).getKey().compare((*dp).getKey());

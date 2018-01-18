@@ -268,7 +268,7 @@ protected:
 namespace _details {
 
 	template<typename Fn>
-	auto callCB(Fn &&fn, const Value &v, const RpcRequest &req) -> decltype(std::declval<Fn>()(v)) {
+	auto callCB(Fn &&fn, const Value &v, const RpcRequest &) -> decltype(std::declval<Fn>()(v)) {
 		return fn(v);
 	}
 	template<typename Fn>
@@ -352,6 +352,8 @@ class RpcServer: private RpcRequest::IErrorFormatter {
 		const String name;
 		virtual void call(const RpcRequest &req) const = 0;
 		AbstractMethodReg(const String &name):name(name) {}
+
+		virtual ~AbstractMethodReg() {}
 	};
 
 public:
@@ -562,7 +564,7 @@ public:
 	static Value updateContext(const Value &context, const Value &value);
 
 	virtual ~AbstractRpcClient() {}
-	AbstractRpcClient(const AbstractRpcClient &other):idCounter(0) {}
+	AbstractRpcClient(const AbstractRpcClient &):idCounter(0) {}
 
 protected:
 	Value context;

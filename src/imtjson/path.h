@@ -66,9 +66,9 @@ public:
 	const Path &getParent() const {return parent;}
 
 	///Determines, whether current element is an index
-	bool isIndex() const {return index != -1;}
+	bool isIndex() const {return index != (std::uintptr_t)-1;}
 	///Determines, whether current element is a key
-	bool isKey() const {return index == -1;}
+	bool isKey() const {return index == (std::uintptr_t)-1;}
 
 	///returns true, if current element is root elemmenet
 	bool isRoot() const {return this == &root;}

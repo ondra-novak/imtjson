@@ -128,7 +128,6 @@ public:
 		std::size_t len = data.length;
 		if (len != 0) {
 			std::size_t nlen = (len + 2) / 3;
-			std::size_t finlen = nlen * 4;
 			std::size_t padd = (nlen * 3) - len;
 			char buff[256];
 			std::size_t rdpos = 0;
@@ -199,6 +198,7 @@ public:
 		if (isdigit(h)) return h-'0';
 		else if (h >= 'A' && h<='F') return h-'A'+10;
 		else if (h >= 'a' && h<='f') return h-'a'+10;
+		return 0;
 	}
 } unhexchar;
 

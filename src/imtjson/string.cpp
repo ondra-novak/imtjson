@@ -183,7 +183,7 @@ Value String::split(const StringView<char> separator, std::size_t maxCount) cons
 	std::size_t curPos = 0;
 	StringView<char> a = impl->getString();
 	std::size_t nextPos = a.indexOf(separator, curPos);
-	while (nextPos != -1 && maxCount) {
+	while (nextPos != a.npos && maxCount) {
 		res.add(new SubStrString(impl,curPos, nextPos-curPos));
 		curPos = nextPos+separator.length;
 		nextPos = a.indexOf(separator, curPos);

@@ -591,6 +591,7 @@ namespace json {
 			o.set(k,setToPathRev(p.getParent(),o[k], newVal));
 			return o;
 		}
+		throw std::runtime_error("Unreachable section reached (setToPathRev)");
 	}
 
 	static Value reversePath(const Path &p, const Path &newPath, const Value &oldval, const Value &newval) {
@@ -600,6 +601,7 @@ namespace json {
 			return reversePath(p.getParent(),Path(newPath,p.getIndex()), oldval, newval);
 		if (p.isKey())
 			return reversePath(p.getParent(),Path(newPath,p.getKey()), oldval, newval);
+		throw std::runtime_error("Unreachable section reached (reversePath)");
 	}
 
 	Value Value::replace(const Path& path, const Value& val) const {

@@ -80,7 +80,7 @@ public:
 	 * @param args arguments if the rule. Array is always here
 	 * @param subject the item it is subject of validation
 	 */
-	virtual bool onNativeRule(const Value &subject, const StrViewA & ruleName ) { return false; }
+	virtual bool onNativeRule(const Value &, const StrViewA &  ) { return false; }
 
 
 

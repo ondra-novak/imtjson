@@ -35,12 +35,12 @@ StringView<char> json::StringValue::getString() const {
 }
 
 std::intptr_t json::AbstractStringValue::getInt() const {
-	std::size_t pos = 0;
+
 	return Value::fromString(getString()).getInt();
 }
 
 std::uintptr_t json::AbstractStringValue::getUInt() const {
-	std::size_t pos = 0;
+
 	return Value::fromString(getString()).getUInt();
 }
 
@@ -60,7 +60,7 @@ void json::StringValue::operator delete(void* ptr, std::size_t ) {
 }
 
 double json::AbstractStringValue::getNumber() const {
-	std::size_t pos = 0;
+
 	return Value::fromString(getString()).getNumber();
 }
 

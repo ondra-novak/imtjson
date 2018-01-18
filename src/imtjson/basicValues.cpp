@@ -33,7 +33,7 @@ public:
 	class StaticEmptyArrayValue : public AbstractArrayValue {
 	public:
 		virtual std::size_t size() const override { return 0; }
-		virtual const IValue *itemAtIndex(std::size_t index) const override { return AbstractValue::getUndefined(); }
+		virtual const IValue *itemAtIndex(std::size_t ) const override { return AbstractValue::getUndefined(); }
 		virtual bool enumItems(const IEnumFn &) const override {
 			return true;
 		}
@@ -42,8 +42,8 @@ public:
 	class StaticEmptyObjectValue : public AbstractObjectValue {
 	public:
 		virtual std::size_t size() const override { return 0; }
-		virtual const IValue *itemAtIndex(std::size_t index) const override { return getUndefined(); }
-		virtual const IValue *member(const StringView<char> &name) const override { return getUndefined(); }
+		virtual const IValue *itemAtIndex(std::size_t ) const override { return getUndefined(); }
+		virtual const IValue *member(const StringView<char> &) const override { return getUndefined(); }
 		virtual bool enumItems(const IEnumFn &) const override { return true; }
 	};
 

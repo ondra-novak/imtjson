@@ -162,7 +162,7 @@ void BinarySerializer<Fn>::serializeBoolean(const IValue *v) {
 	fn(opc);
 }
 template<typename Fn>
-void BinarySerializer<Fn>::serializeNull(const IValue *v) {
+void BinarySerializer<Fn>::serializeNull(const IValue *) {
 	unsigned char opc = opcode::null;
 	fn(opc);
 }

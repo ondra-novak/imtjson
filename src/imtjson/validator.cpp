@@ -87,7 +87,7 @@ class StackSave {
 public:
 	T value;
 	T &var;
-	StackSave(T &var):var(var),value(var) {}
+	StackSave(T &var):value(var),var(var) {}
 	~StackSave() {var = value;}
 };
 
@@ -207,13 +207,14 @@ static bool opDigits(const Value &v) {
 }
 
 
-static bool opCamelcase(const Value &v) {
+/*static bool opCamelcase(const Value &v) {
 	StrViewA str = v.getString();
 	for (std::size_t i = 0; i < str.length; i++) {
 		char c = str[i];
 		if (!isalpha(c) || (i == 0 && c < 'a')) return false;
 	}
-}
+	return true;
+}*/
 
 static bool opIsIdentifier(const Value &v) {
 	StrViewA str = v.getString();
@@ -240,7 +241,7 @@ static bool checkDateTimeGen(const StrViewA &format, const StrViewA &text) {
 	h = 0, //hour
 	m = 0, //minute
 	s = 0, //second
-	c = 0, //milisec
+//	c = 0, //milisec
 	O = 0, //offset hour
 	o = 0; //offset minute
 
@@ -272,6 +273,7 @@ static bool checkDateTimeGen(const StrViewA &format, const StrViewA &text) {
 		if (digit && !isdigit(d)) return false;
 	}
 
+	if (hasY && Y < 1000) return false;
 	if (hasM && (M == 0 || M > 12)) return false;
 	if (hasD && hasM) {
 		const unsigned int days[2][12] = {
@@ -625,7 +627,6 @@ bool Validator::evalRuleObject(const Value& subject, const Value& templateObj) {
 				//skip this item
 				return 1;
 			}
-			int b = 0;
 			if (!left.defined() && right.defined()) {
 				notMatch = !evalRuleSubObj(left, right, rk);
 				if (notMatch) addRejection(*curPath/rk,undefined);
