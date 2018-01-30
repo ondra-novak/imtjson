@@ -163,8 +163,10 @@ namespace json {
 		 * @param values container of values. If type is object, the values must be
 		 * associated with keys and the keys must be unique. Duplicated keys are removed
 		 * (there is no rule, which key=value pair is removed during this process)
+		 * @param skipUndef if true (default), function skips undefined values. Set this to false to
+		 * also include undefined values
 		 */
-		Value(ValueType type, const StringView<Value> &values);
+		Value(ValueType type, const StringView<Value> &values, bool skipUndef = true);
 
 		///Initialize the variable using initializer list {....}
 		/**
@@ -629,6 +631,42 @@ namespace json {
 		 * @return
 		 */
 		Value replace(const uintptr_t index, const Value &val) const;
+
+		///Merges two containers
+		/** If both values are array, the result is combined array. If both values
+		 * are objects, the result is object with merged keys (recursively), where keys from the
+		 * other value replaces original value.
+		 *
+		 * @param other Value of the same type. If the value is different type, result is undefined
+		 * @return merged value
+		 *
+		 * @p @b arrays - result is concatenated array
+		 * @p @b objects - result is merged object (per key recursively]
+		 * @p @b numbers - result is sum
+		 * @p @b strings - result is concatenated string
+		 * @p @b bools - result is xor
+		 * @p @b nulls - result is null
+		 * @p @b undefined - result is undefined
+		 */
+		Value merge(const Value &other) const;
+
+
+		///Calculates difference from one value to other
+		/**
+		 * @p @b arrays - from the current array removes the same values specified by second array, from the end
+		 * @p @b objects - creates diff of two objects (per key recusrively)
+		 * @p @b numbers - returns substraction this value from other value
+		 * @p @b strings - same as array per character
+		 * @p @b bools - result is xor
+		 * @p @b nulls - result is null
+		 * @p @b undefined - result is undefined
+		 *
+		 * @param other other value
+		 * @return if values of the same type are specified, result is calculated otherwise undefined
+		 * is result
+		 */
+
+		Value diff(const Value &other) const;
 
 		///Merges to array (DEPRECATED)
 		/**

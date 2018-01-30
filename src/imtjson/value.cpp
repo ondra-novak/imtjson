@@ -497,13 +497,13 @@ namespace json {
 		return Value::allocator;
 	}
 
-	Value::Value(ValueType type, const StringView<Value>& values) {
+	Value::Value(ValueType type, const StringView<Value>& values, bool skipUndef) {
 		std::vector<PValue> vp;
 		switch (type) {
 		case array: {
 			RefCntPtr<ArrayValue> vp = ArrayValue::create(values.length);
 			for (const Value &v: values) {
-				if (v.defined())
+				if (!skipUndef || v.defined())
 					vp->push_back(v.getHandle());
 			}
 			v = PValue::staticCast(vp);
@@ -514,7 +514,7 @@ namespace json {
 			StrViewA lastKey;
 			bool ordered = true;
 			for (const Value &v: values) {
-				if (v.defined()) {
+				if (!skipUndef || v.defined()) {
 					StrViewA k = v.getKey();
 					int c = lastKey.compare(k);
 					if (c > 0) {
@@ -644,6 +644,205 @@ namespace json {
 		}
 		return npos;
 
+	}
+
+	static bool findInArray(const Array &a, const Value &v, std::size_t start, std::size_t &pos) {
+		std::size_t i = start;
+		while (i < a.size()) {
+			if (a[i] == v) {
+				pos = i;
+				return true;
+			}
+			++i;
+		}
+		i = 0;
+		while (i < start) {
+			if (a[i] == v) {
+				pos = i;
+				return true;
+			}
+			++i;
+		}
+		pos = start;
+		return false;
+	}
+
+	Value json::Value::merge(const Value& other) const {
+
+		if (type() != other.type()) return undefined;
+		switch (type()) {
+		case undefined:
+		case null: return other;
+		case boolean: return getBool() != other.getBool();
+		case number: return getNumber() + other.getNumber();
+		case string: return String({String(*this), String(other)});
+		case array: {
+			Array p(*this);
+			auto itr = other.begin();
+			while (itr != other.end()) {
+				Value v = *itr;
+				if (v.defined()) {
+					p.push_back(v);
+					++itr;
+				} else {
+					++itr;
+					std::size_t lastPos = 0;
+					while (itr != other.end()) {
+						Value find = *itr;
+						++itr;
+						if (itr != other.end()) {
+							Value insert = *itr;
+							++itr;
+							std::size_t pos;
+							if (findInArray(p, find, lastPos, pos)) {
+								if (insert.defined()) {
+									p.insert(pos, insert);
+									lastPos = pos+1;
+								}
+								else {
+									p.erase(pos);
+								}
+							} else {
+								if (insert.defined()) p.push_back(insert);
+							}
+						}
+					}
+					break;
+				}
+			}
+			return p;
+		}
+		case object: {
+			auto i1 = begin(), e1 = end();
+			auto i2 = other.begin(), e2 = other.end();
+			Object res;
+			while (i1 != e1 && i2 != e2) {
+				Value v1 = *i1;
+				Value v2 = *i2;
+				if (v1.getKey() < v2.getKey()) {
+					res.set(v1); ++i1;
+				} else if (v1.getKey() > v2.getKey()) {
+					res.set(v2); ++i2;
+				} else {
+					if (v1.type() == json::object && v2.type() == json::object) {
+						res.set(v1.getKey(),v1.merge(v2));
+					} else {
+						res.set(v2);
+					}
+					++i1; ++i2;
+				}
+			}
+			while (i1 != e1) {
+				res.set(*i1); ++i1;
+			}
+			while (i2 != e2) {
+				res.set(*i2); ++i2;
+			}
+			return res;
+		}
+
+		}
+
+		return undefined;
+	}
+
+	Value json::Value::diff(const Value& other) const {
+		if (type() != other.type()) return undefined;
+		switch (type()) {
+		case undefined:
+		case null: return other;
+		case boolean: return getBool() != other.getBool();
+		case number: return getNumber() - other.getNumber();
+		case string: {
+			auto str1 = getString();
+			auto str2 = other.getString();
+			if (str1.length < str2.length) return *this;
+			if (str1.substr(str1.length - str2.length) == str2) {
+				return str1.substr(0,str1.length - str2.length);
+			}
+			else {
+				return *this;
+			}
+		}
+		case array: {
+			std::size_t tsz = size();
+			std::size_t osz = other.size();
+			std::vector<Value> diff;
+			std::vector<Value> append;
+			std::size_t t = 0, o = 0;
+			while (t < tsz && o < osz) {
+				if ((*this)[t] != other[o]) {
+					if (t + 1 < tsz && (*this)[t+1] == other[o]) {
+						diff.push_back((*this)[t]);
+						diff.push_back(json::undefined);
+						t++;
+					} else if (o < osz && (*this)[t] == other[o+1]) {
+						diff.push_back((*this)[t]);
+						diff.push_back(other[o]);
+						o++;
+					} else {
+						diff.push_back((*this)[t]);
+						diff.push_back(other[o]);
+						diff.push_back((*this)[t]);
+						diff.push_back(json::undefined);
+						o++;
+						t++;
+					}
+				} else{
+					o++;
+					t++;
+				}
+			}
+			while (o < osz) {
+				append.push_back(other[o]);
+				t++;
+			}
+			while (t < tsz) {
+				diff.push_back((*this)[t]);
+				diff.push_back(json::undefined);
+				o++;
+			}
+			if (!diff.empty()) {
+				append.push_back(json::undefined);
+				for (auto &&v : diff) {
+					append.push_back(v);
+				}
+			}
+			return Value(StringView<Value>(append));
+		}
+		case object: {
+			auto i1 = begin(), e1 = end();
+			auto i2 = other.begin(), e2 = other.end();
+			Object res;
+			while (i1 != e1 && i2 != e2) {
+				const Value &v1 = *i1;
+				const Value &v2 = *i2;
+				if (v1.getKey() < v2.getKey()) {
+					res.unset(v1.getKey()); ++i1;
+				} else if (v1.getKey() > v2.getKey()) {
+					res.set(v2); ++i2;
+				} else {
+					if (v1.type() == json::object && v2.type() == json::object) {
+						Value x = v1.diff(v2);
+						if (!x.empty()) res.set(v1.getKey(),x);
+					} else if (v1 != v2) {
+						res.set(v2);
+					}
+					++i1; ++i2;
+				}
+			}
+			while (i1 != e1) {
+				res.unset((*i1).getKey()); ++i1;
+			}
+			while (i2 != e2) {
+				res.set(*i2); ++i2;
+			}
+			return res.commitAsDiff();
+		}
+
+		}
+
+		return undefined;
 	}
 
 }

@@ -1241,6 +1241,61 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		out << Value::compare(null,Value(object,{key/"aaa"=10}));//-1
 	};
 
+	tst.test("Value.merge.nulls","null") >> [](std::ostream &out) {
+		Value(nullptr).merge(nullptr).toStream(out);
+	};
+	tst.test("Value.merge.bool","falsefalsetruetrue") >> [](std::ostream &out) {
+		Value(true).merge(true).toStream(out);
+		Value(false).merge(false).toStream(out);
+		Value(true).merge(false).toStream(out);
+		Value(false).merge(true).toStream(out);
+	};
+	tst.test("Value.merge.numbers","30-1265.12e+11") >> [](std::ostream &out) {
+		Value(10).merge(20).toStream(out);
+		Value(-5).merge(-7).toStream(out);
+		Value(12.3).merge(52.8).toStream(out);
+		Value(5).merge(2e11).toStream(out);
+	};
+	tst.test("Value.merge.strings","\"abc123\",\"foo\",\"bar\"") >> [](std::ostream &out) {
+		Value("abc").merge("123").toStream(out);out.put(',');
+		Value("foo").merge("").toStream(out);out.put(',');
+		Value("").merge("bar").toStream(out);
+	};
+	tst.test("Value.merge.array","[1,2,3,\"abc\",\"foo\",\"bar\"]") >> [](std::ostream &out) {
+		Value({1,2,3}).merge({"abc","foo","bar"}).toStream(out);
+	};
+	tst.test("Value.merge.arraydiff","[\"hello\",\"world\",2,4,\"abc\",\"foo\",\"bar\"]") >> [](std::ostream &out) {
+		Value({1,2,3}).merge(Value(json::array,
+				{"abc","foo","bar",json::undefined,2,"hello",2,"world",1,json::undefined,3,4,3,json::undefined},
+				false)).toStream(out);
+	};
+	tst.test("Value.merge.object","{\"aaa\":10,\"bar\":[2,4,6],\"bbb\":{\"abc\":false,\"foo\":true,\"xxx\":42},\"ccc\":20,\"xyz\":100}") >> [](std::ostream &out) {
+		Value(Object
+				("aaa",10)
+				("ccc",20)
+				("bbb",Object
+						("xxx",11)
+						("foo",true))
+				("bar",{1,2,3})).merge(
+						Value(Object
+								("xyz",100)
+								("bbb",Object("abc",false)("xxx",42))
+							    ("bar",{2,4,6})
+								)).toStream(out);
+	};
+	tst.test("Value.merge.objectdiff","{\"bar\":[1,2,3],\"bbb\":{\"abc\":false,\"foo\":true},\"ccc\":20}") >> [](std::ostream &out) {
+		Value(Object
+				("aaa",10)
+				("ccc",20)
+				("bbb",Object
+						("xxx",11)
+						("foo",true))
+				("bar",{1,2,3})).merge(
+						Value(Object
+								("aaa",json::undefined)
+								("bbb",Object("abc",false)("xxx",json::undefined).commitAsDiff()).commitAsDiff()
+							    )).toStream(out);
+	};
 
 	runValidatorTests(tst);
 	//runRpcTests(tst);
