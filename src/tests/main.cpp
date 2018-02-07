@@ -21,6 +21,7 @@
 #include "../imtjson/binjson.tcc"
 #include "../imtjson/streams.h"
 #include "../imtjson/valueref.h"
+#include "../imtjson/wrap.h"
 #include "testClass.h"
 #include <random>
 
@@ -1302,6 +1303,23 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 								("aaa",json::undefined)
 								("bbb",Object("abc",false)("xxx",json::undefined).commitAsDiff()).commitAsDiff()
 							    )).toStream(out);
+	};
+
+	tst.test("Wrap.strigify","[\"don't panic\",42]") >> [](std::ostream &out) {
+
+		std::pair<std::string, int> payload("don't panic", 42);
+		Value v = makeValue(payload,{payload.first, payload.second});
+		v.toStream(out);
+
+	};
+
+	tst.test("Wrap.cast","don't panic,42") >> [](std::ostream &out) {
+
+		std::pair<std::string, int> payload("don't panic", 42);
+		Value v = makeValue(payload,{payload.first, payload.second});
+		auto c = cast<std::pair<std::string, int> >(v);
+		out << c.first << "," << c.second;
+
 	};
 
 	runValidatorTests(tst);
