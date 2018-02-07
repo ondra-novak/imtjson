@@ -4,6 +4,7 @@
 #include "ivalue.h"
 #include <functional>
 #include "range.h"
+
 namespace json {
 
 	class Array;

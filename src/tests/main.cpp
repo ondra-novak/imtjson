@@ -187,6 +187,13 @@ int testMain() {
 			out << v.getKey() << "=" << v.toString() << " "; return true;
 		});
 	};
+	tst.test("Parse.duplicateKeys", "Parse error: 'Duplicated keys' at <root>/t1/t2. Last input: 125('}').") >> [](std::ostream &out) {
+		try {
+			Value::fromString("{\"aaa\":123,\"t1\":{\"bbb\":\"xyz\", \"t2\":{\"ccc\":true,\"ccc\":false}}, \"\":null, \"neco\":12.2578}");
+		} catch (std::exception &e) {
+			out << e.what();
+		}
+	};
 	tst.test("Parse.objectFindValue", "12.2578") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"aaa\":123,\"bbb\":\"xyz\", \"ccc\":true, \"\":null, \"neco\":12.2578}");
 		out << v["neco"].toString();
@@ -195,8 +202,8 @@ int testMain() {
 		Value v = Value::fromString("{\"aaa\":123,\"bbb\":\"xyz\", \"ccc\":true, \"\":null, \"neco\":12.2578}");
 		out << v["caa"].toString();
 	};
-	tst.test("Parse.objectInObject", "2 3 2 1") >> [](std::ostream &out) {
-		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
+	tst.test("Parse.objectInObject", "3 3 2 1") >> [](std::ostream &out) {
+		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"d\":7}");
 		out << v.size() << " " << v["b"].size() << " " << v["b"]["b"].size() << " " << v["b"]["b"]["b"].size();
 	};
 	tst.test("Serialize.number", "50.0075") >> [](std::ostream &out) {
@@ -288,7 +295,7 @@ int testMain() {
 	    json::maxPrecisionDigits = 4;
 	};
 	tst.test("Serialize.objects", "{\"a\":7,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6}}") >> [](std::ostream &out) {
-		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
+		Value v = Value::fromString("{\"a\":7,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6}}");
 		v.toStream(out);
 	};
 	tst.test("Serialize.binary","[\"\",\"Zg==\",\"Zm8=\",\"Zm9v\",\"Zm9vYg==\",\"Zm9vYmE=\",\"Zm9vYmFy\"]") >> [](std::ostream &out) {
@@ -318,7 +325,7 @@ int testMain() {
 		Value(res).toStream(out);
 	};
 	tst.test("Serialize.valueHash", "13532798998175024480") >> [](std::ostream &out) {
-		Value v = Value::fromString("{\"a\":1,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6},\"a\":7}");
+		Value v = Value::fromString("{\"a\":7,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6}}");
 		std::hash<Value> hv;
 		out << hv(v);
 	};

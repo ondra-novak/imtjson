@@ -13,7 +13,17 @@ namespace json {
 	class Parser {
 	public:
 
-		Parser(const Fn &source) :rd(source) {}
+		typedef std::size_t Flags;
+
+		///Allows duplicated keys in object
+		/** Duplicated keys are considered as invalid JSON. This option allows to relax the rule. Note
+		 * that according to JSON standard, when duplicated keys are allowed, the last key is only stored
+		 * within the object
+		 *
+		 *  */
+		static const Flags allowDupKeys = 1;
+
+		Parser(const Fn &source, Flags flags = 0) :rd(source),flags(flags) {}
 
 		virtual Value parse();
 		Value parseObject();
@@ -160,6 +170,8 @@ namespace json {
 
 		///Temporary array - to keep allocated memory
 		std::vector<Value> tmpArr;
+
+		Flags flags;
 	};
 
 
@@ -288,7 +300,11 @@ namespace json {
 			}
 		} while (cont);		
 		StringView<Value> data = tmpArr;
-		Value res(object, data.substr(tmpArrPos));
+		auto mydata=data.substr(tmpArrPos);
+		Value res(object, mydata);
+		if (((flags & allowDupKeys) == 0) && (res.size() != mydata.length)) {
+			throw ParseError("Duplicated keys",c);
+		}
 		tmpArr.resize(tmpArrPos);
 		return res;
 	}

@@ -1,40 +1,53 @@
 /*
  * range.h
  *
- *  Created on: 6. 4. 2017
+ *  Created on: 7. 2. 2018
  *      Author: ondra
- *
- *
  */
+
+#ifndef SRC_IMTJSON_RANGE_H_
+#define SRC_IMTJSON_RANGE_H_
+#include <type_traits>
+#include <utility>
 
 #pragma once
 
-namespace json {
 
-
-///Range of two iterators - it allows range based loops in C++11
+///Extends std::pair with ranged-loop featire
 /**
- * Because there is no such class in std!!!
+ *
+ * auto r = mmap.equal_range(...);
+ * for (auto &x : range(r)) {
+ *
+ * }
+ *
  */
 template<typename Iter>
-class Range {
+class Range: public std::pair<Iter, Iter> {
 public:
+	typedef std::pair<Iter, Iter> Super;
 
-	Range(const Iter &b, const Iter &e):b(b),e(e) {}
-	Range(Iter &&b, Iter &&e):b(std::move(b)),e(std::move(e)) {}
+	using std::pair<Iter, Iter>::pair;
 
-	const Iter &begin() const {return b;}
-	const Iter &end() const {return e;}
+	typename Super::first_type &begin() {return this->first;}
+	const typename Super::first_type &begin() const {return this->first;}
+	typename Super::second_type &end() {return this->second;}
+	const typename Super::second_type &end() const {return this->second;}
 
-	 typename std::iterator_traits<Iter>::difference_type size() const {return std::distance(b,e);}
+	auto size() const -> decltype(std::distance(
+			std::declval<typename Super::first_type>(),
+			std::declval<typename Super::second_type>())) {
+		return std::distance(this->first, this->second);
+	}
 
-public:
-	Iter b;
-	Iter e;
 };
 
+template<typename Iter>
+Range<Iter> range(const std::pair<Iter, Iter> &r) {return Range<Iter>(r);}
+template<typename Iter>
+Range<Iter> range(std::pair<Iter, Iter> &&r) {return Range<Iter>(std::move(r));}
 
 
-}
 
 
+#endif /* SRC_IMTJSON_RANGE_H_ */
