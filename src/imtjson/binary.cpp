@@ -233,7 +233,7 @@ public:
 	}
 	virtual void encodeBinaryValue(const BinaryView &binary, const WriteFn &fn) const override{
 		for (unsigned char c : binary) {
-			if (isalnum(c) || strchr("-_.!~*'()", c) != 0) fn(StrViewA(reinterpret_cast<char *>(&c),1));
+			if (c && (isalnum(c) || strchr("-_.!~*'()", c) != 0)) fn(StrViewA(reinterpret_cast<char *>(&c),1));
 			else {
 				char buff[3];
 				buff[0]='%';

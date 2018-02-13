@@ -124,7 +124,7 @@ void BinarySerializer<Fn>::serializeInteger(std::size_t n, unsigned char type) {
 	} else if (n <= 0xFFFF) {
 		std::uint16_t v = (std::uint16_t)n;
 		writePOD(v, type | opcode::size16bit);
-	} else if (n <= 0xFFFFFFFFF) {
+	} else if (n <= 0xFFFFFFFF) {
 		std::uint32_t v = (std::uint32_t)n;
 		writePOD(v, type | opcode::size32bit);
 	}
