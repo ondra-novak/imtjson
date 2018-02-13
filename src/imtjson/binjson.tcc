@@ -294,8 +294,7 @@ Value BinaryParser<Fn>::parseItem() {
 		return Value(-(std::intptr_t)parseInteger(tag));
 	case opcode::key: {
 		String s(parseString(tag, nullptr));
-		keyHistory[keyIndex & 0x7F] = s;
-		keyIndex++;
+		storeKey(s);
 		Value v = parseItem();
 		return Value(s, v);
 	}
@@ -373,19 +372,21 @@ std::size_t  BinarySerializer<Fn>::HashStr::operator()(const StrViewA &str) cons
 }
 
 template<typename Fn>
+void BinaryParser<Fn>::storeKey(const String& s) {
+	keyHistory[keyIndex & 0x7F] = s;
+	keyIndex++;
+}
+
+
+
+template<typename Fn>
 inline void BinaryParser<Fn>::preloadKey(const String& str) {
-	keyHistory[keyIndex] = str;
-	keyIndex = (keyIndex + 1) & 0x7F;
+	storeKey(str);
 }
 
 template<typename Fn>
-inline void BinarySerializer<Fn>::preloadKey(const String& str) {
-	if (pkeys == nullptr) pkeys = new PreloadedKeys;
-	pkeys->keys[pkeys->keyIndex] = str;
-	pkeys->keyIndex = (pkeys->keyIndex + 1) & 0x7F;
-	ZeroID &id = keyMap[str];
-	id.value = nextKeyId;
-	++nextKeyId;
+inline bool BinarySerializer<Fn>::preloadKey(const StrViewA& str) {
+	return tryCompressKey(str) == -1;
 }
 
 template<typename Fn>

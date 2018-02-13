@@ -26,9 +26,10 @@ public:
 
 	///Parse binary json
 	Value parse();
-	///Initializes dictionary.
-	/**The dictionary must be initialized in same order as the dictionary of
-	 the serializer. Call this function for one or more keys
+	///Preloads keys to parse binary jsons created with preloaded keys
+	/**
+	 * You need to preload exact same keys in exact order as used during serialization
+	 * @param str reference to String object containing the keys
 	 */
 	void preloadKey(const String &str);
 	///Clears all keys
@@ -56,6 +57,9 @@ protected:
 	std::vector<char> keybuffer;
 	String keyHistory[128];
 	unsigned int keyIndex = 0;
+
+private:
+	void storeKey(const String& s);
 };
 
 
@@ -73,17 +77,19 @@ public:
 	///Serialize to binary stream
 	void serialize(const Value &v);
 	///Preloads to achieve better compression from the beginning
-	/** The keys preloaded here will occupy minimum space. You can preload up to 128 keys. Note that
-	 * if there is more keys in the json, they can eventually slip out from the dictionary and then
-	 * they may appear uncompressed.
+	/**
+	 * Adds keys to the dictionary, so the key will be compressed on the first appeareance. You need
+	 * add the exact same keys to the both serializer and parser in the exact same order, otherwise the
+	 * result stream is generated corrupted. You have to avoid duplicated keys as well.
 	 *
-	 * Function is inteed to be used to reduce space for short json's with a few keys.
-	 * @param str preloaded key. Call this function repatedly for each key to preload
+	 * @param str string to preload. Note the string must persist during serialization, because
+	 * content of the string is not copied. If you preload multiple keys, you need also keep then
+	 * valid until the serialization is done.
 	 *
-	 * @note the parser needs to preload exact the same keys in the same order. Not following this rule
-	 * will lead to file/stream corruption. Different or empty keys can appear during parsing
+	 * @retval true stored
+	 * @retval false
 	 */
-	void preloadKey(const String &str);
+	bool preloadKey(const StrViewA &str);
 	void clearKeys();
 
 protected:
@@ -100,11 +106,6 @@ protected:
 	unsigned int nextKeyId = 256;
 	BinarySerializeFlags flags;
 
-	struct PreloadedKeys{
-		String keys[128];
-		unsigned int keyIndex = 0;
-	};
-	std::unique_ptr<PreloadedKeys> pkeys;
 
 
 	template<typename T>
