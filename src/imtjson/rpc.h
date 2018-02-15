@@ -188,32 +188,6 @@ public:
 	 */
 	bool checkArgs(const Value &argDefTuple);
 
-	///Checks arguments
-	/** Perform argument checking's.
-	 *
-	 * @param argDefTuple Array of argument types defined in the validator. Each position
-	 *     match to argument position. Alternated types are allowed. "optional" is also
-	 *     allowed to signal optional arguments.
-	 * @param optionalArgs Rules for additional arguments.
-	 * @retval true arguments valid, false validation failed. To retrieve rejections, call
-	 * getRejections()
-	 */
-	bool checkArgs(const Value &argDefTuple, const Value &optionalArgs);
-
-	///Checks arguments
-	/** Perform argument checking's.
-	 *
-	 * @param argDefTuple Array of argument types defined in the validator. Each position
-	 *     match to argument position. Alternated types are allowed. "optional" is also
-	 *     allowed to signal optional arguments.
-	 * @param optionalArgs Rules for additional arguments.
-	 * @param customClasses contains validator's definition of custom rules. The default
-	 * rule don't need to be present, because the checkArgs doesn't areuse default rule
-	 * @retval true arguments valid, false validation failed. To retrieve rejections, call
-	 * getRejections()
-	 */
-	bool checkArgs(const Value &argDefTuple, const Value &optionalArgs, const Value &customClasses);
-
 	///Retrieves rejections of the previous checkArgs call
 	Value getRejections() const;
 

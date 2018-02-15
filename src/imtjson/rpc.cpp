@@ -155,20 +155,6 @@ bool RpcRequest::checkArgs(const Value& argDefTuple) {
 	return false;
 }
 
-bool RpcRequest::checkArgs(const Value& argDefTuple, const Value& optionalArgs) {
-	RpcArgValidator val;
-	if (val.checkArgs(data->args, argDefTuple, optionalArgs)) return true;
-	data->rejections = val.getRejections();
-	return false;
-}
-
-bool RpcRequest::checkArgs(const Value& argDefTuple, const Value& optionalArgs,
-		const Value& customClasses) {
-	RpcArgValidator val(customClasses);
-	if (val.checkArgs(data->args, argDefTuple, optionalArgs)) return true;
-	data->rejections = val.getRejections();
-	return false;
-}
 
 Value RpcRequest::getRejections() const {
 	return data->rejections;
@@ -522,12 +508,18 @@ Value RpcServer::formatError(int code,
 }
 
 void RpcRequest::setNoResultError(RequestData *r) {
-	Value err =r->formatter->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
-	r->setResponse(Value(object,{
-		key/"error"=err,
-		key/"result"=nullptr,
-		key/"id"=r->id
-	}));
+	r->addRef();
+	try {
+		Value err =r->formatter->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
+		r->setResponse(Value(object,{
+			key/"error"=err,
+			key/"result"=nullptr,
+			key/"id"=r->id
+		}));
+	} catch (...) {
+
+	}
+	r->release();
 }
 
 void RpcRequest::setNoResultError() {
