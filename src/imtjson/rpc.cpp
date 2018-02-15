@@ -131,13 +131,6 @@ public:
 		curPath = &Path::root;
 		return evalRuleArray(subject, pattern, pattern.size(),0);
 	}
-	bool checkArgs(const Value &subject, const Value &pattern, const Value &alt) {
-		Value::TwoValues s = subject.splitAt(pattern.size());
-		if (checkArgs(s.first, pattern)) {
-			return evalRuleAlternatives(s.second, alt, 0);
-		}
-		else return false;
-	}
 };
 
 void RpcRequest::setDiagData(Value v) {
@@ -149,9 +142,9 @@ const Value &RpcRequest::getDiagData() const {
 }
 
 bool RpcRequest::checkArgs(const Value& argDefTuple) {
-	RpcArgValidator val;
-	if (val.checkArgs(data->args, argDefTuple)) return true;
-	data->rejections = val.getRejections();
+	Value v = data->srvsvc->validateArgs(data->args,argDefTuple);
+	if (v.isNull() || !v.defined()) return true;
+	data->rejections = v;
 	return false;
 }
 
@@ -173,14 +166,14 @@ void RpcRequest::setArgError() {
 }
 
 void RpcRequest::setError(int code, String message, Value d) {
-	if (data->formatter == nullptr) {
+	if (data->srvsvc == nullptr) {
 		setError(Value(object,{
 				key/"code" =code,
 				key/"message"=message,
 				key/"data"=d
 		}));
 	} else {
-		setError(data->formatter->formatError(code,message,d));
+		setError(data->srvsvc->formatError(code,message,d));
 	}
 }
 
@@ -193,7 +186,7 @@ void RpcRequest::RequestData::setResponse(const Value& v) {
 
 void RpcServer::operator ()(RpcRequest req) const throw() {
 	try {
-		req.setErrorFormatter(this);
+		req.init(this);
 		Value name = req.getMethodName();
 		Value args = req.getArgs();
 		Value context = req.getContext();
@@ -334,7 +327,11 @@ void RpcServer::add_ping(const String &name) {
 	});
 }
 
-
+Value RpcServer::validateArgs(const Value& args, const Value& def) const {
+	RpcArgValidator v(customRules);
+	if (v.checkArgs(args, def)) return json::null;
+	else return v.getRejections();
+}
 
 void RpcServer::add_help(const Value& helpContent, const String &name) {
 
@@ -510,7 +507,7 @@ Value RpcServer::formatError(int code,
 void RpcRequest::setNoResultError(RequestData *r) {
 	r->addRef();
 	try {
-		Value err =r->formatter->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
+		Value err =r->srvsvc->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
 		r->setResponse(Value(object,{
 			key/"error"=err,
 			key/"result"=nullptr,
@@ -526,13 +523,13 @@ void RpcRequest::setNoResultError() {
 	setNoResultError(data);
 }
 
-void RpcRequest::setErrorFormatter(const IErrorFormatter *fmt) {
-	data->formatter = fmt;
+void RpcRequest::init(const IServerServices *srvsvc) {
+	data->srvsvc = srvsvc;
 }
 
 void RpcRequest::setInternalError(const char *what) {
 	if (what == nullptr) what = "Internal error";
-	Value err = data->formatter->formatError(RpcServer::errorInternalError,what);
+	Value err = data->srvsvc->formatError(RpcServer::errorInternalError,what);
 	setError(err);
 }
 
@@ -605,6 +602,8 @@ bool RpcRequest::isErrorSent() const {
 	return data->errorSent;
 }
 
-
+void RpcServer::setCustomValidationRules(Value curstomRules) {
+	this->customRules = customRules;
+}
 
 }

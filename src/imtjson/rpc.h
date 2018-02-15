@@ -86,11 +86,13 @@ enum Type {
 
 class RpcRequest {
 public:
-	class IErrorFormatter {
+	class IServerServices {
 	public:
 		virtual Value formatError(int code, const String &message, Value data=Value()) const = 0;
-		virtual ~IErrorFormatter() {}
+		virtual Value validateArgs(const Value &args, const Value &def) const = 0;
+		virtual ~IServerServices() {}
 	};
+
 
 
 private:
@@ -108,7 +110,7 @@ private:
 		Value rejections;
 		Value diagData;
 		RpcVersion::Type ver;
-		const IErrorFormatter *formatter = nullptr;
+		const IServerServices *srvsvc = nullptr;
 		bool responseSent = false;
 		bool errorSent = false;
 		bool notifyEnabled = false;
@@ -148,16 +150,9 @@ public:
 	template<typename Fn>
 	static RpcRequest create(const String &methodName, const Value &args, const Fn &fn, RpcFlags::Type flags = 0);
 
-	///Changes request's error formatter
-	/** Functions which helps to format error message will use this formatter.
-	 *  There is always a formatter defined, because this value is set when the request is processed
-	 *  by the RpcServer
-	 * @param fmt pointer to the formater.
-	 *
-	 * @note always ensure, that formatter is valid during lifetime of the request. The RpcServer
-	 * must be destoyed after the all requests are finished (including asynchronous requests).
-	 */
-	void setErrorFormatter(const IErrorFormatter *fmt);
+
+	///Function is called by RpcServer before the request is being processed
+	void init(const IServerServices *srvsvc);
 
 	///Name of method
 	const String &getMethodName() const;
@@ -319,7 +314,7 @@ inline RpcRequest json::RpcRequest::create(const String& methodName, const Value
  *
  * @note No methods are MT safe! For MT safety you need to wrap the class by locks
  */
-class RpcServer: private RpcRequest::IErrorFormatter {
+class RpcServer: private RpcRequest::IServerServices {
 
 	class AbstractMethodReg: public RefCntObj {
 	public:
@@ -385,6 +380,8 @@ public:
 	 */
 	virtual Value formatError(int code, const String &message, Value data=Value()) const override;
 
+	virtual Value validateArgs(const Value &args, const Value &def) const override;
+
 	///Adds buildin method Server.listMethods
 	void add_listMethods(const String &name = "Server.listMethods" );
 
@@ -401,11 +398,19 @@ public:
 	 */
 	void add_help(const Value &helpContent, const String &name = "Server.help");
 
+	///define custom rules
+	/**
+	 * @param customRules - object containing custom rules for the validator
+	 */
+	void setCustomValidationRules(Value curstomRules);
+
 protected:
 	typedef std::map<StrViewA, RefCntPtr<AbstractMethodReg> > MapReg;
 	typedef MapReg::value_type MapValue;
 
 	MapReg mapReg;
+
+	Value customRules;
 };
 
 
