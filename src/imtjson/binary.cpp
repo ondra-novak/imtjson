@@ -69,7 +69,7 @@ class Base64Encoding: public AbstractBinaryEncoder {
 public:
 
 
-	virtual StrViewA getName() const {
+	virtual StrViewA getName() const override {
 		return "base64";
 	}
 
@@ -170,7 +170,7 @@ public:
 
 class Base64EncodingUrl: public Base64Encoding {
 public:
-	virtual StrViewA getName() const {
+	virtual StrViewA getName() const override {
 		return "base64url";
 	}
 	virtual Value decodeBinaryValue(const StrViewA &str) const override {

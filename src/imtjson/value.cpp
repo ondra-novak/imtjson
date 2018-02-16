@@ -186,7 +186,8 @@ namespace json {
 		SubArray(PValue parent, std::size_t start, std::size_t len)
 			:parent(parent), start(start), len(len) {
 
-			if (typeid(*parent) == typeid(SubArray)) {
+			const IValue *p = parent;
+			if (typeid(*p) == typeid(SubArray)) {
 				const SubArray *x = static_cast<const SubArray *>((const IValue *)parent);
 				this->parent = x->parent;
 				this->start = this->start + x->start;

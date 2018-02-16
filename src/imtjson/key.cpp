@@ -35,7 +35,7 @@ void ObjectProxy::operator delete(void *ptr, std::size_t ) {
 Value getKeyObject(const Value &v) {
 
 	PValue pv = v.getHandle();
-	if (pv->type() == proxy) {
+	if (pv->flags() & proxy) {
 		RefCntPtr<const ObjectProxyString> str = RefCntPtr<const ObjectProxyString>::dynamicCast(pv);
 		if (str != nullptr) {
 			return str->getKey();
