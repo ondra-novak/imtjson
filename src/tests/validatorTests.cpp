@@ -38,6 +38,21 @@ void runValidatorTests(TestSimple &tst) {
 	tst.test("Validator.not_string","[[[],\"string\"]]") >> [](std::ostream &out) {
 		vtest(out,Object("_root","string"),12.5);
 	};
+	tst.test("Validator.charset","ok") >> [](std::ostream &out) {
+		vtest(out,Object("_root","[a-z-0-9XY]"),"ahoj-123");
+	};
+	tst.test("Validator.charset.neg","ok") >> [](std::ostream &out) {
+		vtest(out,Object("_root","[^a-z-0-9XY]"),"AHOJ!");
+	};
+	tst.test("Validator.charset.not_ok",R"([[[],"[a-z-123]"]])") >> [](std::ostream &out) {
+		vtest(out,Object("_root","[a-z-123]"),"ahoj_123");
+	};
+	tst.test("Validator.charset.neg.not_ok",R"([[[],"[^a-z-]"]])") >> [](std::ostream &out) {
+		vtest(out,Object("_root","[^a-z-]"),"AHOJ-AHOJ");
+	};
+	tst.test("Validator.not_string","[[[],\"string\"]]") >> [](std::ostream &out) {
+		vtest(out,Object("_root","string"),12.5);
+	};
 	tst.test("Validator.number","ok") >> [](std::ostream &out) {
 		vtest(out,Object("_root","number"),12.5);
 	};
@@ -287,6 +302,27 @@ void runValidatorTests(TestSimple &tst) {
 	};
 	tst.test("Validator.time.fail","[[[],\"timez\"]]") >> [](std::ostream &out) {
 		vtest(out, Object("_root", "timez"), "A2xE0:34Z");
+	};
+	tst.test("Validator.explode.ok","ok") >> [](std::ostream &out) {
+		vtest(out, Value::fromString(R"({"_root":["explode",".",[[3],"alpha","alpha","alpha"]]})"),"ahoj.nazdar.cau");
+	};
+	tst.test("Validator.explode.fail1",R"([[[2],"alpha"]])") >> [](std::ostream &out) {
+		vtest(out, Value::fromString(R"({"_root":["explode",".",[[3],"alpha","alpha","alpha"]]})"),"ahoj.nazdar.123");
+	};
+	tst.test("Validator.explode.fail2",R"([[[2],"alpha"]])") >> [](std::ostream &out) {
+		vtest(out, Value::fromString(R"({"_root":["explode",".",[[3],"alpha","alpha","alpha"]]})"),"ahoj.nazdar");
+	};
+	tst.test("Validator.explode.fail3",R"([[[3],[[3],"alpha","alpha","alpha"]]])") >> [](std::ostream &out) {
+		vtest(out, Value::fromString(R"({"_root":["explode",".",[[3],"alpha","alpha","alpha"]]})"),"ahoj.nazdar.cau.tepic");
+	};
+	tst.test("Validator.explode.ok2","ok") >> [](std::ostream &out) {
+		vtest(out, Value::fromString(R"({"_root":["explode",".",[[2],"alpha","any"],1]})"),"ahoj.nazdar.cau.tepic");
+	};
+	tst.test("Validator.explode.fail4",R"([[[1],"alpha"]])") >> [](std::ostream &out) {
+		vtest(out, Value::fromString(R"({"_root":["explode",".",[[2],"alpha","alpha"],1]})"),"ahoj.123");
+	};
+	tst.test("Validator.explode.fail5",R"([[[1],"any"]])") >> [](std::ostream &out) {
+		vtest(out, Value::fromString(R"({"_root":["explode",".",[[2],"alpha","any"],1]})"),"ahoj");
 	};
 	tst.test("Validator.customtime.ok","ok") >> [](std::ostream &out) {
 		vtest(out, Object("_root", {"datetime","DD.MM.YYYY hh:mm:ss"} ), "02.04.2004 12:32:46");

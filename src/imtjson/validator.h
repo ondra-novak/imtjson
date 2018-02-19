@@ -41,6 +41,7 @@ public:
 	static StrViewA strNative;
 	static StrViewA strNull;
 	static StrViewA strOptional;
+	static StrViewA strUndefined;
 	static StrViewA strDateTimeZ;
 	static StrViewA strDate;
 	static StrViewA strTimeZ;
@@ -58,6 +59,7 @@ public:
 	static StrViewA strPrefix;
 	static StrViewA strSuffix;
 	static StrViewA strSplit;
+	static StrViewA strExplode;
 	static StrViewA strAll;
 	static StrViewA strAndSymb;
 	static StrViewA strNot;
@@ -69,6 +71,8 @@ public:
 
 	static char valueEscape;
 	static char commentEscape;
+	static char charSetBegin;
+	static char charSetEnd ;
 
 
 
@@ -195,6 +199,8 @@ protected:
 	bool opCompareVar(const Value &subject, const Value &rule);
 	bool opEmit(const Value &subject, const Value &args);
 	Value walkObject(const Value &subject,  const Value &v);
+	bool opExplode(const Value& subject, StrViewA str, const Value& rule, const Value& limit);
+
 
 };
 

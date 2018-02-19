@@ -37,8 +37,10 @@ StrViewA Validator::strToNumber = "tonumber";
 StrViewA Validator::strPrefix = "prefix";
 StrViewA Validator::strSuffix = "suffix";
 StrViewA Validator::strSplit = "split";
+StrViewA Validator::strExplode = "explode"; ///< ["explode","delimiter",rule,limit]
 StrViewA Validator::strNull = "null";
 StrViewA Validator::strOptional = "optional";
+StrViewA Validator::strUndefined = "undefined";
 StrViewA Validator::strGreater = ">";
 StrViewA Validator::strGreaterEqual = ">=";
 StrViewA Validator::strLess = "<";
@@ -57,6 +59,8 @@ StrViewA Validator::strUseVar = "usevar";
 StrViewA Validator::strEmit = "emit";
 
 char Validator::valueEscape = '\'';
+char Validator::charSetBegin = '[';
+char Validator::charSetEnd = ']';
 char Validator::commentEscape = '#';
 
 
@@ -393,6 +397,9 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 			if (token == strSplit) {
 				return opSplit(subject, getVar(rule[1],subject).getUInt(),rule[2],rule[3]);
 			}
+			if (token == strExplode) {
+				return opExplode(subject, getVar(rule[1],subject).getString(),rule[2],rule[3]);
+			}
 			if (token == strGreater || token == strGreaterEqual || token == strLess || token == strLessEqual ) {
 				return opRangeDef(subject, rule, 0);
 			}
@@ -489,6 +496,51 @@ bool Validator::evalRuleAlternatives(const Value& subject, const Value& rule, un
 	return false;
 }
 
+static bool opTestCharset(const std::wstring &subject, const std::wstring &rule) {
+
+
+
+	StrViewW subj(subject);
+	StrViewW r(rule);
+	r = r. substr(1, r.length-2);
+	if (r.empty()) return subject.empty();
+	bool neg = false;
+	if (r[0] == '^') {
+		neg = !neg;
+		r = r.substr(1);
+		if (r.empty()) return !subject.empty();
+	}
+	std::size_t adjlen = r.length-2;
+	for (auto &&x: subj) {
+		bool found = false;
+		for (std::size_t i = 0; i < adjlen; i++) {
+			if (r[i+1] == '-') {
+				if (x >= r[i] && x < r[i+2]) {
+					found = true;
+					break;
+				}
+				i = i+2;
+			} else {
+				if (x == r[i]) {
+					found = true;
+					break;
+				}
+			}
+		}
+		if (!found) {
+			for (std::size_t i = adjlen; i < r.length;i++) {
+				if (x == r[i]) {
+					found = true;
+					break;
+				}
+			}
+		}
+		if (found == neg) return false;
+	}
+	return true;
+
+}
+
 bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	StrViewA name = rule.getString();
 
@@ -503,7 +555,9 @@ bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	else if (name.data[0] == commentEscape) {
 		return false;
 	}
-	else if (name == strString) {
+	else if (name.data[0] == charSetBegin && name[name.length-1] == charSetEnd) {
+		return subject.type() == string && opTestCharset(String(subject).wstr(),String(rule).wstr());
+	}else if (name == strString) {
 		return subject.type() == string;
 	}
 	else if (name == strNumber) {
@@ -518,7 +572,7 @@ bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	else if (name == strNull) {
 		return subject.isNull();
 	}
-	else if (name == strOptional) {
+	else if (name == strOptional || name == strUndefined) {
 		return !subject.defined();
 	}
 	else if (name == strHex) {
@@ -732,6 +786,31 @@ bool Validator::opSuffix(const Value& subject, const Value& args) {
 bool Validator::opSplit(const Value& subject, std::size_t at, const Value& left, const Value& right) {
 	Value::TwoValues s = subject.splitAt((int)at);
 	return evalRule(s.first,left) && evalRule(s.second,right);
+}
+bool Validator::opExplode(const Value& subject, StrViewA str, const Value& rule, const Value& limit) {
+
+	StrViewA subtxt = subject.getString();
+	if (limit.defined()) {
+		unsigned int l = limit.getUInt();
+		if (l) {
+			Array newsubj;
+			auto splt = subtxt.split(str,l);
+			while (!!splt) {
+				StrViewA part = splt();
+				newsubj.push_back(part);
+			}
+			return evalRule(newsubj,rule);
+		}
+	}
+	{
+		Array newsubj;
+		auto splt = subtxt.split(str);
+		while (!!splt) {
+			StrViewA part = splt();
+			newsubj.push_back(part);
+		}
+		return evalRule(newsubj,rule);
+	}
 }
 
 
