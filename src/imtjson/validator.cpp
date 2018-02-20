@@ -554,16 +554,16 @@ static bool opIsEmpty(const Value &subject) {
 		case json::object:
 		case json::array: return subject.empty();
 		case json::string: return subject.getString().empty();
+		default: return false;
 	}
-	return false;
 }
 static bool opIsNonEmpty(const Value &subject) {
 	switch (subject.type()) {
 		case json::object:
 		case json::array: return !subject.empty();
 		case json::string: return !subject.getString().empty();
+		default: return false;
 	}
-	return false;
 }
 
 bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
