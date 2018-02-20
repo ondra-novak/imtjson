@@ -515,7 +515,7 @@ static bool opTestCharset(const std::wstring &subject, const std::wstring &rule)
 		bool found = false;
 		for (std::size_t i = 0; i < adjlen; i++) {
 			if (r[i+1] == '-') {
-				if (x >= r[i] && x < r[i+2]) {
+				if (x >= r[i] && x <= r[i+2]) {
 					found = true;
 					break;
 				}

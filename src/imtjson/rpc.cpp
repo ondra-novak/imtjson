@@ -602,7 +602,7 @@ bool RpcRequest::isErrorSent() const {
 	return data->errorSent;
 }
 
-void RpcServer::setCustomValidationRules(Value curstomRules) {
+void RpcServer::setCustomValidationRules(Value customRules) {
 	this->customRules = customRules;
 }
 
