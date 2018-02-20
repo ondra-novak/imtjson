@@ -46,6 +46,8 @@ public:
 	static StrViewA strDate;
 	static StrViewA strTimeZ;
 	static StrViewA strTime;
+	static StrViewA strEmpty;
+	static StrViewA strNonEmpty;
 
 	static StrViewA strGreater;
 	static StrViewA strGreaterEqual;

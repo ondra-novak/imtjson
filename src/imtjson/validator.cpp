@@ -57,6 +57,8 @@ StrViewA Validator::strTime = "time";
 StrViewA Validator::strSetVar = "setvar";
 StrViewA Validator::strUseVar = "usevar";
 StrViewA Validator::strEmit = "emit";
+StrViewA Validator::strEmpty = "empty";
+StrViewA Validator::strNonEmpty = "nonempty";
 
 char Validator::valueEscape = '\'';
 char Validator::charSetBegin = '[';
@@ -136,6 +138,7 @@ static bool isLess(const Value &a, const Value &b) {
 
 static bool opHex(const Value &v) {
 	StrViewA str = v.getString();
+	if (str.empty()) return false;
 	for (auto &v : str) {
 		if (!isxdigit(v)) return false;
 	}
@@ -159,10 +162,8 @@ static bool opBase64(const Value &v) {
 static bool opBase64url(const Value &v) {
 	StrViewA str = v.getString();
 	if (str.empty()) return false;
-	if (str.length % 4 != 0) return false;
+	if (str.length % 4 == 1) return false;
 	std::size_t len = str.length;
-	if (str[len - 1] == '=') len--;
-	if (str[len - 1] == '=') len--;
 	for (std::size_t i = 0; i < len; i++) {
 		char c = str[i];
 		if (!isalnum(c) && c != '-' && c != '_') return false;
@@ -172,6 +173,7 @@ static bool opBase64url(const Value &v) {
 
 static bool opUppercase(const Value &v) {
 	StrViewA str = v.getString();
+	if (str.empty()) return false;
 	for (auto &v : str) {
 		if (v < 'A' || v>'Z') return false;
 	}
@@ -180,6 +182,7 @@ static bool opUppercase(const Value &v) {
 
 static bool opLowercase(const Value &v) {
 	StrViewA str = v.getString();
+	if (str.empty()) return false;
 	for (auto &v : str) {
 		if (v < 'a' || v>'z') return false;
 	}
@@ -188,6 +191,7 @@ static bool opLowercase(const Value &v) {
 
 static bool opAlpha(const Value &v) {
 	StrViewA str = v.getString();
+	if (str.empty()) return false;
 	for (auto &v : str) {
 		if (!isalpha(v)) return false;
 	}
@@ -196,6 +200,7 @@ static bool opAlpha(const Value &v) {
 
 static bool opAlnum(const Value &v) {
 	StrViewA str = v.getString();
+	if (str.empty()) return false;
 	for (auto &v : str) {
 		if (!isalnum(v)) return false;
 	}
@@ -204,6 +209,7 @@ static bool opAlnum(const Value &v) {
 
 static bool opDigits(const Value &v) {
 	StrViewA str = v.getString();
+	if (str.empty()) return false;
 	for (auto &v : str) {
 		if (!isdigit(v)) return false;
 	}
@@ -500,12 +506,14 @@ static bool opTestCharset(const std::wstring &subject, const std::wstring &rule)
 
 
 
+
 	StrViewW subj(subject);
 	StrViewW r(rule);
 	r = r. substr(1, r.length-2);
 	if (r.empty()) return subject.empty();
+	if (subj.empty()) return false;
 	bool neg = false;
-	if (r[0] == '^') {
+	if (r[0] == '^' && r.length>1) {
 		neg = !neg;
 		r = r.substr(1);
 		if (r.empty()) return !subject.empty();
@@ -539,6 +547,23 @@ static bool opTestCharset(const std::wstring &subject, const std::wstring &rule)
 	}
 	return true;
 
+}
+
+static bool opIsEmpty(const Value &subject) {
+	switch (subject.type()) {
+		case json::object:
+		case json::array: return subject.empty();
+		case json::string: return subject.getString().empty();
+	}
+	return false;
+}
+static bool opIsNonEmpty(const Value &subject) {
+	switch (subject.type()) {
+		case json::object:
+		case json::array: return !subject.empty();
+		case json::string: return !subject.getString().empty();
+	}
+	return false;
 }
 
 bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
@@ -616,6 +641,12 @@ bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	}
 	else if (name == strIdentifier) {
 		return opIsIdentifier(subject.toString());
+	}
+	else if (name == strEmpty) {
+		return opIsEmpty(subject);
+	}
+	else if (name == strNonEmpty) {
+		return opIsNonEmpty(subject);
 	}
 	else {
 		return checkClass(subject, name);

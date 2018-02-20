@@ -44,6 +44,8 @@ public:
 class Binary: public BinaryView {
 public:
 
+	Binary() {}
+
 	BinaryEncoding getEncoding() const;
 	static BinaryEncoding getEncoding(const IValue *v);
 
