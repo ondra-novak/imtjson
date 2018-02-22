@@ -133,7 +133,7 @@ void BinarySerializer<Fn>::serializeString(const StrViewA &str, unsigned char ty
 					btable = std::unique_ptr<Base64Table>(new Base64Table(Base64Table::base64urlchars));
 				}
 				ondra_shared::VLA<unsigned char, 256> buffer(((str.length -1) * 3 +3)/4);
-				unsigned char first = btable->table[str[0]] |0x80;
+				unsigned char first = btable->table[(unsigned)str[0]] |0x80;
 				fn(first);
 				Base64Encoding::decoderCore(buffer.data, str.substr(1), str.length-1, *btable);
 				for (auto c: buffer) fn(c);
