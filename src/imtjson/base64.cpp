@@ -53,7 +53,7 @@ Value Base64Encoding::decodeBinaryValue(const StrViewA &str) const {
 	static Base64Table t(Base64Table::base64chars);
 	std::size_t len = str.length;
 	if ((len & 0x3) || len == 0) return String();
-	std::size_t finlen = ((len+3) / 4) * 3;
+	std::size_t finlen = len * 3 / 4;
 	if (str[len-1] == '=') {
 		--finlen;
 		--len;
@@ -124,7 +124,7 @@ StrViewA Base64EncodingUrl::getName() const  {
 Value Base64EncodingUrl::decodeBinaryValue(const StrViewA &str) const  {
 		static Base64Table t(Base64Table::base64urlchars);
 		std::size_t len = str.length;
-		std::size_t finlen = (len*3+3)/4;
+		std::size_t finlen = (len*3)/4;
 		RefCntPtr<StringValue> strVal = new(len) StringValue(base64,len,[&] (char *buff) {
 			decoderCore(reinterpret_cast<unsigned char *>(buff),str, len,t);
 			return finlen;
