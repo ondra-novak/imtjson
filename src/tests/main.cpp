@@ -67,7 +67,7 @@ bool binTest(std::string file)  {
 	}
 	{
 		std::ofstream outfile(file + ".bin", std::ifstream::binary);
-		input.serializeBinary(toStream(outfile));
+		input.serializeBinary(toStream(outfile),compressKeys|compressTokenStrings);
 	}
 	{
 		std::ifstream infile(file + ".bin", std::ifstream::binary);

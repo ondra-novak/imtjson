@@ -119,6 +119,32 @@ namespace json {
 	*/
 	    
 	const BinarySerializeFlags maintain32BitComp = 0x2;
+	///This flag enables of compression token strings enums and base64url strings
+	/** The compression works only for strings, which contain only
+	 * letters, capitals, numbers, underscores and minus (base64url set).
+	 *
+	 * These strings are stored using 6 bits instead eights, so two bits
+	 * are saved on every byte.
+	 *
+	 * The feature is disabled by default, because it can make serialization
+	 * slower, because the serialized must check, whether the string can
+	 * be compressed by this way.
+	 *
+	 * The first byte is always uncompressed, folloing bytes are
+	 * compressed. The compressed string starts with byte between 0x80 and 0x8BF
+	 * which is invalid UTF-8 character. The byte stores six bits of the
+	 * first character. Following characters are stored using 6 bits per each.
+	 *
+	 * Compression is effective for strings longer then 4 characters
+	 * "A" -> 0x80
+	 * "AB" -> 0x80, 0x04
+	 * "ABC -> 0x80, 0x04, 0x20
+	 * "ABCD -> 0x80, 0x04, 0x20, 0xC0
+	 * "ABCDE -> 0x80, 0x04, 0x20, 0xC4
+	 *
+	 */
+
+	const BinarySerializeFlags compressTokenStrings = 0x1;
 
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;

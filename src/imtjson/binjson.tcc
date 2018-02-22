@@ -10,6 +10,7 @@
 #include "objectValue.h"
 #include "arrayValue.h"
 #include "stringValue.h"
+#include "shared/vla.h"
 
 #pragma once
 
@@ -88,7 +89,12 @@ void BinarySerializer<Fn>::serialize(const IValue *v) {
 	case object: serializeContainer(v,opcode::object);break;
 	case array: serializeContainer(v,opcode::array);break;
 	case number: serializeNumber(v);break;
-	case string: serializeString(v->getString(),opcode::string);break;
+	case string:
+		if (v->flags() & binaryString)
+			serializeString(v->getString(),opcode::binstring);
+		else
+			serializeString(v->getString(),opcode::string);
+		break;
 	case boolean: serializeBoolean(v);break;
 	case null: serializeNull(v);break;
 	default: serializeUndefined(v);break;
@@ -104,11 +110,41 @@ void BinarySerializer<Fn>::serializeContainer(const IValue *v, unsigned char typ
 	}
 }
 
+static inline bool canCompressString(const StrViewA &str) {
+	if (str.length<=4) return false;
+	for (std::size_t i = 0; i < str.length; ++i) {
+		char c = str[i];
+		if (!isalnum(c) && c != '_' && c != '-') return false;
+	}
+	return true;
+}
+
 template<typename Fn>
 void BinarySerializer<Fn>::serializeString(const StrViewA &str, unsigned char type) {
 	serializeInteger(str.length,type);
-	for (std::size_t i = 0; i < str.length; i++) {
-		fn((unsigned char)str[i]);
+	if (str.empty()) {
+		return;
+	} else {
+		if (type == opcode::binstring) {
+			for (unsigned char c: str) fn(c);
+		} else {
+			if (flags & compressTokenStrings && canCompressString(str)) {
+				if (btable == nullptr) {
+					btable = std::unique_ptr<Base64Table>(new Base64Table(Base64Table::base64urlchars));
+				}
+				ondra_shared::VLA<unsigned char, 256> buffer(((str.length -1) * 3 +3)/4);
+				unsigned char first = btable->table[str[0]] |0x80;
+				fn(first);
+				Base64Encoding::decoderCore(buffer.data, str.substr(1), str.length-1, *btable);
+				for (auto c: buffer) fn(c);
+			} else {
+				unsigned char first = str[0];
+				//prevent the first character to be an invalid UTF-8 sequence
+				first = first | ((first & 0x80)>>1);
+				fn(first);
+				for (unsigned char c: str.substr(1)) fn(c);
+			}
+		}
 	}
 }
 
@@ -209,10 +245,44 @@ Value json::BinaryParser<Fn>::parseObject(unsigned char tag, bool diff) {
 template<typename Fn>
 Value json::BinaryParser<Fn>::parseString(unsigned char tag, BinaryEncoding encoding) {
 	std::size_t sz = parseInteger(tag);
-	RefCntPtr<StringValue> s = new(sz) StringValue(encoding, sz, [&](char *buff) {
-		for (std::size_t i = 0; i < sz; i++) buff[i] = fn();
-		return sz;
-	});
+	RefCntPtr<StringValue> s;
+	if (sz == 0)  {
+		return String();
+	} else if (encoding == nullptr) {
+		//reading possible compressed string
+		char x = fn();
+		//first character is compressed string starting sequence
+		if ((x & 0xC0) == 0x80) {
+
+			s = new(sz) StringValue(encoding, sz, [&](char *buff) {
+				buff[0] = Base64Table::base64urlchars[x & 0x3F];
+				ondra_shared::VLA<unsigned char, 256> buffer(sz);
+				for (std::size_t cnt = ((sz-1)*3+3)/4,i = 0; i < cnt; i++) {
+					buffer[i] = fn();
+				}
+				std::size_t wrpos = 1;
+				Base64Encoding::encodeCore(BinaryView(buffer),Base64Table::base64urlchars,
+						[&](StrViewA s) {
+							for(char c:s) {
+								if (wrpos < sz) buff[wrpos++] = c;
+							}
+						},false);
+				return sz;
+			});
+
+		} else {
+			s = new(sz) StringValue(encoding, sz, [&](char *buff) {
+				buff[0] = x;
+				for (std::size_t i = 1; i < sz; i++) buff[i] = fn();
+				return sz;
+			});
+		}
+	} else {
+		s = new(sz) StringValue(encoding, sz, [&](char *buff) {
+			for (std::size_t i = 0; i < sz; i++) buff[i] = fn();
+			return sz;
+		});
+	}
 	return PValue::staticCast(s);
 }
 

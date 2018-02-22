@@ -11,6 +11,7 @@
 #include "value.h"
 #include <unordered_map>
 #include <memory>
+#include "base64.h"
 
 namespace json {
 
@@ -105,6 +106,7 @@ protected:
 	KeyMap keyMap;
 	unsigned int nextKeyId = 256;
 	BinarySerializeFlags flags;
+	std::unique_ptr<Base64Table> btable;
 
 
 
