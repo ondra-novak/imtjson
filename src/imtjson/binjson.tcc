@@ -128,7 +128,7 @@ void BinarySerializer<Fn>::serializeString(const StrViewA &str, unsigned char ty
 		if (type == opcode::binstring) {
 			for (unsigned char c: str) fn(c);
 		} else {
-			if (flags & compressTokenStrings && canCompressString(str)) {
+			if ((flags & compressTokenStrings) && canCompressString(str)) {
 				if (btable == nullptr) {
 					btable = std::unique_ptr<Base64Table>(new Base64Table(Base64Table::base64urlchars));
 				}

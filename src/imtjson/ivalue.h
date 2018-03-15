@@ -144,7 +144,7 @@ namespace json {
 	 *
 	 */
 
-	const BinarySerializeFlags compressTokenStrings = 0x1;
+	const BinarySerializeFlags compressTokenStrings = 0x4;
 
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;
