@@ -3,7 +3,6 @@
 #include <map>
 #include <functional>
 #include "valueref.h"
-#include "stackProtection.h"
 #include "edit.h"
 #include "container.h"
 
@@ -24,7 +23,7 @@ namespace json {
 	the class Value. This makes changes immutable. Original source object is not changed.
 	*/
 
-	class Object : public StackProtected {
+	class Object  {
 	public:
 
 

@@ -27,7 +27,6 @@ const Path &Path::root = rootPath;
 Value Value::operator[](const Path &path) const {
 	if (path.isRoot()) return *this;
 	else {
-		path.checkInstance();
 		Value sub = this->operator[](path.getParent());
 		if (path.isIndex()) {
 			return sub[path.getIndex()];
@@ -49,7 +48,6 @@ PPath Path::copy() const {
 	//calculate length
 	uintptr_t len=0;
 	for (const Path *p = this; p != &root; p = &p->parent) {
-		p->checkInstance();
 		//reserve space for element
 		if (p == this) {
 			reqSize += sizeof(PathRef);
@@ -68,7 +66,6 @@ PPath Path::copy() const {
 	std::uintptr_t *cookie = reinterpret_cast<std::uintptr_t *>(
 			reinterpret_cast<char *>(buff)+reqSize);
 
-	*cookie = StackProtected::cookieValue;
 
 	//get pointer to first item
 	PathRef *start = reinterpret_cast<PathRef *>(buff);
@@ -77,8 +74,6 @@ PPath Path::copy() const {
 	//perform recursive copy
 	PPath out(copyRecurse(start,strbuff));
 
-	if (*cookie != StackProtected::cookieValue)
-		throw std::runtime_error("FATAL: imtjson - Corrupted memory!");
 	return out;
 }
 
@@ -155,8 +150,6 @@ void Path::operator delete (void *, void *) {
 int Path::compare(const Path &other) const {
 	if (isRoot()) return other.isRoot()?0:-1;
 	if (other.isRoot()) return 1;
-	checkInstance();
-	other.checkInstance();
 	int z;
 	if (isIndex()) {
 		if (other.isIndex()) {

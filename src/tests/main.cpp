@@ -879,15 +879,6 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 
 	};
 
-	tst.test("Path.invalidAccess","Attempt to work with already destroyed object") >> [](std::ostream &out) {
-		try {
-			Path p = Path::root /"aaa"/"bbb";
-			Value v;
-			out << v[p];
-		} catch (std::exception &e) {
-			out << e.what();
-		}
-	};
 	tst.test("Path.toValue","[\"bcd\",\"z\",\"x\",2,\"u\"]") >> [](std::ostream &out) {
 		Value v = (Path::root/"bcd"/"z"/"x"/2/"u").toValue();
 		out << v;

@@ -11,3 +11,6 @@ install(TARGETS imtjson
 INSTALL(FILES ${imtjson_HDR}
         DESTINATION "include/imtjson" 
         )    
+INSTALL(FILES "shared/vla.h" "shared/refcnt.h" "shared/stringview.h"
+	DESTINATION "include/imtjson/shared"
+	)

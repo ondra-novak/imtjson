@@ -38,7 +38,6 @@ ValueRef& ValueRef::operator =(const Value& val) {
 	switch (typeOrIndex) {
 	case objectRef:
 		Value::operator= (Value(getKey(),val));
-		objptr->checkInstance();
 		objptr->set(*this);
 		break;
 	case valueRef:
@@ -47,7 +46,6 @@ ValueRef& ValueRef::operator =(const Value& val) {
 		break;
 	default:
 		Value::operator= (val);
-		arrptr->checkInstance();
 		arrptr->set(typeOrIndex, val);
 		break;
 	}
@@ -69,14 +67,12 @@ ValueRef::ValueRef(const ValueRef& other):Value(other),typeOrIndex(other.typeOrI
 const Value &ValueRef::sync() {
 	switch (typeOrIndex) {
 	case objectRef:
-		arrptr->checkInstance();
 		Value::operator= (getValueOrName(*objptr, getKey()));
 		break;
 	case valueRef:
 		Value::operator= (*valptr);
 		break;
 	default:
-		arrptr->checkInstance();
 		Value::operator= (arrptr->operator [](typeOrIndex));
 		break;
 	}

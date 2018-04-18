@@ -1,7 +1,6 @@
 #pragma once
 
 #include "valueref.h"
-#include "stackProtection.h"
 #include "edit.h"
 
 namespace json {
@@ -9,7 +8,7 @@ namespace json {
 	class ArrayIterator;
 
 
-	class Array: public StackProtected {
+	class Array {
 	public:
 		Array(Value value);
 		Array(const Array &other);

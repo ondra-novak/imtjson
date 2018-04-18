@@ -9,7 +9,6 @@
 #define SRC_IMMUJSON_PATH_H_
 #include <memory>
 
-#include "stackProtection.h"
 #include "value.h"
 
 
@@ -28,7 +27,7 @@ class PathRef;
  * whether the current element is root using the function isRoot()
  *
  */
-class Path: public StackProtected {
+class Path {
 
 public:
 	///Always the root element
@@ -77,7 +76,7 @@ public:
 	/**
 	 * @return length of the path. Note that function has linear complexity
 	 */
-	std::uintptr_t length() const {return isRoot()?0:(parent.checkInstance(),parent.length()+1);}
+	std::uintptr_t length() const {return isRoot()?0:(parent.length()+1);}
 
 	///Allocates extra memory and copies path into it
 	/**

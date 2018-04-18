@@ -253,10 +253,10 @@ void runValidatorTests(TestSimple &tst) {
 		vtest(out, Object("_root", "base64"), "flZhTGlEYVRvUn5+flRlc1R+f==");
 	};
 	tst.test("Validator.base64url.ok", "ok") >> [](std::ostream &out) {
-		vtest(out, Object("_root", "base64url"), "flZhTGlEYVRvUn5_flRlc1R_fg==");
+		vtest(out, Object("_root", "base64url"), "flZhTGlEYVRvUn5_flRlc1R_fg");
 	};
 	tst.test("Validator.base64url.fail1", "[[[],\"base64url\"]]") >> [](std::ostream &out) {
-		vtest(out, Object("_root", "base64url"), "flZhTGlEYVRvUn5+flRlc1R+fg==");
+		vtest(out, Object("_root", "base64url"), "flZhTGlEYVRvUn5+flRlc1R+fg");
 	};
 	tst.test("Validator.not1", "ok") >> [](std::ostream &out) {
 		vtest(out, Object("_root", { array, {"!",1,2,3} }), { 10,20 });

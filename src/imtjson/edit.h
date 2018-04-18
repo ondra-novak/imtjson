@@ -13,7 +13,6 @@ namespace json {
 			:Provider(oldVal),parent(parent),index(index) {}
 		~AutoCommitT() noexcept(false) {
 			if (this->dirty()) try {
-				parent.checkInstance();
 				parent.set(index, *this);
 			} catch (...) {
 				if (!std::uncaught_exception()) throw;
