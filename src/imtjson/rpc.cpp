@@ -603,6 +603,13 @@ Notify::Notify(Value js)
 {
 }
 
+
+Notify::Notify(String eventName, Value data)
+	:eventName(eventName)
+	,data(data)
+{
+
+}
 RpcRequest Notify::asRequest() const {
 	return RpcRequest::create(eventName, data, nullptr, Value(), [](Value){}, 0);
 }

@@ -491,7 +491,7 @@ public:
 		 * @return request's unique identifier
 		 */
 		template<typename Fn>
-		unsigned int operator >> (const Fn &fn);
+		Value operator >> (const Fn &fn);
 
 		///Perform synchronous call
 		/**
@@ -499,11 +499,6 @@ public:
 		 */
 		operator RpcResult();
 
-		///Receives ID of the request
-		/** Y can use the ID to cancel pending call later */
-		const Value &getID() const {
-			return id;
-		}
 
 	protected:
 		PreparedCall(AbstractRpcClient &owner, const Value &id, const Value &msg);
@@ -627,7 +622,7 @@ protected:
 };
 
 template<typename Fn>
-inline unsigned int AbstractRpcClient::PreparedCall::operator >>(const Fn& fn) {
+inline Value AbstractRpcClient::PreparedCall::operator >>(const Fn& fn) {
 	if (!executed) {
 
 		class PC: public PendingCall {
@@ -663,6 +658,7 @@ struct Notify {
 	Value data;
 
 	explicit Notify(Value js);
+	Notify(String eventName, Value data);
 	RpcRequest asRequest() const;
 };
 
