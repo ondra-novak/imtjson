@@ -424,6 +424,9 @@ AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName
 }
 
 bool AbstractRpcClient::cancelAsyncCall(Value id, RpcResult result) {
+	return cancelPendingCall(id, result);
+}
+bool AbstractRpcClient::cancelPendingCall(Value id, RpcResult result) {
 	Sync _(lock);
 	auto it = callMap.find(id);
 	if (it == callMap.end()) return false;
@@ -432,6 +435,16 @@ bool AbstractRpcClient::cancelAsyncCall(Value id, RpcResult result) {
 	_.unlock();
 	pc->onResponse(result);
 	return true;
+}
+
+void AbstractRpcClient::cancelAllPendingCalls(RpcResult result) {
+	std::vector<Value> ids;
+	{
+		Sync _(lock);
+		ids.reserve(callMap.size());
+		for (auto &&x: callMap) ids.push_back(x.first);
+	}
+	for (auto &&x: ids) cancelPendingCall(x, result);
 }
 
 AbstractRpcClient::ReceiveStatus AbstractRpcClient::processResponse(Value response) {

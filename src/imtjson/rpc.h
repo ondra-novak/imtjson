@@ -499,6 +499,12 @@ public:
 		 */
 		operator RpcResult();
 
+		///Receives ID of the request
+		/** Y can use the ID to cancel pending call later */
+		const Value &getID() const {
+			return id;
+		}
+
 	protected:
 		PreparedCall(AbstractRpcClient &owner, const Value &id, const Value &msg);
 
@@ -528,7 +534,26 @@ public:
 	void notify(String notifyName, Value args);
 
 	///Cancels asynchronous call
+	/** Obsolete function */
 	bool cancelAsyncCall(Value id, RpcResult result);
+
+	///Cancels pending call
+	/** This allows to cancel one pending call identified by the id.
+	 * Use this if you need to cancel waiting in situation like a timeout or similar.
+	 *
+	 * @param id identifier of the call
+	 * @param result value passed as result to canceled request
+	 * @retval true canceled
+	 * @retval false not found - probably already processed
+	 */
+	bool cancelPendingCall(Value id, RpcResult result);
+
+	///Cancels all asynchronous calls
+	/** Use this to cleanup the all pending calls after the connection is lost
+	 *
+	 * @param result result is send to every canceled call
+	 */
+	void cancelAllPendingCalls(RpcResult result);
 
 	///Processes delivered response.
 	/**
