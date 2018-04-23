@@ -13,7 +13,7 @@
 #define SRC_IMTJSON_RPCSERVER_H_
 #include <condition_variable>
 #include <mutex>
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <functional>
 #include "refcnt.h"
@@ -405,7 +405,10 @@ public:
 	void setCustomValidationRules(Value curstomRules);
 
 protected:
-	typedef std::map<StrViewA, RefCntPtr<AbstractMethodReg> > MapReg;
+	struct HashStr {
+		std::size_t operator()(StrViewA str) const;
+	};
+	typedef std::unordered_map<StrViewA, RefCntPtr<AbstractMethodReg>, HashStr> MapReg;
 	typedef MapReg::value_type MapValue;
 
 	MapReg mapReg;
@@ -497,10 +500,10 @@ public:
 		operator RpcResult();
 
 	protected:
-		PreparedCall(AbstractRpcClient &owner, unsigned int id, const Value &msg);
+		PreparedCall(AbstractRpcClient &owner, const Value &id, const Value &msg);
 
 		AbstractRpcClient &owner;
-		unsigned int id;
+		Value id;
 		Value msg;
 		bool executed;
 
@@ -525,7 +528,7 @@ public:
 	void notify(String notifyName, Value args);
 
 	///Cancels asynchronous call
-	bool cancelAsyncCall(unsigned int id, RpcResult result);
+	bool cancelAsyncCall(Value id, RpcResult result);
 
 	///Processes delivered response.
 	/**
@@ -570,7 +573,7 @@ protected:
 	typedef std::unique_ptr<PendingCall, void (*)(PendingCall *)> PPendingCall;
 
 
-	typedef std::map<unsigned int, PPendingCall > CallMap;
+	typedef std::unordered_map<Value, PPendingCall > CallMap;
 	typedef CallMap::value_type CallItemType;
 	CallMap callMap;
 
@@ -583,7 +586,7 @@ protected:
 
 	RpcVersion::Type ver;
 
-	void addPendingCall(unsigned int id, PPendingCall &&pcall);
+	void addPendingCall(const Value &id, PPendingCall &&pcall);
 
 	///call this function if you need to reject all pending calls
 	/** this can be needed when client lost connection so all pending calls are lost. Rejected
@@ -591,7 +594,10 @@ protected:
 	 */
 	void rejectAllPendingCalls();
 
-
+	///Generates ID for the request
+	/** this allows to override default implementation of ID generation */
+	/** @note called under lock */
+	virtual Value genRequestID();
 
 };
 

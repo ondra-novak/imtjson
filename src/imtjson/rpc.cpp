@@ -13,6 +13,7 @@
 #include "object.h"
 #include "operations.h"
 #include "validator.h"
+#include "fnv.h"
 namespace json {
 
 
@@ -347,7 +348,7 @@ RpcResult::RpcResult(Value result, bool isError, Value context)
 	:Value(result),context(context),error(isError)
 {}
 
-AbstractRpcClient::PreparedCall::PreparedCall(AbstractRpcClient& owner, unsigned int id, const Value& msg)
+AbstractRpcClient::PreparedCall::PreparedCall(AbstractRpcClient& owner, const Value &id, const Value& msg)
 	:owner(owner),id(id),msg(msg),executed(false)
 {
 }
@@ -404,7 +405,7 @@ AbstractRpcClient::PreparedCall::operator RpcResult() {
 
 AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName, Value args) {
 	Sync _(lock);
-	unsigned int id = ++idCounter;
+	Value id = genRequestID();
 	Value ctx = context.empty()?Value():context;
 	switch (ver) {
 	case RpcVersion::ver1:
@@ -422,7 +423,7 @@ AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName
 	throw std::runtime_error("Invalid JSONRPC version (client-call)");
 }
 
-bool AbstractRpcClient::cancelAsyncCall(unsigned int id, RpcResult result) {
+bool AbstractRpcClient::cancelAsyncCall(Value id, RpcResult result) {
 	Sync _(lock);
 	auto it = callMap.find(id);
 	if (it == callMap.end()) return false;
@@ -484,7 +485,7 @@ Value AbstractRpcClient::updateContext(const Value& context, const Value& value)
 	return newContext;
 }
 
-void AbstractRpcClient::addPendingCall(unsigned int id, PPendingCall &&pcall) {
+void AbstractRpcClient::addPendingCall(const Value &id, PPendingCall &&pcall) {
 	callMap.insert(CallItemType(id,std::move(pcall)));
 }
 
@@ -605,5 +606,19 @@ bool RpcRequest::isErrorSent() const {
 void RpcServer::setCustomValidationRules(Value customRules) {
 	this->customRules = customRules;
 }
+
+Value AbstractRpcClient::genRequestID () {
+	unsigned int id = ++idCounter;
+	return id;
+
+}
+
+std::size_t RpcServer::HashStr::operator()(StrViewA str) const {
+	std::size_t h = 0;
+	FNV1a<sizeof(std::size_t)> c(h);
+	for(char x:str) c(x);
+	return h;
+}
+
 
 }
