@@ -63,9 +63,6 @@ PPath Path::copy() const {
 
 	void *buff = Value::allocator->alloc(reqSize+sizeof(std::uintptr_t));
 
-	std::uintptr_t *cookie = reinterpret_cast<std::uintptr_t *>(
-			reinterpret_cast<char *>(buff)+reqSize);
-
 
 	//get pointer to first item
 	PathRef *start = reinterpret_cast<PathRef *>(buff);
