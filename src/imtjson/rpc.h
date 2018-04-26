@@ -366,6 +366,8 @@ public:
 	///Remove method
 	void remove(const StrViewA &name);
 
+	void removeAll();
+
 	///Find method
 	AbstractMethodReg *find(const StrViewA &name) const;
 

@@ -212,6 +212,11 @@ void RpcServer::remove(const StrViewA& name) {
 	mapReg.erase(name);
 }
 
+void RpcServer::removeAll() {
+	mapReg.clear();
+}
+
+
 RpcServer::AbstractMethodReg* RpcServer::find(const StrViewA& name) const {
 	auto f = mapReg.find(name);
 	if (f == mapReg.end()) return nullptr;
