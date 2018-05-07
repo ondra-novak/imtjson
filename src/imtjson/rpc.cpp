@@ -457,14 +457,13 @@ AbstractRpcClient::ReceiveStatus AbstractRpcClient::processResponse(Value respon
 	if (id.defined() && !id.isNull()) {
 		Value result = response["result"];
 		Value error = response["error"];
-		if (id.type() == number && (result.defined() || error.defined())) {
-			unsigned int nid = id.getUInt();
+		if (result.defined() || error.defined()) {
 			Value ctx = response["context"];
 			updateContext(ctx);
 			if (result.defined() && (!error.defined() || error.isNull()))  {
-				if (!cancelAsyncCall(nid,RpcResult(result,false,ctx))) return unexpected;
+				if (!cancelAsyncCall(id,RpcResult(result,false,ctx))) return unexpected;
 			} else {
-				if (!cancelAsyncCall(nid,RpcResult(error,true,ctx))) return unexpected;
+				if (!cancelAsyncCall(id,RpcResult(error,true,ctx))) return unexpected;
 			}
 			return success;
 

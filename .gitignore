@@ -43,4 +43,6 @@ src/tests/test2.json.decmp
 CMakeCache.txt
 install_manifest.txt
 Makefile
+CMakeFiles
+cmake_install.cmake
 
