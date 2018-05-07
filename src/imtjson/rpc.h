@@ -342,7 +342,9 @@ public:
 
 
 	///call the request
-	void operator()(RpcRequest req) const throw();
+	void operator()(const RpcRequest &req) const noexcept;
+
+	void call(RpcRequest req) const noexcept;
 
 	///Register a method
 	/**
@@ -352,7 +354,7 @@ public:
 	 *
 	 */
 	template<typename Fn>
-	void add(const String &name, const Fn fn);
+	void add(const String &name, Fn &&fn);
 
 	///Register a member method
 	/**
@@ -361,7 +363,7 @@ public:
 	 * @param fn pointer to member function of given prototype
 	 */
 	template<typename ObjPtr, typename Fn>
-	void add(const String &name, ObjPtr objPtr, void (Fn::*fn)(RpcRequest));
+	void add(const String &name, ObjPtr &&objPtr, void (Fn::*fn)(RpcRequest));
 
 	///Remove method
 	void remove(const StrViewA &name);
@@ -385,20 +387,44 @@ public:
 	virtual Value validateArgs(const Value &args, const Value &def) const override;
 
 	///Adds buildin method Server.listMethods
-	void add_listMethods(const String &name = "Server.listMethods" );
+	void add_listMethods(const String &name = "methods" );
 
 	///Adds buildin method Server.multicall
-	void add_multicall(const String &name = "Server.multicall");
+	void add_multicall(const String &name = "multicall");
 
 	///Adds buildin method Server.ping
-	void add_ping(const String &name = "Server.ping");
+	void add_ping(const String &name = "ping");
 
 	///Adds buildin method Server.help
 	/**
 	 * @param helpContent content of help. For each method it contains key nad value is text which is returned as help
 	 * @param name of the method
 	 */
-	void add_help(const Value &helpContent, const String &name = "Server.help");
+	void add_help(const Value &helpContent, const String &name = "help");
+
+
+	///Enables or disables proxy
+	/**
+	 * Proxy allows to forward methods to the other rpc servers. The proxy function is called whenever
+	 * the client makes a request for unknown method. The proxy function can forward the request
+	 * to the other rpc client and also route the response back
+	 *
+	 * @param proxy specifty function which handles unknown method call. To disable proxy (default) set this argument to nullptr
+	 *
+	 * @retval true function can handle request
+	 * @retval false function cannot handle request (error is generated to the client)
+	 *
+	 * @note The proxy need to decide whether it supports the method synchronously. If this is impossible
+	 * to achive, the proxy function would return true and in case of calling unknown method it must
+	 * generate apropriate error message
+	 *
+	 *
+	 * @note Function "methods" (function added by add_listMedhods())  forwards the request to the proxy
+	 * function to achieve listing of all methods. The proxy function need to detect this request
+	 * (by testing the method signature) and forward the call to the target server
+	 *
+	 */
+	void enableProxy(std::function<bool(RpcRequest)> proxy) {this->proxy = proxy;}
 
 	///define custom rules
 	/**
@@ -414,31 +440,42 @@ protected:
 	typedef MapReg::value_type MapValue;
 
 	MapReg mapReg;
-
+	std::function<bool(RpcRequest)> proxy;
 	Value customRules;
 };
 
 
 
 template<typename Fn>
-inline void RpcServer::add(const String& name, const Fn fn) {
+inline void RpcServer::add(const String& name, Fn &&fn) {
 	class F: public AbstractMethodReg {
 	public:
-		F(const String &name, const Fn &fn):AbstractMethodReg(name), fn(fn) {}
+		F(const String &name, Fn &&fn):AbstractMethodReg(name), fn(std::forward<Fn>(fn)) {}
 		virtual void call(const RpcRequest &req) const override {
 			fn(req);
 		}
 	protected:
 		Fn fn;
 	};
-	RefCntPtr<AbstractMethodReg> f = new F(name, fn);
+	RefCntPtr<AbstractMethodReg> f = new F(name, std::forward<Fn>(fn));
 	mapReg.insert(MapValue(f->name, f));
 }
 
 template<typename ObjPtr, typename Fn>
-inline void RpcServer::add(const String& name, ObjPtr objPtr,
-		void (Fn::*fn)(RpcRequest)) {
-	add(name, [=](const RpcRequest &req) {((*objPtr).*fn)(req);});
+inline void RpcServer::add(const String& name, ObjPtr &&objPtr, void (Fn::*fn)(RpcRequest)) {
+	class F: public AbstractMethodReg {
+	public:
+		F(const String &name, ObjPtr &&objPtr, void (Fn::*fn)(RpcRequest))
+				:AbstractMethodReg(name), objPtr(std::forward<ObjPtr>(objPtr)),fn(fn) {}
+		virtual void call(const RpcRequest &req) const override {
+			((*objPtr).*fn)(req);
+		}
+	protected:
+		ObjPtr objPtr;
+		void (Fn::*fn)(RpcRequest);
+	};
+	RefCntPtr<AbstractMethodReg> f = new F(name, std::forward<ObjPtr>(objPtr), fn);
+	mapReg.insert(MapValue(f->name, f));
 }
 
 

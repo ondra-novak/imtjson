@@ -40,6 +40,15 @@ RpcRequest::RequestData::RequestData(const Value& request, RpcFlags::Type flags)
 	if (flags & RpcFlags::preResponseNotify) notifyEnabled = true;
 }
 
+static Value defaultFormatError(int code, const String& message, Value data) {
+	return Value(object,{
+			Value("code",code),
+			Value("message",message),
+			Value("data",data)
+	});
+}
+
+
 const String& RpcRequest::getMethodName() const {
 	return data->methodName;
 }
@@ -113,8 +122,6 @@ void RpcRequest::setError(const Value& error) {
 	data->setResponse(resp);
 }
 
-
-
 Value RpcRequest::operator [](unsigned int index) const {
 	return data->args[index];
 }
@@ -155,11 +162,7 @@ Value RpcRequest::getRejections() const {
 }
 
 void RpcRequest::setArgError(Value rejections) {
-	setError(Value(object,{
-			key/"code"=1,
-			key/"message"="Invalid parameters",
-			key/"rejections" = rejections
-	}));
+	setError(-32602, "Invalid params", rejections);
 }
 
 void RpcRequest::setArgError() {
@@ -168,11 +171,7 @@ void RpcRequest::setArgError() {
 
 void RpcRequest::setError(int code, String message, Value d) {
 	if (data->srvsvc == nullptr) {
-		setError(Value(object,{
-				key/"code" =code,
-				key/"message"=message,
-				key/"data"=d
-		}));
+		setError(defaultFormatError(code,message,d));
 	} else {
 		setError(data->srvsvc->formatError(code,message,d));
 	}
@@ -185,7 +184,10 @@ void RpcRequest::RequestData::setResponse(const Value& v) {
 	if (!id.isNull()) response(v);
 }
 
-void RpcServer::operator ()(RpcRequest req) const throw() {
+void RpcServer::operator ()(const RpcRequest &req) const noexcept {
+	call(req);
+}
+void RpcServer::call( RpcRequest req) const noexcept {
 	try {
 		req.init(this);
 		Value name = req.getMethodName();
@@ -195,6 +197,8 @@ void RpcServer::operator ()(RpcRequest req) const throw() {
 				&& (!context.defined() || context.type() == object)) {
 			AbstractMethodReg *m = find(req.getMethodName());
 			if (m == nullptr) {
+				if (proxy != nullptr)
+					if (proxy(req)) return;
 				req.setError(errorMethodNotFound,"Method not found",name);
 			} else {
 				m->call(req);
@@ -231,7 +235,21 @@ void RpcServer::add_listMethods(const String& name) {
 		for(auto &x : mapReg) {
 			res.push_back(x.second->name);
 		}
-		req.setResult(res);
+		Value r(res);
+
+		if (proxy != nullptr) {
+			auto proxyReq = RpcRequest::create(req.getMethodName(), req.getArgs(), req.getId(), req.getContext(),
+					[=](Value resp) mutable {
+
+					Array res2(r);
+					res2.addSet(resp["result"]);
+					req.setResult(res2);
+
+				});
+			if (proxy(proxyReq)) return;
+
+		}
+		req.setResult(r);
 	});
 }
 
@@ -513,13 +531,9 @@ RpcRequest::RequestData::RequestData(const String& methodName,
 }
 
 
-Value RpcServer::formatError(int code,
-							const String& message, Value data) const {
-	return Value(object,{
-			key/"code"=code,
-			key/"message"=message,
-			key/"data"=data
-	});
+
+Value RpcServer::formatError(int code, const String& message, Value data) const {
+	return defaultFormatError(code,message,data);
 }
 
 void RpcRequest::setNoResultError(RequestData *r) {
@@ -546,9 +560,8 @@ void RpcRequest::init(const IServerServices *srvsvc) {
 }
 
 void RpcRequest::setInternalError(const char *what) {
-	if (what == nullptr) what = "Internal error";
-	Value err = data->srvsvc->formatError(RpcServer::errorInternalError,what);
-	setError(err);
+	Value whatV = what?Value(what):Value();
+	setError(RpcServer::errorInternalError, "Internal error", whatV);
 }
 
 static Value formatNotify(RpcVersion::Type ver, const String name, Value data) {
