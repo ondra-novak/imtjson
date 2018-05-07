@@ -45,4 +45,7 @@ install_manifest.txt
 Makefile
 CMakeFiles
 cmake_install.cmake
-
+/inst
+/bin
+language.settings.xml
+/src/tests

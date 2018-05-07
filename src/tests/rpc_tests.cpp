@@ -28,7 +28,7 @@ void runRpcTests(TestSimple &tst) {
 		srv.add_listMethods();
 		srv.add_multicall();
 		srv.add_help(object);
-		srv.add<RefCntPtr<TestClass>, TestClass>("test",x,&TestClass::method);
+		srv.add("test",x,&TestClass::method);
 		RpcRequest req = RpcRequest::create(Value(object, {
 				key/"method"="Server.listMethods",
 				key/"params"=Value(array),
