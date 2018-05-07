@@ -75,12 +75,12 @@ StrViewA RpcRequest::getVer() const {
 }
 
 
-void RpcRequest::setResult(const Value& result) {
-	setResult(result, undefined);
+bool RpcRequest::setResult(const Value& result) {
+	return setResult(result, undefined);
 
 }
 
-void RpcRequest::setResult(const Value& result, const Value& context) {
+bool RpcRequest::setResult(const Value& result, const Value& context) {
 
 	Value resp;
 	Value ctxch = context.empty()?Value():context;
@@ -99,12 +99,12 @@ void RpcRequest::setResult(const Value& result, const Value& context) {
 		break;
 	}
 
-	data->setResponse(resp);
+	return data->setResponse(resp);
 
 
 }
 
-void RpcRequest::setError(const Value& error) {
+bool RpcRequest::setError(const Value& error) {
 	Value resp;
 	switch (data->ver) {
 	case RpcVersion::ver1:
@@ -119,7 +119,7 @@ void RpcRequest::setError(const Value& error) {
 		break;
 	}
 
-	data->setResponse(resp);
+	return data->setResponse(resp);
 }
 
 Value RpcRequest::operator [](unsigned int index) const {
@@ -166,22 +166,27 @@ void RpcRequest::setArgError(Value rejections) {
 }
 
 void RpcRequest::setArgError() {
-	setArgError(getRejections());
+	return setArgError(getRejections());
 }
 
-void RpcRequest::setError(int code, String message, Value d) {
+bool RpcRequest::setError(int code, String message, Value d) {
 	if (data->srvsvc == nullptr) {
-		setError(defaultFormatError(code,message,d));
+		return setError(defaultFormatError(code,message,d));
 	} else {
-		setError(data->srvsvc->formatError(code,message,d));
+		return setError(data->srvsvc->formatError(code,message,d));
 	}
 }
 
-void RpcRequest::RequestData::setResponse(const Value& v) {
-	if (responseSent) return;
+bool RpcRequest::RequestData::setResponse(const Value& v) {
+	if (responseSent) return false;
 	responseSent = true;
 	notifyEnabled =  (flags & RpcFlags::postResponseNotify) != 0;
-	if (!id.isNull()) response(v);
+	if (!id.isNull()) {
+		bool b = response(v);
+		if (!b) notifyEnabled = false;
+		return b;
+	}
+	else return false;
 }
 
 void RpcServer::operator ()(const RpcRequest &req) const noexcept {
@@ -245,6 +250,7 @@ void RpcServer::add_listMethods(const String& name) {
 					res2.addSet(resp["result"]);
 					req.setResult(res2);
 
+					return true;
 				});
 			if (proxy(proxyReq)) return;
 
@@ -298,6 +304,8 @@ public:
 							if (++mtfork == 2) {
 								this->run();
 							}
+							return true;
+
 						}
 				);
 				server(req);
@@ -536,7 +544,7 @@ Value RpcServer::formatError(int code, const String& message, Value data) const 
 	return defaultFormatError(code,message,data);
 }
 
-void RpcRequest::setNoResultError(RequestData *r) {
+bool RpcRequest::setNoResultError(RequestData *r) {
 	r->addRef();
 	try {
 		Value err =r->srvsvc->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
@@ -549,6 +557,7 @@ void RpcRequest::setNoResultError(RequestData *r) {
 
 	}
 	r->release();
+
 }
 
 void RpcRequest::setNoResultError() {
@@ -591,8 +600,9 @@ bool RpcRequest::isSendNotifyEnabled() const {
 
 bool RpcRequest::RequestData::sendNotify(const Value& v) {
 	if (notifyEnabled) {
-		response(v);
-		return true;
+		bool b = response(v);
+		if (!b) notifyEnabled = false;
+		return b;
 	} else {
 		return false;
 	}
@@ -628,7 +638,7 @@ Notify::Notify(String eventName, Value data)
 
 }
 RpcRequest Notify::asRequest() const {
-	return RpcRequest::create(eventName, data, nullptr, Value(), [](Value){}, 0);
+	return RpcRequest::create(eventName, data, nullptr, Value(), [](Value){return false;}, 0);
 }
 
 

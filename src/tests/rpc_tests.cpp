@@ -34,6 +34,7 @@ void runRpcTests(TestSimple &tst) {
 				key/"params"=Value(array),
 				key/"id"=1}),[&](Value res) {
 			res.toStream(out);
+			return true;
 		});
 		srv(req);
 	};
@@ -44,6 +45,7 @@ void runRpcTests(TestSimple &tst) {
 		srv.add_ping();
 		RpcRequest req = RpcRequest::create("Server.ping",{1,2,3,true,Object("aaa",4)},10,Value(),[&](Value res) {
 			res.toStream(out);
+			return true;
 		});
 		srv(req);
 	};
@@ -53,6 +55,7 @@ void runRpcTests(TestSimple &tst) {
 		srv.add_multicall();
 		RpcRequest req = RpcRequest::create("Server.multicall",{"Server.ping",{1,2,3},{4,5,6},{7,8,9}},[&](Value res) {
 			res.toStream(out);
+			return true;
 		});
 		srv(req);
 	};
@@ -63,6 +66,7 @@ void runRpcTests(TestSimple &tst) {
 		srv.add_multicall();
 		RpcRequest req = RpcRequest::create("Server.multicall",{{"Server.ping",{1,2,3}},{"Server.listMethods",json::array}},[&](Value res) {
 			res.toStream(out);
+			return true;
 		});
 		srv(req);
 	};
@@ -83,6 +87,7 @@ void runRpcTests(TestSimple &tst) {
 		//create request
 		RpcRequest req = RpcRequest::create("Server.multicall",{{"Server.ping",{1,2,3}},{"test",{10,20}},{"Server.ping",{4,5,6}}},[&](Value res) {
 			res.toStream(out);
+			return true;
 		});
 		//call request
 		srv(req);
@@ -106,6 +111,7 @@ void runRpcTests(TestSimple &tst) {
 		srv.add_multicall();
 		RpcRequest req = RpcRequest::create("Server.multicall",{{"Server.ping",{1,2,3}},{"test",{10,20}},{"Server.ping",{4,5,6}}},[&](Value res) {
 			res.toStream(out);
+			return true;
 		});
 		srv(req);
 	};

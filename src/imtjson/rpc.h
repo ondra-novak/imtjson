@@ -115,9 +115,9 @@ private:
 		bool errorSent = false;
 		bool notifyEnabled = false;
 		RpcFlags::Type flags;
-		virtual void response(const Value &result) = 0;
+		virtual bool response(const Value &result) = 0;
 
-		void setResponse(const Value &v);
+		bool setResponse(const Value &v);
 		bool sendNotify(const Value &v);
 		virtual ~RequestData() {}
 
@@ -140,6 +140,21 @@ public:
 	 *    a result.
 	 * @param flags some extra settings of the request
 	 * @return RpcRequest instance. Value can be copied.
+	 *
+	 * @note Following prototypes are allowed for functions
+	 * @code
+	 * bool(Value)
+	 * bool(Value, RpcRequest)
+	 * @endcode
+	 *
+	 * Function must return boolean, where true means, that response has been delivered
+	 * (or send without errors), or false when the response cannot be delivered. This allows
+	 * to unsubscribe the client from the notification. By returning the false, the server
+	 * disables notifications.
+	 *
+	 * For RPC over socket connection - once connection is lost, return false.
+	 *
+	 *
 	 */
 	template<typename Fn>
 	static RpcRequest create(const Value &request, const Fn &fn, RpcFlags::Type flags = 0);
@@ -202,16 +217,59 @@ public:
 	void setInternalError(const char *what);
 
 	///set result (can be called once only)
-	void setResult(const Value &result);
+	/**
+	 * @param result
+	 * @retval true response has been sent
+	 * @retval false response cannot be sent (disconnected). But it is still considered as sent
+	 */
+	bool setResult(const Value &result);
 	///set result (can be called once only)
-	void setResult(const Value &result, const Value &context);
+	/**
+	 * @param result
+	 * @param context
+	 * @retval true response has been sent
+	 * @retval false response cannot be sent (disconnected). But it is still considered as sent
+	 */
+	bool setResult(const Value &result, const Value &context);
 	///set error (can be called once only)
-	void setError(const Value &error);
+	/**
+	 *
+	 * @param error
+	 * @retval true response has been sent
+	 * @retval false response cannot be sent (disconnected). But it is still considered as sent
+	 */
+	bool setError(const Value &error);
 	///set error (can be called once only)
-	void setError(int code, String message, Value data = Value());
+	/**
+	 *
+	 * @param code
+	 * @param message
+	 * @param data
+	 * @retval true response has been sent
+	 * @retval false response cannot be sent (disconnected). But it is still considered as sent
+	 */
+	bool setError(int code, String message, Value data = Value());
 	///Send notify - note that owner can disable notify, then this function fails
+	/**
+	 * @param name name of the notification
+	 * @param data data of the notification
+	 * @retval true notification sent
+	 * @retval false unable to deliver notification. Notifications are disabled. Because there
+	 * is no way how to reenable notifications, it also means, that source service can uninstall
+	 * a notification observer for this response.
+	 */
 	bool sendNotify(const String name, Value data);
 	///Determines whether notification is enabled
+	/**
+	 * @retval true notifications are enabled
+	 * @retval false notifications are disabled
+	 *
+	 * @note the method doesn't actively test notification state. It just simply returns state
+	 * of previous call the function sendNotify(). At the begining, it contain static state
+	 * defined by the service provider.	 * @retval true response has been sent
+	 * @retval false response cannot be sent (disconnected). But it is still considered as sent
+	 *
+	 */
 	bool isSendNotifyEnabled() const;
 	///Sets value which can be later send to the log. It can be any diagnostic data
 	void setDiagData(Value v);
@@ -228,13 +286,14 @@ public:
 protected:
 	RpcRequest(RefCntPtr<RequestData> data):data(data) {}
 
-	static void setNoResultError(RequestData *data);
+	static bool setNoResultError(RequestData *data);
 
 	RefCntPtr<RequestData> data;
 };
 
 
 namespace _details {
+
 
 	template<typename Fn>
 	auto callCB(Fn &&fn, const Value &v, const RpcRequest &) -> decltype(std::declval<Fn>()(v)) {
@@ -258,8 +317,8 @@ inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn, RpcFlag
 		Call(const Value &request,  const Fn &fn, RpcFlags::Type flags)
 			:RequestData(request,flags)
 			,fn(fn) {}
-		virtual void response(const Value &result) {
-			_details::callCB(fn,result,RefCntPtr<RequestData>(this));
+		virtual bool response(const Value &result) {
+			return !!(_details::callCB(fn,result,RefCntPtr<RequestData>(this)));
 		}
 		~Call() {
 			if (!responseSent) {
@@ -281,8 +340,8 @@ inline RpcRequest json::RpcRequest::create(const String& methodName,
 		Call(const String& methodName, const Value& args, const Value& id, const Value& context, const Fn& fn, RpcFlags::Type flags)
 			:RequestData(methodName,args,id,context,flags)
 			,fn(fn) {}
-		virtual void response(const Value &result) {
-			_details::callCB(fn,result,RefCntPtr<RequestData>(this));
+		virtual bool response(const Value &result) {
+			return !!(_details::callCB(fn,result,RefCntPtr<RequestData>(this)));
 		}
 		~Call() {
 			if (!responseSent) {
