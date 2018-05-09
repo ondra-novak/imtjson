@@ -111,6 +111,7 @@ private:
 		Value diagData;
 		RpcVersion::Type ver;
 		const IServerServices *srvsvc = nullptr;
+		std::uintptr_t sourceId = 0;
 		bool responseSent = false;
 		bool errorSent = false;
 		bool notifyEnabled = false;
@@ -277,6 +278,20 @@ public:
 	const Value &getDiagData() const;
 	///allows to modify args, for example if the request is forwarded to different method
 	void setArgs(Value args);
+
+	///Sets numeric identifier which identifies the source of the call
+	/** The main rule of using SourceID is, that id must be same for each call belongs to single connection,
+	 * or user. In most cases, the value is generated from pointer which acts as instance of the client
+	 *
+	 * @param srcId custom source id
+	 *
+	 * @note RpcServer from simpleServer library uses this value as connectionId
+	 */
+	void setSourceID(std::uintptr_t srcId);
+
+	///Gets numeric identifier which identifies the source of the call
+	/** @return sourceID of the call. If not set, returns zero */
+	std::uintptr_t getSourceID(std::uintptr_t srcId);
 
 	bool isResponseSent() const;
 

@@ -668,4 +668,13 @@ std::size_t RpcServer::HashStr::operator()(StrViewA str) const {
 }
 
 
+void RpcRequest::setSourceID(std::uintptr_t srcId){
+	data->sourceId = srcId;
+}
+
+std::uintptr_t RpcRequest::getSourceID(std::uintptr_t srcId) {
+	return data->sourceId;
+}
+
+
 }
