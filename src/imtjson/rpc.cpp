@@ -544,7 +544,7 @@ Value RpcServer::formatError(int code, const String& message, Value data) const 
 	return defaultFormatError(code,message,data);
 }
 
-bool RpcRequest::setNoResultError(RequestData *r) {
+void RpcRequest::setNoResultError(RequestData *r) {
 	r->addRef();
 	try {
 		Value err =r->srvsvc->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");

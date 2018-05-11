@@ -301,7 +301,7 @@ public:
 protected:
 	RpcRequest(RefCntPtr<RequestData> data):data(data) {}
 
-	static bool setNoResultError(RequestData *data);
+	static void setNoResultError(RequestData *data);
 
 	RefCntPtr<RequestData> data;
 };
