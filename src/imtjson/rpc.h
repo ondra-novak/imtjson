@@ -19,6 +19,7 @@
 #include "refcnt.h"
 #include "value.h"
 #include "string.h"
+#include "object.h"
 
 namespace json {
 
@@ -38,6 +39,19 @@ public:
 protected:
 	Value context;
 	bool error;
+};
+
+class RpcRequest;
+
+///Simple object which can be used to store notification which arrived from the client
+/** you can construct Notify from the JSON. You can later convert it to RpcRequest */
+struct RpcNotify {
+	String eventName;
+	Value data;
+
+	explicit RpcNotify(Value js);
+	RpcNotify(String eventName, Value data);
+	RpcRequest asRequest() const;
 };
 
 
@@ -67,17 +81,13 @@ namespace RpcFlags {
 
 }
 
-namespace RpcVersion {
-
-enum Type {
+enum class RpcVersion {
 	///protocol version 1.0 or unspecified
 	ver1,
 	///protocol version 2.0
-	ver2
+	ver2,
 };
 
-
-}
 
 ///Interface represents connection state
 /**
@@ -86,7 +96,7 @@ enum Type {
  * are kept till close of the connection
  *
  */
-class IRpcConnContext {
+class RpcConnContext: public RefCntObj {
 public:
 
 	template<typename Object>
@@ -94,12 +104,36 @@ public:
 		return reinterpret_cast<Object *>(queryObjectPtr(typeid(Object)));
 	}
 
-	virtual void store(StrViewA name, Value value) = 0;
-	virtual Value retrieve(StrViewA name) const = 0;
+	virtual void store(StrViewA name, Value value) {data(name,value);}
+	virtual Value retrieve(StrViewA name) const {return data[name];}
+	virtual ~RpcConnContext() {}
 protected:
-	virtual void *queryObjectPtr(const std::type_info &objectId) = 0;
+	virtual void *queryObjectPtr(const std::type_info &) {return nullptr;}
+	Object data;
 
 };
+
+typedef RefCntPtr<RpcConnContext> PRpcConnContext;
+
+
+namespace _details {
+
+
+	template<typename Fn>
+	auto callCB(Fn &&fn, const Value &v, const RpcRequest &) -> decltype(std::declval<Fn>()(v)) {
+		return fn(v);
+	}
+	template<typename Fn>
+	auto callCB(Fn &&fn, const Value &v, const RpcRequest &req) -> decltype(std::declval<Fn>()(v,req)) {
+		return fn(v,req);
+	}
+
+	template<typename Fn>
+	auto callCB(Fn &&fn, const Value &v, const RpcRequest &req) -> decltype(std::declval<Fn>()(req,v)) {
+		return fn(req,v);
+	}
+}
+
 
 ///Packs typical JSONRPC request into object. You can call RPC function with this object.
 /** Object can be copied, because it is internally shared. It can be stored when
@@ -115,98 +149,104 @@ public:
 		virtual ~IServerServices() {}
 	};
 
+	struct ParseRequest {
+		Value methodName;
+		Value params;
+		Value id;
+		Value context;
+		Value version;
+
+		ParseRequest() {}
+		ParseRequest(const Value & request);
+		ParseRequest(const Value &methodName, const Value &params);
+		ParseRequest(const Value &methodName, const Value &params, const Value &id, const Value &context, const Value &version);
+	};
 
 
 private:
 
-	struct RequestData: public RefCntObj {
+	struct RequestData: public RefCntObj, public ParseRequest {
 	public:
-		RequestData(const Value &request, RpcFlags::Type flags);
-		RequestData(const String &methodName,const Value &args,
-				const Value &id,const Value &context, RpcFlags::Type flags);
+		RequestData(const ParseRequest &preq, RpcFlags::Type flags,const PRpcConnContext &connctx);
 
-		String methodName;
-		Value args;
-		Value id;
-		Value context;
 		Value rejections;
 		Value diagData;
-		RpcVersion::Type ver;
+
 		const IServerServices *srvsvc = nullptr;
-		IRpcConnContext *connctx = nullptr;
 		bool responseSent = false;
 		bool errorSent = false;
 		bool notifyEnabled = false;
 		RpcFlags::Type flags;
+		PRpcConnContext connctx;
+
+		virtual void sendResult(const Value &result, const Value &context);
+		virtual void sendError(const Value &error);
+		virtual bool sendNotify(const RpcNotify &notify);
+		virtual bool sendCallback(RpcRequest request);
+		virtual void postSendResponse(bool sendResult);
+
 		virtual bool response(const Value &result) = 0;
 
-		bool setResponse(const Value &v);
-		bool sendNotify(const Value &v);
+
 		virtual ~RequestData() {}
+
+		RpcVersion getVersion() const;
 
 	};
 
 
 public:
 
+	class ICallbacks {
+	public:
 
-	///Creates the request
-	/**
-	 * @param request specify JSON parsed request. It should contain method name
-	 * params and optionally context. The request should have ID, otherwise it is not replied
-	 *
-	 * @param context caller's context. It could be anything from the caller, interface
-	 *   can carry any service need from caller. Can be set to nullptr
-	 * @param fn function which will be executed to process the result. The result contains
-	 *    a response prepared to be serialized to the output stream. Note that
-	 *    this argument can be set to "undefined" in case, that method did not produced
-	 *    a result.
-	 * @param flags some extra settings of the request
-	 * @return RpcRequest instance. Value can be copied.
-	 *
-	 * @note Following prototypes are allowed for functions
-	 * @code
-	 * bool(Value)
-	 * bool(Value, RpcRequest)
-	 * @endcode
-	 *
-	 * Function must return boolean, where true means, that response has been delivered
-	 * (or send without errors), or false when the response cannot be delivered. This allows
-	 * to unsubscribe the client from the notification. By returning the false, the server
-	 * disables notifications.
-	 *
-	 * For RPC over socket connection - once connection is lost, return false.
-	 *
-	 *
-	 */
-	template<typename Fn>
-	static RpcRequest create(const Value &request, const Fn &fn, RpcFlags::Type flags = 0);
+		virtual bool onResult(const RpcRequest &req, const Value &result, const Value &) noexcept{
+			return onResult(req, result);
+		}
+		virtual bool onResult(const RpcRequest &, const Value &) noexcept {return false;}
+		virtual bool onError(const RpcRequest &, const Value &) noexcept {return false;}
+		virtual bool onNotify(const RpcRequest &, const RpcNotify &) noexcept {return false;}
+		virtual bool onCallback(const RpcRequest &, RpcRequest &) noexcept {return false;}
+		virtual void release()noexcept {delete this;}
+		virtual ~ICallbacks() {}
+	};
 
-	template<typename Fn>
-	static RpcRequest create(const String &methodName, const Value &args,const Value& id,  const Value &context, const Fn &fn, RpcFlags::Type flags = 0);
 
-	template<typename Fn>
-	static RpcRequest create(const String &methodName, const Value &args, const Fn &fn, RpcFlags::Type flags = 0);
+	template<typename Fn, typename = decltype(_details::callCB(std::declval<Fn>(), std::declval<Value>(), std::declval<RpcRequest>()))>
+	static RpcRequest create(const Value &request, Fn &&fn, RpcFlags::Type flags = 0, const PRpcConnContext &connCtx = PRpcConnContext());
+
+	template<typename Fn, typename = decltype(_details::callCB(std::declval<Fn>(), std::declval<Value>(), std::declval<RpcRequest>()))>
+	static RpcRequest create(const ParseRequest &reqdata, Fn &&fn, RpcFlags::Type flags = 0, const PRpcConnContext &connCtx = PRpcConnContext());
+
+	static RpcRequest create(const Value &request, ICallbacks *cbs, const PRpcConnContext &connCtx = PRpcConnContext());
+
+	static RpcRequest create(const ParseRequest &reqdata, ICallbacks *cbs, const PRpcConnContext &connCtx = PRpcConnContext());
+
 
 
 	///Function is called by RpcServer before the request is being processed
 	void init(const IServerServices *srvsvc);
 
 	///Name of method
-	const String &getMethodName() const;
+	const Value &getMethodName() const;
 	///Arguments as array
 	const Value &getArgs() const;
+	///Arguments as array
+	const Value &getParams() const;
 	///Id
 	const Value &getId() const;
 	///Context (optional)
 	const Value &getContext() const;
 
-	StrViewA getVer() const;
 	///access to arguments
 	Value operator[](unsigned int index) const;
 	///acfcess to context
 	Value operator[](const StrViewA name) const;
 
+
+	RpcVersion getVersion() const;
+
+	Value getVersionField() const;
 
 	///Checks arguments
 	/** Perform argument checking's.
@@ -242,36 +282,28 @@ public:
 	///set result (can be called once only)
 	/**
 	 * @param result
-	 * @retval true response has been sent
-	 * @retval false response cannot be sent (disconnected). But it is still considered as sent
 	 */
-	bool setResult(const Value &result);
+	void setResult(const Value &result);
 	///set result (can be called once only)
 	/**
 	 * @param result
 	 * @param context
-	 * @retval true response has been sent
-	 * @retval false response cannot be sent (disconnected). But it is still considered as sent
 	 */
-	bool setResult(const Value &result, const Value &context);
+	void setResult(const Value &result, const Value &context);
 	///set error (can be called once only)
 	/**
 	 *
 	 * @param error
-	 * @retval true response has been sent
-	 * @retval false response cannot be sent (disconnected). But it is still considered as sent
 	 */
-	bool setError(const Value &error);
+	void setError(const Value &error);
 	///set error (can be called once only)
 	/**
 	 *
 	 * @param code
 	 * @param message
 	 * @param data
-	 * @retval true response has been sent
-	 * @retval false response cannot be sent (disconnected). But it is still considered as sent
 	 */
-	bool setError(int code, String message, Value data = Value());
+	void setError(int code, String message, Value data = Value());
 	///Send notify - note that owner can disable notify, then this function fails
 	/**
 	 * @param name name of the notification
@@ -299,16 +331,16 @@ public:
 	///Retrieve diagnostic data
 	const Value &getDiagData() const;
 	///allows to modify args, for example if the request is forwarded to different method
-	void setArgs(Value args);
+	void setParams(Value args);
 
 	bool isResponseSent() const;
 
 	bool isErrorSent() const;
 
 
-	void setConnContext(IRpcConnContext *ctx) {data->connctx = ctx;}
+	void setConnContext(const PRpcConnContext &ctx) {data->connctx = ctx;}
 
-	IRpcConnContext *getConnContext() const {return data->connctx;}
+	PRpcConnContext getConnContext() const {return data->connctx;}
 
 protected:
 	RpcRequest(RefCntPtr<RequestData> data):data(data) {}
@@ -319,30 +351,18 @@ protected:
 };
 
 
-namespace _details {
 
-
-	template<typename Fn>
-	auto callCB(Fn &&fn, const Value &v, const RpcRequest &) -> decltype(std::declval<Fn>()(v)) {
-		return fn(v);
-	}
-	template<typename Fn>
-	auto callCB(Fn &&fn, const Value &v, const RpcRequest &req) -> decltype(std::declval<Fn>()(v,req)) {
-		return fn(v,req);
-	}
-
-	template<typename Fn>
-	auto callCB(Fn &&fn, const Value &v, const RpcRequest &req) -> decltype(std::declval<Fn>()(req,v)) {
-		return fn(req,v);
-	}
+template<typename Fn, typename>
+inline RpcRequest RpcRequest::create(const Value& request,  Fn&& fn, RpcFlags::Type flags, const PRpcConnContext &connCtx) {
+	return create(ParseRequest(request), std::forward<Fn>(fn), flags, connCtx);
 }
 
-template<typename Fn>
-inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn, RpcFlags::Type flags) {
+template<typename Fn, typename>
+inline RpcRequest json::RpcRequest::create(const ParseRequest &req, Fn&& fn, RpcFlags::Type flags, const PRpcConnContext &connCtx) {
 	class Call: public RequestData {
 	public:
-		Call(const Value &request,  const Fn &fn, RpcFlags::Type flags)
-			:RequestData(request,flags)
+		Call(const ParseRequest &req, const Fn& fn, RpcFlags::Type flags, const PRpcConnContext &connCtx)
+			:RequestData(req,flags,connCtx)
 			,fn(fn) {}
 		virtual bool response(const Value &result) {
 			return !!(_details::callCB(fn,result,RefCntPtr<RequestData>(this)));
@@ -356,36 +376,9 @@ inline RpcRequest RpcRequest::create(const Value& request, const Fn& fn, RpcFlag
 		Fn fn;
 	};
 
-	return RpcRequest(new Call(request, fn, flags));
+	return RpcRequest(new Call(req, fn,flags,connCtx));
 }
 
-template<typename Fn>
-inline RpcRequest json::RpcRequest::create(const String& methodName,
-		const Value& args, const Value& id, const Value& context, const Fn& fn, RpcFlags::Type flags) {
-	class Call: public RequestData {
-	public:
-		Call(const String& methodName, const Value& args, const Value& id, const Value& context, const Fn& fn, RpcFlags::Type flags)
-			:RequestData(methodName,args,id,context,flags)
-			,fn(fn) {}
-		virtual bool response(const Value &result) {
-			return !!(_details::callCB(fn,result,RefCntPtr<RequestData>(this)));
-		}
-		~Call() {
-			if (!responseSent) {
-				RpcRequest::setNoResultError(this);
-			}
-		}
-	protected:
-		Fn fn;
-	};
-
-	return RpcRequest(new Call(methodName, args,id,context,  fn,flags));
-}
-
-template<typename Fn>
-inline RpcRequest json::RpcRequest::create(const String& methodName, const Value& args, const Fn& fn, RpcFlags::Type flags) {
-	return create(methodName, args, 0,Value(),fn, flags);
-}
 
 
 ///RpcServer object - it helps to build JSONRPC server.
@@ -425,6 +418,8 @@ public:
 	static const int errorInternalError = -32603;
 	///In situation, when request is finished without producing any result (extension)
 	static const int errorMethodDidNotProduceResult = -32099;
+	///Service provider doesn't support callbacks
+	static const int errorCallbackIsNotSupported = -32098;
 
 
 	///call the request
@@ -579,7 +574,7 @@ class AbstractRpcClient {
 public:
 
 
-	AbstractRpcClient(RpcVersion::Type version);
+	AbstractRpcClient(RpcVersion version);
 
 	enum ReceiveStatus {
 		///response has been received and processed
@@ -731,7 +726,7 @@ protected:
 
 	unsigned int idCounter;
 
-	RpcVersion::Type ver;
+	RpcVersion ver;
 
 	void addPendingCall(const Value &id, PPendingCall &&pcall);
 
@@ -777,17 +772,6 @@ inline Value AbstractRpcClient::PreparedCall::operator >>(const Fn& fn) {
 	}
 	return id;
 }
-
-///Simple object which can be used to store notification which arrived from the client
-/** you can construct Notify from the JSON. You can later convert it to RpcRequest */
-struct Notify {
-	String eventName;
-	Value data;
-
-	explicit Notify(Value js);
-	Notify(String eventName, Value data);
-	RpcRequest asRequest() const;
-};
 
 
 

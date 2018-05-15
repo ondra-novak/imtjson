@@ -17,26 +17,43 @@
 namespace json {
 
 
-RpcRequest::RequestData::RequestData(const Value& request, RpcFlags::Type flags)
-	:flags(flags)
-{
-	methodName = String(request["method"]);
-	args = request["params"];
-	id = request["id"];
+
+
+RpcRequest::ParseRequest::ParseRequest(const Value & request) {
+
+	methodName = request["method"];
+	params = request["params"];
 	context = request["context"];
-	Value jsonrpcver = request["jsonrpc"];
-	if (jsonrpcver.defined()) {
-		if (jsonrpcver.getString() == "2.0") {
-			ver = RpcVersion::ver2;
-		} else if (jsonrpcver.getString() == "1.0") {
-			ver = RpcVersion::ver1;
-		} else {
-			throw std::runtime_error("Unknown JSONRPC version");
+	id = request["id"];
+	version = request["version"];
+
+
+}
+RpcRequest::ParseRequest::ParseRequest(const Value & methodName, const Value & params)
+	:methodName(methodName)
+	,params(params)
+{
+
+}
+
+RpcRequest::ParseRequest::ParseRequest(const Value &methodName, const Value &params, const Value &id, const Value &context, const Value &version)
+	:methodName(methodName)
+	,params(params)
+	,id(id)
+	,context(context)
+	,version(version) {}
+
+
+
+RpcRequest::RequestData::RequestData(const ParseRequest& request, RpcFlags::Type flags,const PRpcConnContext &connctx)
+	:ParseRequest(request), flags(flags),connctx(connctx)
+{
+
+	if (params.type() != array) {
+		if (params.type() != object || (flags & RpcFlags::namedParams) == 0) {
+			params = Value(array, {params});
 		}
-	} else {
-		ver = RpcVersion::ver1;
 	}
-	if (args.type() != json::array && (flags & RpcFlags::namedParams) == 0) args = Value(json::array, {args});
 	if (flags & RpcFlags::preResponseNotify) notifyEnabled = true;
 }
 
@@ -48,13 +65,30 @@ static Value defaultFormatError(int code, const String& message, Value data) {
 	});
 }
 
+static Value formatNotify(RpcVersion ver, const String name, Value data) {
+	Value obj;
+	switch (ver) {
+	case RpcVersion::ver1:
+		obj = Object("id", nullptr)("method", name)("params", data);
+		break;
+	case RpcVersion::ver2:
+		obj = Object("method", name)("params", data)("jsonrpc", "2.0");
+		break;
+	}
+	return obj;
+}
 
-const String& RpcRequest::getMethodName() const {
+
+const Value& RpcRequest::getMethodName() const {
 	return data->methodName;
 }
 
 const Value& RpcRequest::getArgs() const {
-	return data->args;
+	return data->params;
+}
+
+const Value& RpcRequest::getParams() const {
+	return data->params;
 }
 
 const Value& RpcRequest::getId() const {
@@ -65,23 +99,75 @@ const Value& RpcRequest::getContext() const {
 	return data->context;
 }
 
-StrViewA RpcRequest::getVer() const {
-	switch (data->ver) {
-	case RpcVersion::ver1: return StrViewA("1.0");
-	case RpcVersion::ver2: return StrViewA("2.0");
+
+
+void RpcRequest::RequestData::sendResult(const Value &result, const Value &context) {
+	if (id.defined() && !id.isNull() && !responseSent) {
+		Value ctxch = context.empty()? Value():context;
+		switch (getVersion()) {
+		case RpcVersion::ver1:
+				return postSendResponse(
+					response(Object("id",id)
+									 ("result",result)
+									 ("error",nullptr)
+									 ("context",ctxch)));
+
+		case RpcVersion::ver2:
+			return postSendResponse(
+					response(Object("id",id)
+							 ("result",result)
+							 ("jsonrpc","2.0")
+							 ("context",ctxch)));
+		}
 	}
-	return StrViewA("unknown");
+}
+void RpcRequest::RequestData::sendError(const Value &error) {
+	if (id.defined() && !id.isNull() && !responseSent) {
+		responseSent = true;
+		switch (getVersion()) {
+		case RpcVersion::ver1:
+			return postSendResponse(
+					response(Object("id",id)
+								 ("error",error)
+								 ("result",nullptr)));
+		case RpcVersion::ver2:
+			return postSendResponse(
+					response(Object("id",id)
+							 ("error",error)
+							 ("jsonrpc","2.0")));
+				return;
+		}
+	}
 
+}
+void RpcRequest::RequestData::postSendResponse(bool sendResult) {
+	responseSent = true;
+	notifyEnabled =  (flags & RpcFlags::postResponseNotify) != 0 && sendResult;
+}
+
+bool RpcRequest::RequestData::sendNotify(const RpcNotify &notify) {
+	if (notifyEnabled) {
+		notifyEnabled = response(formatNotify(getVersion(),notify.eventName, notify.data));
+	}
+	return notifyEnabled;
+
+}
+bool RpcRequest::RequestData::sendCallback(RpcRequest request) {
+	request.setError(RpcServer::errorCallbackIsNotSupported,"Callback is not supported");
+	return true;
 }
 
 
-bool RpcRequest::setResult(const Value& result) {
-	return setResult(result, undefined);
+void RpcRequest::setResult(const Value& result) {
+	setResult(result, undefined);
 
 }
 
-bool RpcRequest::setResult(const Value& result, const Value& context) {
+void RpcRequest::setResult(const Value& result, const Value& context) {
 
+
+	data->sendResult(result,context);
+	/*
 	Value resp;
 	Value ctxch = context.empty()?Value():context;
 	switch (data->ver) {
@@ -98,13 +184,16 @@ bool RpcRequest::setResult(const Value& result, const Value& context) {
 				("context", ctxch);
 		break;
 	}
+	*/
 
-	return data->setResponse(resp);
+	//data->setResponse(resp);
 
 
 }
 
-bool RpcRequest::setError(const Value& error) {
+void RpcRequest::setError(const Value& error) {
+	data->sendError(error);
+	/*
 	Value resp;
 	switch (data->ver) {
 	case RpcVersion::ver1:
@@ -120,10 +209,11 @@ bool RpcRequest::setError(const Value& error) {
 	}
 
 	return data->setResponse(resp);
+	*/
 }
 
 Value RpcRequest::operator [](unsigned int index) const {
-	return data->args[index];
+	return data->params[index];
 }
 
 Value RpcRequest::operator [](const StrViewA name) const {
@@ -150,7 +240,7 @@ const Value &RpcRequest::getDiagData() const {
 }
 
 bool RpcRequest::checkArgs(const Value& argDefTuple) {
-	Value v = data->srvsvc->validateArgs(data->args,argDefTuple);
+	Value v = data->srvsvc->validateArgs(data->params,argDefTuple);
 	if (v.isNull() || !v.defined()) return true;
 	data->rejections = v;
 	return false;
@@ -169,7 +259,7 @@ void RpcRequest::setArgError() {
 	return setArgError(getRejections());
 }
 
-bool RpcRequest::setError(int code, String message, Value d) {
+void RpcRequest::setError(int code, String message, Value d) {
 	if (data->srvsvc == nullptr) {
 		return setError(defaultFormatError(code,message,d));
 	} else {
@@ -177,17 +267,6 @@ bool RpcRequest::setError(int code, String message, Value d) {
 	}
 }
 
-bool RpcRequest::RequestData::setResponse(const Value& v) {
-	if (responseSent) return false;
-	responseSent = true;
-	notifyEnabled =  (flags & RpcFlags::postResponseNotify) != 0;
-	if (!id.isNull()) {
-		bool b = response(v);
-		if (!b) notifyEnabled = false;
-		return b;
-	}
-	else return false;
-}
 
 void RpcServer::operator ()(const RpcRequest &req) const noexcept {
 	exec(req);
@@ -200,7 +279,7 @@ void RpcServer::exec( RpcRequest req) const noexcept {
 		Value context = req.getContext();
 		if (name.defined() && name.type() == string && (args.type() == array || args.type() == object || args.type() == undefined)
 				&& (!context.defined() || context.type() == object)) {
-			AbstractMethodReg *m = find(req.getMethodName());
+			AbstractMethodReg *m = find(name.getString());
 			if (m == nullptr) {
 				if (proxy != nullptr)
 					if (proxy(req)) return;
@@ -243,7 +322,12 @@ void RpcServer::add_listMethods(const String& name) {
 		Value r(res);
 
 		if (proxy != nullptr) {
-			auto proxyReq = RpcRequest::create(req.getMethodName(), req.getArgs(), req.getId(), req.getContext(),
+			auto proxyReq = RpcRequest::create(RpcRequest::ParseRequest(
+							req.getMethodName(),
+							req.getArgs(),
+							req.getId(),
+							req.getContext(),
+							req.getVersionField()),
 					[=](Value resp) mutable {
 
 					Array res2(r);
@@ -283,32 +367,43 @@ public:
 			auto p = nextfn();
 			mtfork = 0;
 			if (p.first.defined()) {
-				RpcRequest req = RpcRequest::create(String(p.first), p.second,this->req.getId(),context,
-						[&](Value res) {
-							if (res.defined()) {
-								if (!res["error"].isNull() ) {
-									results.push_back(Value(nullptr));
-									errors.push_back(res["error"]);
-								} else {
-									results.push_back(res["result"]);
-									Value ctx = res["context"];
-									if (ctx.defined()) {
-										context = AbstractRpcClient::updateContext(context,ctx);
-										contextchange = AbstractRpcClient::updateContext(contextchange,ctx);
-									}
-								}
-							} else {
-								results.push_back(Value(nullptr));
-								errors.push_back(Value(nullptr));
-							}
-							if (++mtfork == 2) {
-								this->run();
-							}
-							return true;
-
+				RpcRequest::ParseRequest pr (p.first, p.second, req.getId(), context, req.getVersionField());
+				class CBS: public RpcRequest::ICallbacks {
+				public:
+					virtual bool onResult(const RpcRequest &, const Value &res, const Value &ctx) noexcept override  {
+						owner.results.push_back(res);
+						if (ctx.defined()) {
+							owner.context = AbstractRpcClient::updateContext(owner.context,ctx);
+							owner.contextchange = AbstractRpcClient::updateContext(owner.contextchange,ctx);
 						}
-				);
-				server(req);
+						if (++owner.mtfork == 2) {
+							owner.run();
+						}
+						return true;
+					}
+					virtual bool onError(const RpcRequest &, const Value &err) noexcept override  {
+						owner.results.push_back(Value(nullptr));
+						owner.errors.push_back(err);
+						if (++owner.mtfork == 2) {
+							owner.run();
+						}
+						return true;
+					}
+					virtual bool onNotify(const RpcRequest &, const RpcNotify &ntf) noexcept override  {
+						return req.sendNotify(ntf.eventName, ntf.data);
+					}
+					virtual bool onCallback(const RpcRequest &, RpcRequest &) noexcept override  {
+						return false;
+					}
+
+					MulticallContext &owner;
+					RpcRequest req;
+					CBS(MulticallContext &owner):owner(owner),req(owner.req) {}
+				};
+
+				RpcRequest req = RpcRequest::create(pr,new CBS(*this));
+
+				server.exec(req);
 			} else {
 				req.setResult(Value(object,{key/"results"=results, key/"errors"= errors}));
 				delete this;
@@ -328,7 +423,7 @@ void RpcServer::add_multicall(const String& name) {
 	add(name, [this](RpcRequest req) {
 
 		if (req.getArgs().empty()) req.setError(errorInvalidParams,"Empty arguments");
-		else if (req[0].type() == json::string) {
+		else if (req[0].type() == string) {
 			std::size_t pos = 1;
 			MulticallContext *m = new MulticallContext(*this,req, [pos,req] () mutable {
 				if (pos < req.getArgs().size())
@@ -337,7 +432,7 @@ void RpcServer::add_multicall(const String& name) {
 					return std::make_pair(Value(),Value());
 			});
 			m->run();
-		} else if (req[0].type() == json::array) {
+		} else if (req[0].type() == array) {
 			std::size_t pos = 0;
 			MulticallContext *m = new MulticallContext(*this,req,[pos,req] () mutable {
 				std::size_t x = pos++;
@@ -361,7 +456,7 @@ void RpcServer::add_ping(const String &name) {
 
 Value RpcServer::validateArgs(const Value& args, const Value& def) const {
 	RpcArgValidator v(customRules);
-	if (v.checkArgs(args, def)) return json::null;
+	if (v.checkArgs(args, def)) return null;
 	else return v.getRejections();
 }
 
@@ -532,11 +627,6 @@ void AbstractRpcClient::addPendingCall(const Value &id, PPendingCall &&pcall) {
 	callMap.insert(CallItemType(id,std::move(pcall)));
 }
 
-RpcRequest::RequestData::RequestData(const String& methodName,
-		const Value& args, const Value& id, const Value& context, RpcFlags::Type flags)
-	:methodName(methodName), args(args), id(id), context(context),flags(flags) {
-	if (flags & RpcFlags::preResponseNotify) notifyEnabled = true;
-}
 
 
 
@@ -546,15 +636,13 @@ Value RpcServer::formatError(int code, const String& message, Value data) const 
 
 void RpcRequest::setNoResultError(RequestData *r) {
 	r->addRef();
-	try {
-		Value err =r->srvsvc->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
-		r->setResponse(Value(object,{
-			key/"error"=err,
-			key/"result"=nullptr,
-			key/"id"=r->id
-		}));
-	} catch (...) {
+	if (r->srvsvc != nullptr) {
+		try {
+			Value err =r->srvsvc->formatError(RpcServer::errorMethodDidNotProduceResult,"The method did not produce a result");
+			r->sendError(err);
+		} catch (...) {
 
+		}
 	}
 	r->release();
 
@@ -573,23 +661,11 @@ void RpcRequest::setInternalError(const char *what) {
 	setError(RpcServer::errorInternalError, "Internal error", whatV);
 }
 
-static Value formatNotify(RpcVersion::Type ver, const String name, Value data) {
-	Value obj;
-	switch (ver) {
-	case RpcVersion::ver1:
-		obj = Object("id", nullptr)("method", name)("params", data);
-		break;
-	case RpcVersion::ver2:
-		obj = Object("method", name)("params", data)("jsonrpc", "2.0");
-		break;
-	}
-	return obj;
-}
 
 ///Send notify - note that owner can disable notify, then this function fails
 bool RpcRequest::sendNotify(const String name, Value data) {
-	Value obj= formatNotify(this->data->ver, name, data);
-	return this->data->sendNotify(obj);
+//	Value obj= formatNotify(this->data->ver, name, data);
+	return this->data->sendNotify(RpcNotify(name, data));
 
 
 }
@@ -598,22 +674,13 @@ bool RpcRequest::isSendNotifyEnabled() const {
 		return data->notifyEnabled;
 }
 
-bool RpcRequest::RequestData::sendNotify(const Value& v) {
-	if (notifyEnabled) {
-		bool b = response(v);
-		if (!b) notifyEnabled = false;
-		return b;
-	} else {
-		return false;
-	}
-}
 
 void AbstractRpcClient::notify(String notifyName, Value args) {
 	Sync _(lock);
 	sendRequest(formatNotify(ver, notifyName, args));
 }
 
-AbstractRpcClient::AbstractRpcClient(RpcVersion::Type version)
+AbstractRpcClient::AbstractRpcClient(RpcVersion version)
 : idCounter(0)
 , ver(version)
 {
@@ -624,21 +691,21 @@ void AbstractRpcClient::rejectAllPendingCalls() {
 }
 
 
-Notify::Notify(Value js)
+RpcNotify::RpcNotify(Value js)
 	:eventName(String(js["method"]))
 	,data(js["params"])
 {
 }
 
 
-Notify::Notify(String eventName, Value data)
+RpcNotify::RpcNotify(String eventName, Value data)
 	:eventName(eventName)
 	,data(data)
 {
 
 }
-RpcRequest Notify::asRequest() const {
-	return RpcRequest::create(eventName, data, nullptr, Value(), [](Value){return false;}, 0);
+RpcRequest RpcNotify::asRequest() const {
+	return RpcRequest::create(RpcRequest::ParseRequest(eventName, data), [](Value){return false;}, 0);
 }
 
 
@@ -668,5 +735,61 @@ std::size_t RpcServer::HashStr::operator()(StrViewA str) const {
 }
 
 
+RpcVersion RpcRequest::RequestData::getVersion() const {
+	if (version.defined()) return RpcVersion::ver2;
+	else return RpcVersion::ver1;
+}
+
+RpcRequest RpcRequest::create(const Value& request, ICallbacks* cbs, const PRpcConnContext &connCtx) {
+	return create(ParseRequest(request), cbs, connCtx);
+}
+
+RpcRequest RpcRequest::create(const ParseRequest& reqdata, ICallbacks* cbs, const PRpcConnContext &connCtx) {
+	class Call: public RequestData {
+	public:
+		Call(const ParseRequest &req, ICallbacks* cbs, RpcFlags::Type flags, const PRpcConnContext &connCtx)
+			:RequestData(req,flags,connCtx)
+			,cbs(cbs) {}
+
+		virtual void sendResult(const Value &result, const Value &context) override {
+			postSendResponse(cbs->onResult(RpcRequest(this),result,context));
+		}
+		virtual void sendError(const Value &error) noexcept {
+			postSendResponse(cbs->onError(RpcRequest(this),error));
+		}
+		virtual bool sendNotify(const RpcNotify &notify) noexcept {
+			return cbs->onNotify(RpcRequest(this),notify);
+		}
+		virtual bool sendCallback(RpcRequest request) noexcept {
+			return cbs->onCallback(RpcRequest(this), request);
+		}
+		virtual bool response(const Value &) noexcept {return false;}
+
+		~Call() {
+			if (!responseSent) {
+				RpcRequest::setNoResultError(this);
+			}
+			cbs->release();
+		}
+	protected:
+		ICallbacks* cbs;
+	};
+
+	return RpcRequest(new Call(reqdata, cbs,RpcFlags::notify, connCtx));
+
+
+}
+
+RpcVersion RpcRequest::getVersion() const {
+	return data->getVersion();
+}
+
+Value RpcRequest::getVersionField() const {
+	return data->version;
+}
+
+void RpcRequest::setParams(Value args) {
+	data->params = args;
+}
 
 }
