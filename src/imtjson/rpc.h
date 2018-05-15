@@ -79,6 +79,28 @@ enum Type {
 
 }
 
+///Interface represents connection state
+/**
+ * If the client has a persistent connection with the RPC server, this interface can used to
+ * query various informations. It can also push new informations into the state. These informations
+ * are kept till close of the connection
+ *
+ */
+class IRpcConnContext {
+public:
+
+	template<typename Object>
+	Object *queryObject() {
+		return reinterpret_cast<Object *>(queryObjectPtr(typeid(Object)));
+	}
+
+	virtual void store(StrViewA name, Value value) = 0;
+	virtual Value retrieve(StrViewA name) const = 0;
+protected:
+	virtual void *queryObjectPtr(const std::type_info &objectId) = 0;
+
+};
+
 ///Packs typical JSONRPC request into object. You can call RPC function with this object.
 /** Object can be copied, because it is internally shared. It can be stored when
  * the method is executed asynchronous way. Until the request is resolved, it
@@ -111,7 +133,7 @@ private:
 		Value diagData;
 		RpcVersion::Type ver;
 		const IServerServices *srvsvc = nullptr;
-		std::uintptr_t sourceId = 0;
+		IRpcConnContext *connctx = nullptr;
 		bool responseSent = false;
 		bool errorSent = false;
 		bool notifyEnabled = false;
@@ -279,24 +301,14 @@ public:
 	///allows to modify args, for example if the request is forwarded to different method
 	void setArgs(Value args);
 
-	///Sets numeric identifier which identifies the source of the call
-	/** The main rule of using SourceID is, that id must be same for each call belongs to single connection,
-	 * or user. In most cases, the value is generated from pointer which acts as instance of the client
-	 *
-	 * @param srcId custom source id
-	 *
-	 * @note RpcServer from simpleServer library uses this value as connectionId
-	 */
-	void setSourceID(std::uintptr_t srcId);
-
-	///Gets numeric identifier which identifies the source of the call
-	/** @return sourceID of the call. If not set, returns zero */
-	std::uintptr_t getSourceID(std::uintptr_t srcId);
-
 	bool isResponseSent() const;
 
 	bool isErrorSent() const;
 
+
+	void setConnContext(IRpcConnContext *ctx) {data->connctx = ctx;}
+
+	IRpcConnContext *getConnContext() const {return data->connctx;}
 
 protected:
 	RpcRequest(RefCntPtr<RequestData> data):data(data) {}
@@ -418,7 +430,9 @@ public:
 	///call the request
 	void operator()(const RpcRequest &req) const noexcept;
 
-	void call(RpcRequest req) const noexcept;
+	///Execute the request
+	/** function can continue asynchronously */
+	void exec(RpcRequest req) const noexcept;
 
 	///Register a method
 	/**

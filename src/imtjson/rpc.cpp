@@ -190,9 +190,9 @@ bool RpcRequest::RequestData::setResponse(const Value& v) {
 }
 
 void RpcServer::operator ()(const RpcRequest &req) const noexcept {
-	call(req);
+	exec(req);
 }
-void RpcServer::call( RpcRequest req) const noexcept {
+void RpcServer::exec( RpcRequest req) const noexcept {
 	try {
 		req.init(this);
 		Value name = req.getMethodName();
@@ -667,14 +667,6 @@ std::size_t RpcServer::HashStr::operator()(StrViewA str) const {
 	return h;
 }
 
-
-void RpcRequest::setSourceID(std::uintptr_t srcId){
-	data->sourceId = srcId;
-}
-
-std::uintptr_t RpcRequest::getSourceID(std::uintptr_t srcId) {
-	return data->sourceId;
-}
 
 
 }
