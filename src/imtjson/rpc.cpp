@@ -29,12 +29,6 @@ RpcRequest::ParseRequest::ParseRequest(const Value & request) {
 
 
 }
-RpcRequest::ParseRequest::ParseRequest(const Value & methodName, const Value & params)
-	:methodName(methodName)
-	,params(params)
-{
-
-}
 
 RpcRequest::ParseRequest::ParseRequest(const Value &methodName, const Value &params, const Value &id, const Value &context, const Value &version)
 	:methodName(methodName)
@@ -43,6 +37,20 @@ RpcRequest::ParseRequest::ParseRequest(const Value &methodName, const Value &par
 	,context(context)
 	,version(version) {}
 
+template<std::size_t pos>
+static inline Value pick(const std::initializer_list<Value> &items) {
+	if (pos < items.size()) return *(items.begin()+pos); else return Value();
+}
+
+RpcRequest::ParseRequest::ParseRequest(const std::initializer_list<Value> &items)
+	:methodName(pick<0>(items))
+	,params(pick<1>(items))
+	,id(pick<2>(items))
+	,context(pick<3>(items))
+	,version(pick<4>(items))
+{
+
+}
 
 
 RpcRequest::RequestData::RequestData(const ParseRequest& request, RpcFlags::Type flags,const PRpcConnContext &connctx)
@@ -368,7 +376,7 @@ public:
 			mtfork = 0;
 			if (p.first.defined()) {
 				RpcRequest::ParseRequest pr (p.first, p.second, req.getId(), context, req.getVersionField());
-				class CBS: public RpcRequest::ICallbacks {
+				class CBS: public RpcRequest::Callbacks {
 				public:
 					virtual bool onResult(const RpcRequest &, const Value &res, const Value &ctx) noexcept override  {
 						owner.results.push_back(res);
@@ -740,14 +748,11 @@ RpcVersion RpcRequest::RequestData::getVersion() const {
 	else return RpcVersion::ver1;
 }
 
-RpcRequest RpcRequest::create(const Value& request, ICallbacks* cbs, const PRpcConnContext &connCtx) {
-	return create(ParseRequest(request), cbs, connCtx);
-}
 
-RpcRequest RpcRequest::create(const ParseRequest& reqdata, ICallbacks* cbs, const PRpcConnContext &connCtx) {
+RpcRequest RpcRequest::create(const ParseRequest& reqdata, Callbacks* cbs, const PRpcConnContext &connCtx) {
 	class Call: public RequestData {
 	public:
-		Call(const ParseRequest &req, ICallbacks* cbs, RpcFlags::Type flags, const PRpcConnContext &connCtx)
+		Call(const ParseRequest &req, Callbacks* cbs, RpcFlags::Type flags, const PRpcConnContext &connCtx)
 			:RequestData(req,flags,connCtx)
 			,cbs(cbs) {}
 
@@ -772,7 +777,7 @@ RpcRequest RpcRequest::create(const ParseRequest& reqdata, ICallbacks* cbs, cons
 			cbs->release();
 		}
 	protected:
-		ICallbacks* cbs;
+		Callbacks* cbs;
 	};
 
 	return RpcRequest(new Call(reqdata, cbs,RpcFlags::notify, connCtx));

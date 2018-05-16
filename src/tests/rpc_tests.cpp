@@ -43,7 +43,7 @@ void runRpcTests(TestSimple &tst) {
 	tst.test("RpcServer.ping","{\"error\":null,\"id\":10,\"result\":[1,2,3,true,{\"aaa\":4}]}") >> [](std::ostream &out) {
 		RpcServer srv;
 		srv.add_ping();
-		RpcRequest req = RpcRequest::create("Server.ping",{1,2,3,true,Object("aaa",4)},10,Value(),[&](Value res) {
+		RpcRequest req = RpcRequest::create(RpcRequest::ParseRequest("Server.ping",{1,2,3,true,Object("aaa",4),nullptr},10),[&](Value res) {
 			res.toStream(out);
 			return true;
 		});
@@ -53,7 +53,7 @@ void runRpcTests(TestSimple &tst) {
 		RpcServer srv;
 		srv.add_ping();
 		srv.add_multicall();
-		RpcRequest req = RpcRequest::create("Server.multicall",{"Server.ping",{1,2,3},{4,5,6},{7,8,9}},[&](Value res) {
+		RpcRequest req = RpcRequest::create(RpcRequest::ParseRequest("Server.multicall",{"Server.ping",{1,2,3},{4,5,6},{7,8,9}}),[&](Value res) {
 			res.toStream(out);
 			return true;
 		});
@@ -64,7 +64,7 @@ void runRpcTests(TestSimple &tst) {
 		srv.add_listMethods();
 		srv.add_ping();
 		srv.add_multicall();
-		RpcRequest req = RpcRequest::create("Server.multicall",{{"Server.ping",{1,2,3}},{"Server.listMethods",json::array}},[&](Value res) {
+		RpcRequest req = RpcRequest::create(RpcRequest::ParseRequest("Server.multicall",{{"Server.ping",{1,2,3}},{"Server.listMethods",json::array}}),[&](Value res) {
 			res.toStream(out);
 			return true;
 		});
@@ -85,7 +85,7 @@ void runRpcTests(TestSimple &tst) {
 		//register multicall
 		srv.add_multicall();
 		//create request
-		RpcRequest req = RpcRequest::create("Server.multicall",{{"Server.ping",{1,2,3}},{"test",{10,20}},{"Server.ping",{4,5,6}}},[&](Value res) {
+		RpcRequest req = RpcRequest::create(RpcRequest::ParseRequest("Server.multicall",{{"Server.ping",{1,2,3}},{"test",{10,20}},{"Server.ping",{4,5,6}}}),[&](Value res) {
 			res.toStream(out);
 			return true;
 		});
@@ -109,7 +109,7 @@ void runRpcTests(TestSimple &tst) {
 		srv.add("test", asyncFn);
 		srv.add_ping();
 		srv.add_multicall();
-		RpcRequest req = RpcRequest::create("Server.multicall",{{"Server.ping",{1,2,3}},{"test",{10,20}},{"Server.ping",{4,5,6}}},[&](Value res) {
+		RpcRequest req = RpcRequest::create({"Server.multicall",{{"Server.ping",{1,2,3}},{"test",{10,20}},{"Server.ping",{4,5,6}}}},[&](Value res) {
 			res.toStream(out);
 			return true;
 		});

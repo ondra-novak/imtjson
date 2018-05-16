@@ -27,14 +27,34 @@ namespace json {
 ///Carries result or error
 class RpcResult: public Value {
 public:
+	///Initialize the object
+	/**
+	 * @param result result or error object, depend on isError status
+	 * @param isError set to true, if the result is error
+	 * @param context optional context. It contains whole updated context
+	 */
 	RpcResult(Value result, bool isError, Value context);
+	///Inicializes empty result. Empty result is always set as error
+	/**
+	 * @note empty result is always error, because JSONRPC cannot have empty result. Empty
+	 * error result is used in situation when neither result nor error is available, but the
+	 * is no longer chance that method will return any result. This state is used to solve various
+	 * technical issues, such as connection problems etc.
+	 */
 	RpcResult():error(true) {}
 
+	///retrieve context
 	Value getContext() const {return context;}
+
+	///Deterine whether result is error
 	bool isError() const {return error;}
 
+	///Deterine whether result is error
 	bool operator!() const {return error;}
-	operator bool() const {return !error;}
+
+	int getErrorCode() const {return this->operator []("code").getInt();}
+	StrViewA getErrorMessage() const {return this->operator []("message").getString();}
+	Value getErrorData() const {return this->operator []("data");}
 
 protected:
 	Value context;
@@ -49,8 +69,14 @@ struct RpcNotify {
 	String eventName;
 	Value data;
 
+	///Construct notify from JSON
 	explicit RpcNotify(Value js);
+
+	///Construct notify
 	RpcNotify(String eventName, Value data);
+
+	///Create request from the notify
+	/** this helps if you need to pass notify to the server as method call */
 	RpcRequest asRequest() const;
 };
 
@@ -99,16 +125,52 @@ enum class RpcVersion {
 class RpcConnContext: public RefCntObj {
 public:
 
-	template<typename Object>
-	Object *queryObject() {
-		return reinterpret_cast<Object *>(queryObjectPtr(typeid(Object)));
+	///Queries for other interface
+	/**
+	 * @tparam This allow to server to expose various services. The caller only needs the
+	 * name of interface. If the service is available, the function returns pointer to it. In
+	 * other case, nullptr is returned
+	 *
+	 * @tparam Interface name of the interface. Note that service provider may require const
+	 * access to the interface, so don't forget to specify const Interface, in this case.
+	 *
+	 * @return pointer to the specified interface or nullptr if interface is not implemented
+	 */
+	template<typename Interface>
+	Interface *queryInterface() {
+		Interface *z =  reinterpret_cast<Interface *>(queryInterfacePtr(typeid(Interface)));
+		if (z == nullptr) z = dynamic_cast<Interface *>(this);
+		return z;
 	}
 
-	virtual void store(StrViewA name, Value value) {data(name,value);}
-	virtual Value retrieve(StrViewA name) const {return data[name];}
+	///Store some value to the context of the connection
+	/**
+	 *
+	 * @param key key
+	 * @param value value
+	 * If the key already exists, its value is overriden. To remove key, specify undefined as value
+	 */
+	virtual void store(StrViewA key, Value value) {data(key,value);}
+	///Retrieves value soecified by the key
+	/**
+	 *
+	 * @param key key
+	 * @return if key exists, its value is returned, otherwise the undefined is returned
+	 */
+	virtual Value retrieve(StrViewA key) const {return data[key];}
 	virtual ~RpcConnContext() {}
 protected:
-	virtual void *queryObjectPtr(const std::type_info &) {return nullptr;}
+	///Implements queryInterface
+	/**
+	 * @param information about desired interface.
+	 * @return if the interface is implemented, function should return pointer to it. Const
+	 * pointers must be const_casted (they are converted to const on the caller's side
+	 *
+	 * Interfaces directly inherieted by the implementatio class are automatically available without
+	 * need to implement this function. However this function can override the automatic behaviour.
+	 * .
+	 */
+	virtual void *queryInterfacePtr(const std::type_info &) {return nullptr;}
 	Object data;
 
 };
@@ -142,13 +204,49 @@ namespace _details {
 
 class RpcRequest {
 public:
+	///once the request is being processed by the server, following service are available
 	class IServerServices {
 	public:
+		///Formats the error message
+		/** Performs standard formarting for JSONRPC 2.0
+		 *
+		 * @param code error code
+		 * @param message message
+		 * @param data optional data
+		 * @return
+		 */
 		virtual Value formatError(int code, const String &message, Value data=Value()) const = 0;
+		///Valation of arguments
+		/**
+		 *
+		 * @param args arguments
+		 * @param def validation definition
+		 * @return if validatiion is successed, undefined is returned. The rejections are returned
+		 * otherwise.
+		 */
 		virtual Value validateArgs(const Value &args, const Value &def) const = 0;
 		virtual ~IServerServices() {}
 	};
 
+	///Contains request parsed to separated parts
+	/** This class allows to build request from parts or from the whole JSONRPC message
+	 *
+	 *  IF you need just parse JSONRPC message, use it to construct this object. If you already
+	 *  have parts, you can combine them and also construct this object. The instance of this
+	 *  class is then used to initialize the request.
+	 *
+	 *  You don't need to explicitly specify the name of the class. It can be implicitly constructed
+	 *  from the single json::Value - in case of whole JSONRPC message - or using the initializer_list
+	 *  when it is being build from parts.
+	 *
+	 *  {method, params, id, context, version}
+	 *
+	 *  You can however specify less items, the other unspecified items become undefined.
+	 *
+	 *  {method, params}
+	 *
+	 *
+	 */
 	struct ParseRequest {
 		Value methodName;
 		Value params;
@@ -158,8 +256,8 @@ public:
 
 		ParseRequest() {}
 		ParseRequest(const Value & request);
-		ParseRequest(const Value &methodName, const Value &params);
-		ParseRequest(const Value &methodName, const Value &params, const Value &id, const Value &context, const Value &version);
+		ParseRequest(const Value &methodName, const Value &params, const Value &id=Value(0), const Value &context=Value(), const Value &version=Value());
+		ParseRequest(const std::initializer_list<Value> &items);
 	};
 
 
@@ -197,34 +295,150 @@ private:
 
 public:
 
-	class ICallbacks {
+	///This interface allows you to define various callbacks called as the request is processed
+	/** It expects the instance allocated on the heap, however this can be overridden by implementation
+	 *
+	 *  The base class has all functions empty, you need to override it and define own implementation
+	 *
+	 *  Also see RpcRequest::create
+	 */
+	class Callbacks {
 	public:
 
-		virtual bool onResult(const RpcRequest &req, const Value &result, const Value &) noexcept{
+		///called when request is finished by a result
+		/**
+		 * @param req request being processed
+		 * @param result result
+		 * @param context context generated by the method (can be undefined)
+		 * @retval true post-request notifications are allowed (connection ongoing)
+		 * @retval false post-request notifications are disallowed (connection lost)
+		 */
+		virtual bool onResult(const RpcRequest &req, const Value &result, const Value &context) noexcept{
+			(void)context;
 			return onResult(req, result);
 		}
-		virtual bool onResult(const RpcRequest &, const Value &) noexcept {return false;}
-		virtual bool onError(const RpcRequest &, const Value &) noexcept {return false;}
-		virtual bool onNotify(const RpcRequest &, const RpcNotify &) noexcept {return false;}
-		virtual bool onCallback(const RpcRequest &, RpcRequest &) noexcept {return false;}
+		///called when request is finished by a result
+		/**
+		 * @param req request being processed
+		 * @param result result
+		 * @retval true post-request notifications are allowed (connection ongoing)
+		 * @retval false post-request notifications are disallowed (connection lost)
+		 *
+		 * @note this function is called only if the three-args version is not overridden
+		 */
+		virtual bool onResult(const RpcRequest &req, const Value &result) noexcept {
+			(void)req; (void)result;
+			return false;
+		}
+		///called when request is finished by an error
+		/**
+		 *
+		 * @param req request being processed
+		 * @param error error object
+		 * @retval true post-request notifications are allowed (connection ongoing)
+		 * @retval false post-request notifications are disallowed (connection lost)
+		 */
+		virtual bool onError(const RpcRequest &req, const Value &error) noexcept {
+			(void)req;(void)error;
+			return false;
+		}
+		///Called when request generates notification
+		/**
+		 * The request can generate notification anytime. Notifications can arrive
+		 * before the request is finished and also after the finishing the request.
+		 *
+		 * However it is possible to stop generating future notification,
+		 * by rejecting at least one notification.
+		 *
+		 * @param req request being processed
+		 * @param ntf notification object
+		 * @retval true allow future notifications
+		 * @retval false disallow future notification
+		 *
+		 * @note there is no way to reenable disallowed notification
+		 */
+		virtual bool onNotify(const RpcRequest &req, const RpcNotify &ntf) noexcept {
+			(void)req;(void)ntf;
+			return false;
+		}
+		///Called when request is generates callback request
+		/**
+		 * the callback request is request sent from the server to the client. It is kind
+		 * of notification which has also own ID. It is excepted that callback request is
+		 * sent to the client and its response is then somehow received and the callback
+		 * request is finished. The RpcServer doesn't support callbacks, it better to use
+		 * AbstractRpcClient to handle opened callback requests.
+		 *
+		 * @param req request being processed
+		 * @param cbreq callback request. To continue processing the source request, the
+		 * callback request must be finished
+		 * @retval true operation is in progress
+		 * @retval false  operation is not supported (or disallowed)
+		 *
+		 * @note because the callbacks are built on notifications, once the notifications
+		 * are disalloed, the calbacks are disallowed as well.
+		 */
+		virtual bool onCallback(const RpcRequest &req, RpcRequest &cbreq) noexcept {
+			(void)req;(void)cbreq;
+			return false;
+		}
+
+		///Method is called when the instance is no longer needed
+		/**
+		 * Default implemenation is to call delete this to end lifetime of the instance because
+		 * the source request has been destroyed. However if the object is being allocated
+		 * staticaly, you need to override this method to prevent deleting the statically allocated
+		 * object.
+		 */
 		virtual void release()noexcept {delete this;}
-		virtual ~ICallbacks() {}
+		virtual ~Callbacks() {}
 	};
 
 
-	template<typename Fn, typename = decltype(_details::callCB(std::declval<Fn>(), std::declval<Value>(), std::declval<RpcRequest>()))>
-	static RpcRequest create(const Value &request, Fn &&fn, RpcFlags::Type flags = 0, const PRpcConnContext &connCtx = PRpcConnContext());
-
+	///Creates a request
+	/**
+	 * This function is mostly call as the first once the JSONRPC message is received
+	 *
+	 * @param reqdata contains a instance of ParseRequest which can be implicitly constructed from
+	 * the JSONRPC message directly (carried as json::Value). By using an initializer list, you can
+	 * construct this object from parts of JSONRPC message. See description of ParseRequest
+	 * @param fn function which is called when request is finished. The function can accept one or two
+	 * arguments. If the function has one argument, it is generated JSONRPC response, which can
+	 * be directly serialized into output stream. If the function accepts two arguments, then second
+	 * argument is reference to RpcRequest which is being processed. Note that function can be called
+	 * by multipletimes, because notifications are also sent through this function.
+	 * @param flags contains various flags which can limit or extend processing of the request. Note
+	 * that default value disables notifications and maintain compatibility with JSONRPC 1.0
+	 * @param connCtx context associated with the connection, if there is such thing. The argument can
+	 * be nullptr. The method can access this context.
+	 * @return request object. The object can be passed to the server for execution
+	 */
 	template<typename Fn, typename = decltype(_details::callCB(std::declval<Fn>(), std::declval<Value>(), std::declval<RpcRequest>()))>
 	static RpcRequest create(const ParseRequest &reqdata, Fn &&fn, RpcFlags::Type flags = 0, const PRpcConnContext &connCtx = PRpcConnContext());
 
-	static RpcRequest create(const Value &request, ICallbacks *cbs, const PRpcConnContext &connCtx = PRpcConnContext());
-
-	static RpcRequest create(const ParseRequest &reqdata, ICallbacks *cbs, const PRpcConnContext &connCtx = PRpcConnContext());
+	///Creates a request which is probably processed internally
+	/**
+	 *
+	 * @param reqdata contains a instance of ParseRequest which can be implicitly constructed from
+	 * the JSONRPC message directly (carried as json::Value). By using an initializer list, you can
+	 * construct this object from parts of JSONRPC message. See description of ParseRequest
+	 * @param cbs pointer to object implementing Callbacks. Function also receives ownership of this
+	 * object and the object is destroyed automatically with the destruction of the request (so the
+	 * object should be allocated on heap) - however this behavior can be overridden by the
+	 * object itself. Object contains various callback called in situations when the request generates
+	 * result, error, notification or callback call.
+	 * @param connCtx context associated with the connection, if there is such thing. The argument can
+	 * be nullptr. The method can access this context.
+	 * @return request object. The object can be passed to the server for execution
+	 */
+	static RpcRequest create(const ParseRequest &reqdata, Callbacks *cbs, const PRpcConnContext &connCtx = PRpcConnContext());
 
 
 
 	///Function is called by RpcServer before the request is being processed
+	/**
+	 * @param srvsvc pointer to server's services
+	 */
 	void init(const IServerServices *srvsvc);
 
 	///Name of method
@@ -243,9 +457,22 @@ public:
 	///acfcess to context
 	Value operator[](const StrViewA name) const;
 
-
+	///Gets version of the request
+	/**The server tracks version of the request to generate response in requested version
+	 *
+	 * @retval RpcVersion::ver1 version 1.0 (legacy version)
+	 * @retval RpcVersion::ver2 version 2.0
+	 *
+	 * If the request has unknown version, it is processed as version 2.0
+	 */
 	RpcVersion getVersion() const;
 
+	///Retrieves version field of the JSONRPC request
+	/**
+	 * @return version field. Note that JSONRPC 1.0 doesn't have version field, so in this
+	 * case, result is undefined value. For the JSONRPC 2.0 the result is "2.0". If the request
+	 * uses other (unsupported) version, the field contains string of the version.
+	 */
 	Value getVersionField() const;
 
 	///Checks arguments
@@ -333,13 +560,24 @@ public:
 	///allows to modify args, for example if the request is forwarded to different method
 	void setParams(Value args);
 
+	///Determines whether response has been already sent
+	/**
+	 * @retval true response has been sent
+	 * @retval false response has not been sent
+	 */
 	bool isResponseSent() const;
 
+	///Determines whether respone has been already sent and was error
+	/**
+	 * @retval true response has been sent and it was error
+	 * @retval false response has not been sent or response was not error
+	 */
 	bool isErrorSent() const;
 
-
+	///Changes connection's context
 	void setConnContext(const PRpcConnContext &ctx) {data->connctx = ctx;}
 
+	///Retrieves cnnection's context
 	PRpcConnContext getConnContext() const {return data->connctx;}
 
 protected:
@@ -352,10 +590,6 @@ protected:
 
 
 
-template<typename Fn, typename>
-inline RpcRequest RpcRequest::create(const Value& request,  Fn&& fn, RpcFlags::Type flags, const PRpcConnContext &connCtx) {
-	return create(ParseRequest(request), std::forward<Fn>(fn), flags, connCtx);
-}
 
 template<typename Fn, typename>
 inline RpcRequest json::RpcRequest::create(const ParseRequest &req, Fn&& fn, RpcFlags::Type flags, const PRpcConnContext &connCtx) {
@@ -467,6 +701,7 @@ public:
 	 */
 	virtual Value formatError(int code, const String &message, Value data=Value()) const override;
 
+	///Override to perform custom validation
 	virtual Value validateArgs(const Value &args, const Value &def) const override;
 
 	///Adds buildin method Server.listMethods
