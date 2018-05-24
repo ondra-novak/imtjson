@@ -1313,6 +1313,61 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 
 	};
 
+	tst.test("PreciseNumber.create_serialize","-123456789000036798446785510.1215851015232487940323198E-257") >> [](std::ostream &out) {
+		Value numb = Value::preciseNumber("-123456789000036798446785510.1215851015232487940323198E-257");
+		numb.toStream(out);
+	};
+	tst.test("PreciseNumber.create_serialize2","1215851015232487940323198e100") >> [](std::ostream &out) {
+		Value numb = Value::preciseNumber("1215851015232487940323198e100");
+		numb.toStream(out);
+	};
+	tst.test("PreciseNumber.create_serialize2","1215851015232487940323198.00000000000000000000000000123") >> [](std::ostream &out) {
+		Value numb = Value::preciseNumber("1215851015232487940323198.00000000000000000000000000123");
+		numb.toStream(out);
+	};
+	tst.test("PreciseNumber.create_serializeError","Invalid numeric format (precise number): -123456789000036798ahoj446785510.1215851015232487940323198E-257") >> [](std::ostream &out) {
+		try {
+			Value numb = Value::preciseNumber("-123456789000036798ahoj446785510.1215851015232487940323198E-257");
+			numb.toStream(out);
+		} catch (const std::exception &e) {
+			out << e.what();
+		}
+	};
+	tst.test("PreciseNumber.create_serializeError2","Invalid numeric format (precise number): -123456789000036798446785510.121585101523248794032319K+257") >> [](std::ostream &out) {
+		try {
+		Value numb = Value::preciseNumber("-123456789000036798446785510.121585101523248794032319K+257");
+		numb.toStream(out);
+		} catch (const std::exception &e) {
+			out << e.what();
+		}
+	};
+	tst.test("PreciseNumber.create_serializeError3","Invalid numeric format (precise number): -0.11023k") >> [](std::ostream &out) {
+		try {
+		Value numb = Value::preciseNumber("-0.11023k");
+		numb.toStream(out);
+		} catch (const std::exception &e) {
+			out << e.what();
+		}
+	};
+	tst.test("PreciseNumber.create_convert","132,424242") >> [](std::ostream &out) {
+		Value numb = Value::preciseNumber("424242");
+		out << numb.flags() << "," << numb.getUInt();
+	};
+	tst.test("PreciseNumber.create_convert2","130,-584488") >> [](std::ostream &out) {
+		Value numb = Value::preciseNumber("-584488");
+		out << numb.flags() << "," << numb.getInt();
+	};
+	tst.test("PreciseNumber.create_convert3","128,12.523") >> [](std::ostream &out) {
+		Value numb = Value::preciseNumber("12.523");
+		out << numb.flags() << "," << numb.getNumber();
+	};
+	tst.test("PreciseNumber.parse_serialize",R"json({"value1":123.456,"value2":1.0000000000000000000000000000001,"value3":[1.23343224234,1.34]})json") >> [](std::ostream &out) {
+		StreamFromString str(R"json({"value1":123.456,"value2":1.0000000000000000000000000000001,"value3":[1.23343224234, 1.34]})json");
+		Parser<const StreamFromString &> parser(str, 		Parser<const StreamFromString &>::allowPreciseNumbers);
+		Value v = parser.parse();
+		v.toStream(out);
+	};
+
 	runValidatorTests(tst);
 	//runRpcTests(tst);
 
@@ -1329,6 +1384,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	tst.test("compress.utf-8","ok") >> [](std::ostream &out) {
 		if (compressTest("src/tests/test2.json")) out << "ok"; else out << "not same";
 	};
+
 
 
 	return tst.didFail()?1:0;

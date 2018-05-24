@@ -25,7 +25,7 @@ enum Eof_t {
 class StreamFromStdStream {
 public:
 	StreamFromStdStream(std::istream &stream):stream(stream) {}
-	int operator()() {
+	int operator()() const {
 		return stream.get();
 	}
 private:
@@ -45,13 +45,13 @@ inline StreamFromStdStream fromStream(std::istream &stream) {
 class StreamFromString {
 public:
 	StreamFromString(const StrViewA &string):string(string),pos(0) {}
-	int operator()() {
+	int operator()() const {
 		if (pos < string.length) return (unsigned char)string[pos++];
 		else return eof;
 	}
 private:
 	StrViewA string;
-	std::size_t pos;
+	mutable std::size_t pos;
 };
 
 ///Creates stream for the parser which reads bytes from the string
@@ -67,7 +67,7 @@ inline StreamFromString fromString(const StrViewA &string) {
 class StreamToStdStream {
 public:
 	StreamToStdStream(std::ostream &stream):stream(stream) {}
-	void operator()(char c) {
+	void operator()(char c) const {
 		stream.put(c);
 	}
 private:

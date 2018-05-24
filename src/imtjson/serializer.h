@@ -53,6 +53,7 @@ namespace json {
 		void writeUnicode(unsigned int uchar);
 		void writeString(const StringView<char> &text);
 		void writeStringBody(const StringView<char> &text);
+		void writePreciseNumber(const StringView<char> &text);
 
 	};
 
@@ -139,7 +140,8 @@ namespace json {
 	inline void Serializer<Fn>::serializeNumber(const IValue * ptr)
 	{
 		ValueTypeFlags f = ptr->flags();
-		if (f & numberUnsignedInteger) writeUnsigned(ptr->getUInt());
+		if (f & preciseNumber) writePreciseNumber(ptr->getString());
+		else if (f & numberUnsignedInteger) writeUnsigned(ptr->getUInt());
 		else if (f & numberInteger) writeSigned(ptr->getInt());
 		else writeDouble(ptr->getNumber());			
 	}
@@ -330,6 +332,12 @@ namespace json {
 		writeStringBody(text);
 		target('"');
 	}
+
+	template<typename Fn>
+	inline void Serializer<Fn>::writePreciseNumber(const StringView<char>& text) {
+		for (auto c: text) target(c);
+	}
+
 	template<typename Fn>
 	inline void Serializer<Fn>::writeStringBody(const StringView<char>& text)
 	{

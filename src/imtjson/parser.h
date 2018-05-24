@@ -9,6 +9,14 @@
 
 namespace json {
 
+
+	///enables parsing numbers as precise numbers
+	/** this option is global for whole application. If you need specify
+	 * option locally, construct Parse instance with correct flag
+	 */
+	extern bool enableParsePreciseNumbers;
+
+
 	template<typename Fn>
 	class Parser {
 	public:
@@ -22,6 +30,15 @@ namespace json {
 		 *
 		 *  */
 		static const Flags allowDupKeys = 1;
+		///Parse numbers as precise
+		/** Precise numbers are parsed as they are and stored as string. This is transparent
+		 * for the rest of the code. Precise numbers emits special flag preciseNumber. The
+		 * function Value::getString() returns the actual form of the number. If such
+		 * number is serialized, it is serialized 1:1 to its actual form
+		 *
+		 */
+		static const Flags allowPreciseNumbers = 2;
+
 
 		Parser(const Fn &source, Flags flags = 0) :rd(source),flags(flags) {}
 
@@ -103,6 +120,11 @@ namespace json {
 				}
 			}
 
+			void putBack(int c) {
+				loaded = true;
+				this->c = c;
+			}
+
 			///slightly faster read, because it returns character directly from the stream
 			/**
 			 * Note that previous character must be commited"
@@ -165,8 +187,11 @@ namespace json {
 		///Stores unicode character as UTF-8 into the tmpstr
 		void storeUnicode(std::uintptr_t uchar);
 
+
+		StrIdx parsePreciseNumber(bool &hint_is_float);
+
 		///Temporary string - to keep allocated memory
-		std::string tmpstr;
+		std::vector<char> tmpstr;
 
 		///Temporary array - to keep allocated memory
 		std::vector<Value> tmpArr;
@@ -174,6 +199,12 @@ namespace json {
 		Flags flags;
 	};
 
+
+	class ParserHelper {
+		template<typename Fn>
+		friend class Parser;
+		static Value numberFromStringRaw(StrViewA str, bool force_double);
+	};
 
 	class ParseError:public std::exception {
 	public:
@@ -226,7 +257,7 @@ namespace json {
 	template<typename Fn>
 	inline Value Value::parse(const Fn & source)
 	{
-		Parser<Fn> parser(source);
+		Parser<Fn> parser(source, enableParsePreciseNumbers?Parser<Fn>::allowPreciseNumbers:0);
 		return parser.parse();
 	}
 
@@ -403,7 +434,7 @@ namespace json {
 			if (isdigit(c)) uchar += (c - '0');
 			else if (c >= 'A' && c <= 'F') uchar += (c - 'A' + 10);
 			else if (c >= 'a' && c <= 'f') uchar += (c - 'a' + 10);
-			else ParseError("Expected '0'...'9' or 'A'...'F' after the escape sequence \\u: ("+tmpstr+")", c);
+			else ParseError("Expected '0'...'9' or 'A'...'F' after the escape sequence \\u: ("+std::string(tmpstr.begin(),tmpstr.end())+")", c);
 		}
 		storeUnicode(uchar);
 	}
@@ -418,46 +449,55 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parseNumber()
 	{		
-		//first try to read number as signed or unsigned integer
-		std::uintptr_t intpart;
-		//read sign and return true whether it is '-' (discard '+')
-		bool isneg = readSign();
-		//test next character
-		int c = rd.next();
-		//it should be digit or dot (because .3 is valid number)
-		if (!isdigit(c) && c != '.') 
-			throw ParseError("Expected '0'...'9', '.', '+' or '-'", c);
-		//declared dummy var (we don't need counter here)
-		int counter;
-		//parse sequence of numbers as unsigned integer
-		//function returns false, if overflow detected
-		bool complete = parseUnsigned(intpart,counter);
-		//in case of overflow or dot follows, continue to read as floating number
-		if (!complete || rd.next() == '.' || toupper(rd.next()) == 'E') {
-			//parse floating number (give it already parsed informations)
-			return parseDouble(intpart, isneg);
-		}
-		//is negative?
-		if (isneg) {
-			//tests, whether highest bit of unsigned integer is set
-			//if so, converting to signed triggers overflow
-			if (intpart & (std::uintptr_t(1) << (sizeof(intpart) * 8 - 1))) {
-				//convert number to float
-				double v = (double)intpart;
-				//return negative value
-				return Value(-v);
+
+		if (flags & allowPreciseNumbers) {
+			bool hint_is_double = false;
+			StrIdx numb = parsePreciseNumber(hint_is_double);
+			Value v = ParserHelper::numberFromStringRaw(getString(numb), hint_is_double);
+			freeString(numb);
+			return Value(v);
+		} else {
+
+			//first try to read number as signed or unsigned integer
+			std::uintptr_t intpart;
+			//read sign and return true whether it is '-' (discard '+')
+			bool isneg = readSign();
+			//test next character
+			int c = rd.next();
+			//it should be digit or dot (because .3 is valid number)
+			if (!isdigit(c) && c != '.')
+				throw ParseError("Expected '0'...'9', '.', '+' or '-'", c);
+			//declared dummy var (we don't need counter here)
+			int counter;
+			//parse sequence of numbers as unsigned integer
+			//function returns false, if overflow detected
+			bool complete = parseUnsigned(intpart,counter);
+			//in case of overflow or dot follows, continue to read as floating number
+			if (!complete || rd.next() == '.' || toupper(rd.next()) == 'E') {
+				//parse floating number (give it already parsed informations)
+				return parseDouble(intpart, isneg);
+			}
+			//is negative?
+			if (isneg) {
+				//tests, whether highest bit of unsigned integer is set
+				//if so, converting to signed triggers overflow
+				if (intpart & (std::uintptr_t(1) << (sizeof(intpart) * 8 - 1))) {
+					//convert number to float
+					double v = (double)intpart;
+					//return negative value
+					return Value(-v);
+				}
+				else {
+					//convert to signed and return negative
+					return Value(-intptr_t(intpart));
+				}
 			}
 			else {
-				//convert to signed and return negative
-				return Value(-intptr_t(intpart));
+				//return unsigned version
+				return Value(intpart);
 			}
-		}
-		else {
-			//return unsigned version
-			return Value(intpart);
-		}
 
-
+		}
 
 	}
 
@@ -473,7 +513,7 @@ namespace json {
 	template<typename Fn>
 	inline void Parser<Fn>::freeString(const StrIdx &str)
 	{
-		assert(str.first+ str.second== tmpstr.length());
+		assert(str.first+ str.second== tmpstr.size());
 		tmpstr.resize(str.first);
 
 	}
@@ -481,7 +521,7 @@ namespace json {
 	template<typename Fn>
 	inline typename Parser<Fn>::StrIdx Parser<Fn>::readString()
 	{
-		std::size_t start = tmpstr.length();
+		std::size_t start = tmpstr.size();
 		try {
 			Utf8ToWide conv;
 			conv([&]{
@@ -702,4 +742,63 @@ namespace json {
 		}
 	}
 
+
+	template<typename Fn>
+	typename Parser<Fn>::StrIdx Parser<Fn>::parsePreciseNumber(bool& hint_is_float) {
+		std::uintptr_t start = tmpstr.size();
+		try {
+			int c = rd.nextCommit();
+			if (c == '+' || c== '-') {
+				tmpstr.push_back((char)c);
+				c = rd.readFast();
+			}
+			if (!isdigit(c)) {
+				rd.putBack(c);
+				throw ParseError("Expected a number", c);
+			}
+
+			while (isdigit(c)) {
+				tmpstr.push_back((char)c);
+				c = rd.readFast();
+			}
+			if (c == '.') {
+				hint_is_float = true;
+				tmpstr.push_back((char)c);
+				c = rd.readFast();
+				while (isdigit(c)) {
+					tmpstr.push_back((char)c);
+					c = rd.readFast();
+				}
+			}
+			if (c == 'e' || c == 'E') {
+				hint_is_float = true;
+				tmpstr.push_back((char)c);
+				c = rd.readFast();
+				if (c == '+' || c== '-') {
+					tmpstr.push_back((char)c);
+					c = rd.readFast();
+				}
+				if (!isdigit(c)) {
+					rd.putBack(c);
+					throw ParseError("Expected a number", c);
+				}
+
+				while (isdigit(c)) {
+					tmpstr.push_back((char)c);
+					c = rd.readFast();
+				}
+
+			}
+
+			rd.putBack(c);
+			return StrIdx(start, tmpstr.size()-start);
+
+		} catch (...) {
+			tmpstr.resize(start);
+			throw;
+		}
+
+	}
+
 }
+

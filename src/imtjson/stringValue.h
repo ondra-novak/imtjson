@@ -56,5 +56,48 @@ inline StringValue::StringValue(BinaryEncoding encoding, std::size_t strSz, cons
 	sz = wrsz;
 }
 
+
+template<typename T>
+class PreciseNumberValue: public AbstractNumberValue {
+public:
+
+	virtual double getNumber() const override;
+	virtual std::intptr_t getInt() const override;
+	virtual std::uintptr_t getUInt() const override;
+	virtual bool getBool() const override;
+	virtual ValueTypeFlags flags() const override;
+	virtual StringView<char> getString() const override;
+
+	///Constructs PValue
+	/** @note constructor doesn't check content - you need to handle it before */
+	static PValue create(const StringView<char> &str);
+
+	static PValue create(const T &value, const StringView<char> &str);
+
+	virtual ~PreciseNumberValue();
+	void operator delete(void *ptr, std::size_t sz);
+
+protected:
+	PreciseNumberValue(const StrViewA &strNum);
+	PreciseNumberValue(const T &v, const StrViewA &strNum);
+
+
+	void *operator new(std::size_t sz, const std::size_t &strsz );
+	void operator delete(void *ptr, const std::size_t &sz);
+	void cacheValue() const;
+
+
+	mutable T n;
+	mutable bool cached;
+	char charbuff[100];
+};
+
+typedef PreciseNumberValue<double> PreciseNumberValueDouble;
+typedef PreciseNumberValue<std::uintptr_t> PreciseNumberValueUnsigned;
+typedef PreciseNumberValue<std::intptr_t> PreciseNumberValueSigned;
+
+
+
 }
+
 #endif /* SRC_IMMUJSON_STRINGVALUE_H_ */

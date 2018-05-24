@@ -207,6 +207,18 @@ namespace json {
 		 */
 		Value(const Binary &binary);
 
+
+		///Creates precise number value
+		/*** Precise number is number stored as string. It is serialized diractly as
+		 * it is. It is still can be used as ordinary number, but it can be damaged
+		 * while it is converted to the double type
+		 *
+		 * @param number number written as string. Note that input value must be valid JSON number, otherwise function throws ParseError exception
+		 * @return value which stores precise number
+		 * @exception InvalidNumericFormat thrown when input is not valid number
+		 */
+		static Value preciseNumber(const StrViewA number);
+
 		///Retrieves type of value
 		/**
 		 * @return type of value
@@ -967,6 +979,7 @@ namespace json {
 		 */
 		std::size_t lastIndexOf(const Value &v, std::size_t start = npos) const;
 
+
 public:
 
 		///Pointer to custom allocator
@@ -986,6 +999,8 @@ protected:
 
 		friend class Object;
 		friend class Array;
+
+		static Value numberFromStringRaw(StrViewA str, bool force_double);
 
 		//std::vector<PValue> prepareValues(const std::initializer_list<Value>& data);
 	};
@@ -1047,6 +1062,17 @@ protected:
 	    typedef Value &        reference;
 	    typedef std::intptr_t  difference_type;
 
+	};
+
+
+	class InvalidNumericFormat: public std::exception {
+	public:
+		InvalidNumericFormat(std::string &&val);
+		const std::string &getValue() const;
+		const char *what() const noexcept override;
+	protected:
+		std::string val;
+		mutable std::string msg;
 	};
 
 

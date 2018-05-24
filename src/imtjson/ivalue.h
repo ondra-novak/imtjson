@@ -99,6 +99,24 @@ namespace json {
 	 */
 	const ValueTypeFlags customObject = 64;
 
+	/// States that object stores precise number
+	/** Precise numbers are stored directly as strings. This flag can appear
+	 * with type string or number. If it appears on string, it states, that
+	 * the value has been parsed as string, but it contains precise number. It
+	 * it appears on number, th states, that the value has been parsed as number,
+	 * but is contains precise number, which can be retrieved as string.
+	 *
+	 * Precise number can be accesed without conversion through the method
+	 * Value::getString(). You can also convert such Value to String object.
+	 * The function Value::toString() is slightly faster with precise numbers
+	 *
+	 *
+	 * @note precise numbers are currently not supported by binjson. They are
+	 * converted to standard double value
+	 */
+
+	const ValueTypeFlags preciseNumber = 128;
+
 
 	typedef int BinarySerializeFlags;
 

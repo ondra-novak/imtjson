@@ -62,7 +62,11 @@ namespace json {
 		switch (type()) {
 		case null:
 		case boolean:
-		case number: return stringify();
+		case number: if (flags() & json::preciseNumber)
+						return String(*this);
+					else
+						return stringify();
+
 		case undefined: return String("<undefined>");
 		case object: return stringify();
 		case array: return stringify();
@@ -303,6 +307,7 @@ namespace json {
 
 	uintptr_t maxPrecisionDigits = 9;
 	UnicodeFormat defaultUnicodeFormat = emitEscaped;
+	bool enableParsePreciseNumbers = false;
 
 	///const double maxMantisaMult = pow(10.0, floor(log10(std::uintptr_t(-1))));
 
@@ -707,6 +712,36 @@ namespace json {
 		}
 
 		return undefined;
+	}
+
+
+	Value Value::preciseNumber(const StrViewA number) {
+		std::uintptr_t pos = 0;
+		auto reader = [&]() -> int {
+			if (pos > number.length) {
+				pos++;
+				return -1;
+			}
+			else {
+				return number[pos++];
+			}
+		};
+		typedef Parser<decltype(reader)> P;
+		P parser(reader, P::allowPreciseNumbers);
+		try {
+			Value v = parser.parseNumber();
+			if (pos <= number.length) throw InvalidNumericFormat(number);
+			return v;
+		} catch (const ParseError &) {
+			throw InvalidNumericFormat(number);
+		}
+	}
+
+	InvalidNumericFormat::InvalidNumericFormat(std::string &&val):val(std::move(val)) {}
+	const std::string &InvalidNumericFormat::getValue() const {return val;}
+	const char *InvalidNumericFormat::what() const noexcept  {
+		msg = "Invalid numeric format (precise number): " + val;
+		return msg.c_str();
 	}
 
 }
