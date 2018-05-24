@@ -13,7 +13,7 @@
 class TestSimple {
 public:
 
-	TestSimple():failed(false) {}
+	TestSimple(bool showOutput = false):failed(false),showOutput(showOutput) {}
 
 	class ChargedTest {
 	public:
@@ -40,6 +40,7 @@ public:
 
 protected:
 	bool failed;
+	bool showOutput;
 
 	template<typename Fn>
 	void runTest(const Fn &fn, const std::string &name, const std::string &expected_result );
@@ -64,6 +65,7 @@ inline void TestSimple::runTest(const Fn& fn, const std::string &name, const std
 		std::string produced = stream.str();
 		if (produced == expected_result) {
 			std::cout<<"OK" << std::endl;
+			if (showOutput) std::cout<<"\tProduced:" << produced << std::endl;
 		} else {
 			std::cout<<"FAILED" << std::endl;
 			std::cout<<"\tExpected:" << expected_result << std::endl;

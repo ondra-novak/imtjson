@@ -83,8 +83,8 @@ void subobject(Object &&obj) {
 }
 
 
-int testMain() {
-	TestSimple tst;
+int testMain(bool showOutput) {
+	TestSimple tst(showOutput);
 
 	//Normalize test across platforms
 	json::maxPrecisionDigits = 4;
@@ -1390,8 +1390,12 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	return tst.didFail()?1:0;
 }
 
-int main(int, char **) {
-	int r = testMain();
+int main(int c, char **a) {
+	bool showOutput = c == 2 && strcmp(a[1],"-v") == 0;
+	int r = testMain(showOutput);
+	if (!showOutput && r == 0) {
+		std::cout << "add -v to display output of each test" << std::endl;
+	}
 #ifdef _WIN32
 	_CrtDumpMemoryLeaks();
 #endif
