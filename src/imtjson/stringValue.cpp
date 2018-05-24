@@ -219,8 +219,8 @@ template class PreciseNumberValue<std::intptr_t>;
 
 Value ParserHelper::numberFromStringRaw(StrViewA str, bool force_double) {
 	if (force_double) return PreciseNumberValue<double>::create(str);
-	std::uintptr_t acclm;
-	bool neg;
+	std::uintptr_t acclm = 0;
+	bool neg = false;
 	std::uintptr_t pos = 0;
 	if (str[0] == '-' || str[0] == '+') {
 		neg = str[0] == '-';

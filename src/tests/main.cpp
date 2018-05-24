@@ -1361,8 +1361,8 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value numb = Value::preciseNumber("12.523");
 		out << numb.flags() << "," << numb.getNumber();
 	};
-	tst.test("PreciseNumber.parse_serialize",R"json({"value1":123.456,"value2":1.0000000000000000000000000000001,"value3":[1.23343224234,1.34]})json") >> [](std::ostream &out) {
-		StreamFromString str(R"json({"value1":123.456,"value2":1.0000000000000000000000000000001,"value3":[1.23343224234, 1.34]})json");
+	tst.test("PreciseNumber.parse_serialize",R"json({"value1":123.456,"value2":1.0000000000000000000000000000001,"value3":[3.14159265358979323846264338327950288,1.34]})json") >> [](std::ostream &out) {
+		StreamFromString str(R"json({"value1":123.456,"value2":1.0000000000000000000000000000001,"value3":[3.14159265358979323846264338327950288,1.34]})json");
 		Parser<const StreamFromString &> parser(str, 		Parser<const StreamFromString &>::allowPreciseNumbers);
 		Value v = parser.parse();
 		v.toStream(out);
