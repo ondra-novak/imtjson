@@ -350,7 +350,7 @@ namespace json {
 				if (c == eof) return c;
 				switch (c) {
 					case '\\':
-					case '/':
+//					case '/':
 					case '"':target('\\'); target(c); break;
 					case '\f':target('\\'); target('f'); break;
 					case '\b':target('\\'); target('b'); break;

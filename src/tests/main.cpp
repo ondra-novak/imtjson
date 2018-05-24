@@ -102,7 +102,7 @@ int testMain() {
 		out << Value::fromString(u8"\"testing-ěščřžýáíé\"").getString();
 	};
 	tst.test("Parse.stringSpecial","line1\nline2\rline3\fline4\bline5\\line6\"line7/line8") >> [](std::ostream &out) {
-		out << Value::fromString("\"line1\\nline2\\rline3\\fline4\\bline5\\\\line6\\\"line7\\/line8\"").getString();
+		out << Value::fromString("\"line1\\nline2\\rline3\\fline4\\bline5\\\\line6\\\"line7/line8\"").getString();
 	};
 	tst.test("Parse.stringEmpty","true") >> [](std::ostream &out) {
 		out << ((Value::fromString("\"\"").getHandle() == Value("").getHandle())?"true":"false");
@@ -1099,7 +1099,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		v = Value("Hello", v);
 		out << v.getKey() << " " << v.getString();
 	};
-	tst.test("Parser.commented", "{\"blockComment\\/*not here*\\/\":\"here\\\"\\r\\n\",\"lineComment\\/\\/not here\":\"here\"}") >> [](std::ostream &out) {
+	tst.test("Parser.commented", "{\"blockComment/*not here*/\":\"here\\\"\\r\\n\",\"lineComment//not here\":\"here\"}") >> [](std::ostream &out) {
 		StrViewA str = "{\r\n"
 			"\"lineComment//not here\":\r\n"
 			"\"here\",//there is comment\r\n"
