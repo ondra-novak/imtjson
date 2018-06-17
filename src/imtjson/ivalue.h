@@ -47,7 +47,7 @@ namespace json {
 	extern BinaryEncoding defaultBinaryEncoding;
 
 	///Various flags tied with JSON's type
-	/**@see userDefined, numberInteger, numberUnsignedInteger, proxy
+	/**@see userDefined, numberInteger, numberUnsignedInteger, proxy,valueDiff,binaryString,customObject,preciseNumber
 	 *
 	 */
 	typedef uintptr_t ValueTypeFlags;
@@ -91,7 +91,7 @@ namespace json {
 	const ValueTypeFlags binaryString = 32;
 
 	/// States that value contains a custom object
-	/** Value holds a custrom object, which won't be serialized. Using
+	/** Value holds a custom object, which won't be serialized. Using
 	 * standard API of the Value class returns data of a value supplied during
 	 * creation thus it is disconnected from the object carried by the value
 	 *
