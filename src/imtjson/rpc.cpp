@@ -25,7 +25,7 @@ RpcRequest::ParseRequest::ParseRequest(const Value & request) {
 	params = request["params"];
 	context = request["context"];
 	id = request["id"];
-	version = request["version"];
+	version = request["jsonrpc"];
 
 
 }
