@@ -241,7 +241,7 @@ namespace json {
 
 
 		template<typename Fn>
-		Object map(Fn mapFn) const;
+		Object map(Fn &&mapFn) const;
 
 		template<typename T, typename ReduceFn>
 		T reduce(const ReduceFn &reduceFn, T init) const ;

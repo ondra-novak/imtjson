@@ -693,70 +693,63 @@ bool Validator::evalRuleObject(const Value& subject, const Value& templateObj) {
 		//reserve space, there cannot be more than count items in the object
 		extra.reserve(subject.size());
 
-		//Merge - because member items are ordered by the key
-		//we can perform merged walk through the two containers		
-		subject.merge(templateObj, [&](const Value &left, const Value &right) {
-			//if notMatch is signaled, we will leave this cycle quickly as we can
-			if (notMatch) return 0;
-			
-			//detect extra properties
-			bool prop;
-			//retrieve subject's key
-			StrViewA lk = left.getKey();
-			//retrieve template's key - also handle '%'
-			StrViewA rk = parseKey(right.getKey(), prop);
-			//for '%' 
-			if (prop) {
-				//store extra rules
-				extraRules = right;
-				//skip this item
-				return 1;
-			}
-			if (!left.defined() && right.defined()) {
-				notMatch = !evalRuleSubObj(left, right, rk);
-				if (notMatch) addRejection(*curPath/rk,undefined);
-				return 1;
-			}
-			else if (left.defined() && !right.defined()) {
-				extra.push_back(left);
-				return -1;
-			}
-			else if (lk < rk) {
-				extra.push_back(left);
-				return -1;
-			}
-			else if (lk > rk) {
-				notMatch = !evalRuleSubObj(undefined, right, rk);
-				if (notMatch) addRejection(*curPath/rk,right);
-				return 1;
-			}
-			else {
-				notMatch = !evalRuleSubObj(left, right, lk);
-				if (notMatch) addRejection(*curPath/lk,right);
-				return 0;
-			}
-		});
-		//when notMatch?
-		if (notMatch)
-			//report unsuccess
-			return false;
-		//if extra rules are not defined
-		if (!extraRules.defined()) {
-			//succes only if extra is empty
-			if (extra.empty()) return true;
-			addRejection(*curPath/extra[0].getKey(),"undefined");
-			return false;
-		}
-		//for extra rules
-		for (Value v : extra) {
-			//process every extra field
-			StackSave<const Path *> store(curPath);
-			Path nxtPath(*curPath, v.getKey());
-			curPath = &nxtPath;
-			//test extra field against to extra rules
-			if (!evalRule(v, extraRules)) 
-				return false;
 
+		auto siter = subject.begin();
+		auto send = subject.end();
+		auto titer = templateObj.begin();
+		auto tend = templateObj.end();
+
+		Value wildRules = templateObj["%"];
+
+		while (siter != send && titer != tend) {
+			Value s = *siter;
+			Value t = *titer;
+			bool isSpec;
+			StrViewA sk = s.getKey();
+			StrViewA tk = parseKey(t.getKey(),isSpec);
+			StrViewA k;
+			if (sk < tk) {
+				//sk is not in template
+				t = wildRules;
+				++siter;
+				k = sk;
+			} else if (sk > tk) {
+				//sk is undefined
+				s = Value();
+				++titer;
+				k = tk;
+			} else {
+				++titer;
+				++siter;
+				k = sk;
+			}
+			if (isSpec) continue;
+
+			bool match = evalRuleSubObj(s,t,k);
+			if (!match) {
+				addRejection(*curPath/k, t);
+				return false;
+			}
+		}
+		while (siter != send) {
+			Value s = *siter;
+			++siter;
+			StrViewA k = s.getKey();
+			bool match = evalRuleSubObj(s,wildRules, k);
+			if (!match) {
+				addRejection(*curPath/k, wildRules);
+				return false;
+			}
+		}
+		while (titer != tend) {
+			Value t = *titer;
+			++titer;
+			StrViewA k = t.getKey();
+			bool match = evalRuleSubObj(undefined,t, k);
+			if (!match) {
+				addRejection(*curPath/k, t);
+				return false;
+			}
 		}
 		return true;
 	}
@@ -848,6 +841,8 @@ bool Validator::opExplode(const Value& subject, StrViewA str, const Value& rule,
 
 
 void Validator::addRejection(const Path& path, const Value& rule) {
+	if (!rule.defined())
+		return addRejection(path,"undefined");
 	if (rule == lastRejectedRule) return;
 	for (Value v : rule) {
 		if (v.isCopyOf(lastRejectedRule)) {
@@ -856,10 +851,7 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 		}
 	}
 	Value vp = path.toValue();
-	if (rule.defined())
-		rejections.push_back({ vp, rule });
-	else
-		rejections.push_back({ vp, "undefined" });
+	rejections.push_back({ vp, rule });
 
 	lastRejectedRule = rule;
 }

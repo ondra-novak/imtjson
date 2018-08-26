@@ -251,10 +251,10 @@ namespace json {
 		Array &slice(std::intptr_t start, std::intptr_t end);
 
 		template<typename Fn>
-		Array map(Fn mapFn) const;
+		Array map(Fn &&mapFn) const;
 
 		template<typename T, typename ReduceFn>
-		T reduce(const ReduceFn &reduceFn, T init) const ;
+		T reduce(ReduceFn &&reduceFn, T &&init) const ;
 
 		template<typename Cmp>
 		Array sort(const Cmp &cmp) const;

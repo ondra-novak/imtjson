@@ -570,7 +570,7 @@ namespace json {
 		 * @return
 		 */
 		template<typename Fn>
-		Value map(const Fn &mapFn)  const;
+		Value map(Fn &&mapFn)  const;
 
 		///Performs reduce operaton on the container
 		/**
@@ -584,7 +584,7 @@ namespace json {
 		 * @endcode
 		 */
 		template<typename Fn, typename Total>
-		Total reduce(const Fn &reduceFn, Total initalValue)  const;
+		Total reduce(Fn &&reduceFn, Total &&initalValue)  const;
 
 		///Sort object or array
 		/** Result of the operation sort is always array (because objects
@@ -604,7 +604,7 @@ namespace json {
 		 *
 		 */
 		template<typename Fn>
-		Ordered<Fn> sort(const Fn &sortFn)  const;
+		Ordered<Fn> sort(Fn &&sortFn)  const;
 
 		///Reverses container
 		Value reverse() const;
@@ -681,101 +681,7 @@ namespace json {
 
 		Value diff(const Value &other) const;
 
-		///Merges to array (DEPRECATED)
-		/**
-		 * @param other other container
-		 * @param mergeFn function which compares each items and performs merge item per item
-		 *
-		 * The function mergeFn has following prototype
-		 * @code
-		 * int mergeFn(const Value &left, const Value &right);
-		 * @endcode
-		 *
-		 * Where left and right are items to compare. Function need to pick one ot items and
-		 * perform some operation which is not part of the function itself. It can
-		 * for example store the item to the file
-		 *
-		 * The function returns <0 to advance left iterator, >0 to advance right iterator or
-		 * =0 to advance both iterators
-		 *
-		 * @note Both container should be sorted
-		 */
-		template<typename Fn>
-		void merge(const Value &other, const Fn &mergeFn) const;
 
-		///Merges to array (DEPRECATED)
-		/**
-		 * @param other other conatiner
-		 * @param mergeFn function which compares each items and performs merge item per item
-		 * @return merged array
-		 *
-		 * The function mergeFn has following prototype
-		 * @code
-		 * int mergeFn(const Value &left, const Value &right, Array &collector);
-		 * @endcode
-		 *
-		 * Where left and right are items to compare, and collector is object where the
-		 * function has to put result of the merge operation
-		 *
-		 * The function returns <0 to advance left iterator, >0 to advance right iterator or
-		 * =0 to advance both iterators
-		 *
-		 * @note Both container should be sorted
-		 */
-		template<typename Fn>
-		Value mergeToArray(const Value &other, const Fn &mergeFn) const;
-
-		///Merges to object (DEPRECATED)
-		/**
-		 * @param other other conatiner
-		 * @param mergeFn function which compares each items and performs merge item per item
-		 * @return merged object
-		 *
-		 * The function mergeFn has following prototype
-		 * @code
-		 * int mergeFn(const Value &left, const Value &right, Object &collector);
-		 * @endcode
-		 *
-		 * Where left and right are items to compare, and collector is object where the
-		 * function has to put result of the merge operation
-		 *
-		 * The function returns <0 to advance left iterator, >0 to advance right iterator or
-		 * =0 to advance both iterators
-		 */
-		template<typename Fn>
-		Value mergeToObject(const Value &other, const Fn &mergeFn) const;
-
-
-
-		///Removes duplicated values after sort (DEPRECATED)
-		/** Function expects sorted container. It removes duplicated values */
-		template<typename Fn>
-		Value uniq(const Fn &sortFn) const;
-
-		///Finds key in given container (DEPRECATED)
-		/** Function expects sorted container. It returns whole value which matches the key
-		 *
-		 * @param orderFn defines container ordering. Function returns -1 for a<b or 1 for a>b or 0 if the
-		 * value equals
-		 * @param key key to find
-		 * @return function returns found value or undefined when not found.
-		 *
-		 * */
-		template<typename Fn>
-		Value find(const Fn &orderFn, const Value &key) const;
-
-
-		///Splits container to an array of sets of values that are considered as equal according to sortfn (DEPRECATED)
-		/**
-		 * - Example: [12,14,23,25,27,34,36,21,22,78]
-		 * - Result (split by tens) [[12,14],[23,25,26],[34,36],[21,22],[78]]
-		 *
-		 * @param sortFn the function which compares two values and returns zero if they are
-		 * equal and nonzero if not equal
-		 * @return split result
-		 */
-		template<typename Fn>
-		Value split(const Fn &sortFn) const;
 
 		///Splits container into two arrays
 		/**
@@ -790,30 +696,6 @@ namespace json {
 		TwoValues splitAt(int pos) const;
 
 
-		///Makes intersection of two containers (DEPRECATED)
-		/**
-		 * @param other second container
-		 * @param sortFn function which defines order of values.
-		 * @return array contains intersection of both containers
-		 *
-		 * @note both containers must be sorted. Use this function along with sort() if
-		 * necessary.
-		 */
-		template<typename Fn>
-		Value makeIntersection(const Value &other, const Fn &sortFn) const;
-
-		///Makes union of two containers (DEPRECATED)
-		/**
-		 * @param other second container
-		 * @param sortFn function which defines order of values.
-		 * @return array contains union of both containers. Duplicate keys are stored
-		 *
-		 *
-		 * @note both containers must be sorted. Use this function along with sort() if
-		 * necessary.
-		 */
-		template<typename Fn>
-		Value makeUnion(const Value &other, const Fn &sortFn) const;
 
 		///Combination split+reduce.
 		/** Splits rows to groups according to compare function. Note that

@@ -617,17 +617,11 @@ void AbstractRpcClient::updateContext(const Value& value) {
 	setContext(updateContext(context,value));
 }
 Value AbstractRpcClient::updateContext(const Value& context, const Value& value) {
-	Object newContext;
-	context.merge(value,[&](Value l, Value r) {
-		int cmp;
-		if (!l.defined()) cmp = 1;
-		else if (!r.defined()) cmp = -1;
-		else cmp = l.getKey().compare(r.getKey());
-
-		if (cmp < 0) newContext.set(l);
-		else if (!r.isNull()) newContext.set(r);
-		return cmp;
-	});
+	Object newContext(context);
+	for (Value v: value) {
+		if (v.isNull()) newContext.unset(v.getKey());
+		else newContext.set(v);
+	}
 	return newContext;
 }
 

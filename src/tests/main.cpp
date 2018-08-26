@@ -1050,7 +1050,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		res.toStream(out);
 	};
 
-	tst.test("Operation.split","[[12,14],[23,25,27],[34,36],[21,22],[78]]") >> [](std::ostream &out) {
+/*	tst.test("Operation.split","[[12,14],[23,25,27],[34,36],[21,22],[78]]") >> [](std::ostream &out) {
 		Value testset = {12,14,23,25,27,34,36,21,22,78};
 
 		auto defSet= [](const Value &a, const Value &b){
@@ -1060,7 +1060,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value res= testset.split(defSet);
 		res.toStream(out);
 	};
-
+*/
 	tst.test("Operation.group","[[12,14],[23,25,27,21,22],[34,36],[78]]") >> [](std::ostream &out) {
 		Value testset = {12,14,23,25,27,34,36,21,22,78};
 

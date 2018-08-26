@@ -27,7 +27,7 @@ class Ordered: public Value {
 
 	class SortFn: public RefCntObj, public AllocObject {
 	public:
-		SortFn(const Cmp &sortFn):sortFn(sortFn) {}
+		SortFn(Cmp &&sortFn):sortFn(std::forward<Cmp>(sortFn)) {}
 
 		Value sort(const Value &container) const;
 		ValueIterator find(const Value &haystack, const Value &needle) const;
@@ -64,7 +64,7 @@ public:
 	/**
 	 * @param sortFn - function that defines ordering
 	 */
-	Ordered(const Cmp &sortFn): sortFn(new SortFn(sortFn) ) {}
+	Ordered(Cmp &&sortFn): sortFn(new SortFn(std::forward<Cmp>(sortFn)) ) {}
 	///Constructs Ordered instance, called mostly internally by various functions
 	/**
 	 * @param value a container - must be ordered. It is better to call Value::sort to create Ordered instance
@@ -334,23 +334,23 @@ Value Ordered<Cmp>::SortFn::group(const Value &container, const ReduceFn &reduce
 
 
 template<typename Fn>
-inline Value Value::map(const Fn& mapFn) const {
+inline Value Value::map(Fn&& mapFn) const {
 	if (type() == object) {
-		return Object(*this).map(mapFn);
+		return Object(*this).map(std::forward<Fn>(mapFn));
 	} else {
-		return Array(*this).map(mapFn);
+		return Array(*this).map(std::forward<Fn>(mapFn));
 	}
 }
 
 template<typename Fn, typename Total>
-inline Total Value::reduce(const Fn& reduceFn, Total curVal) const {
-	return Array(*this).reduce(reduceFn,curVal);
+inline Total Value::reduce(Fn&& reduceFn, Total &&curVal) const {
+	return Array(*this).reduce(std::forward<Fn>(reduceFn),std::forward<Total>(curVal));
 }
 
 
 template<typename Fn>
-inline Ordered<Fn> Value::sort(const Fn& sortFn) const {
-	return Ordered<Fn>(sortFn).sort(*this);
+inline Ordered<Fn> Value::sort(Fn&& sortFn) const {
+	return Ordered<Fn>(std::forward<Fn>(sortFn)).sort(*this);
 }
 
 
@@ -396,86 +396,6 @@ void merge(Iter1 liter, Iter1 lend, Iter2 riter, Iter2 rend, Fn fn, Undefined un
 
 }
 
-
-template<typename Fn>
-void Value::merge(const Value &other, const Fn &mergeFn) const {
-
-	json::merge(this->begin(),this->end(),
-				other.begin(),other.end(),
-				mergeFn, undefined);
-}
-
-template<typename Fn>
-inline Value Value::mergeToArray(const Value& other, const Fn& mergeFn) const {
-	Array collector;
-	merge(other,[&collector,mergeFn](const Value &a, const Value &b) {
-		return mergeFn(a,b,collector);
-	});
-	return collector;
-}
-
-template<typename Fn>
-inline Value Value::makeIntersection(const Value& other,const Fn& sortFn) const {
-	return mergeToArray(other,
-			[sortFn](const Value &left, const Value &right, Array &collect) -> decltype(sortFn(Value(),Value())) {
-		if (!left.defined() || !right.defined()) return 0;
-		auto cmp = sortFn(left,right);
-		if (cmp == 0) collect.add(right);
-		return cmp;
-	});
-}
-
-template<typename Fn>
-inline Value Value::makeUnion(const Value& other, const Fn& sortFn) const {
-	return mergeToArray(other,
-			[sortFn](const Value &left, const Value &right, Array &collect) -> decltype(sortFn(Value(),Value())) {
-		if (!left.defined()) {
-			collect.add(right);return 0;
-		} else if (!right.defined()) {
-			collect.add(left);return 0;
-		} else {
-			auto cmp = sortFn(left,right);
-			if (cmp < 0) {
-				collect.add(left);
-			} else {
-				collect.add(right);
-			}
-			return cmp;
-		}
-	});
-}
-
-template<typename Fn>
-inline Value Value::mergeToObject(const Value& other, const Fn& mergeFn) const {
-	Object collector;
-	merge(other,[&collector,mergeFn](const Value &a, const Value &b) {
-		return mergeFn(a,b,collector);
-	});
-	return collector;
-}
-
-
-template<typename Fn>
-inline Value Value::uniq(const Fn& sortFn) const {
-	Array out;
-	Value prevValue;
-	forEach([&](const Value &v){
-		if (!prevValue.defined() || sortFn(prevValue,v) != 0) {
-			out.add(v);
-			prevValue = v;
-		}
-		return true;
-	});
-	if (out.size() == size()) return *this;
-	return out;
-}
-
-template<typename Fn>
-inline Value Value::split(const Fn& sortFn) const {
-	return Array(*this).split(sortFn);
-
-}
-
 template<typename CompareFn, typename ReduceFn, typename InitVal>
 inline Value Value::group(const CompareFn& cmp, const ReduceFn& reduceFn, InitVal initVal) {
 	return Array(*this).group(cmp);
@@ -483,7 +403,7 @@ inline Value Value::group(const CompareFn& cmp, const ReduceFn& reduceFn, InitVa
 
 
 template<typename Fn>
-inline Array Array::map(Fn mapFn) const {
+inline Array Array::map(Fn &&mapFn) const {
 	Array out;
 	for (auto item:*this) {
 		out.add(mapFn(item));
@@ -492,7 +412,7 @@ inline Array Array::map(Fn mapFn) const {
 }
 
 template<typename Cmp, typename Src, typename T>
-inline T genReduce(Cmp reduceFn, const Src &src, T init) {
+inline T genReduce(Cmp &&reduceFn, Src &&src, T &&init) {
 	T acc = init;
 	for (auto &&item:src) {
 		acc = (T)reduceFn(acc, item);
@@ -503,8 +423,8 @@ inline T genReduce(Cmp reduceFn, const Src &src, T init) {
 
 
 template<typename T, typename ReduceFn>
-inline T Array::reduce(const ReduceFn& reduceFn, T init) const {
-	return genReduce<ReduceFn, Array, T>(reduceFn,*this,init);
+inline T Array::reduce(ReduceFn&& reduceFn, T &&init) const {
+	return genReduce(std::forward<ReduceFn>(reduceFn),*this,std::forward<T>(init));
 }
 
 template<typename Src, typename Cmp>
@@ -560,7 +480,7 @@ inline Array Array::group(const Cmp& cmp, const ReduceFn& reduceFn, T init) cons
 }
 
 template<typename Fn>
-inline Object Object::map(Fn mapFn) const {
+inline Object Object::map(Fn &&mapFn) const {
 	Object out;
 	for (auto item:*this) {
 		out.set(item.getKey(),mapFn(item));
@@ -578,26 +498,6 @@ inline Array Object::sort(const Cmp& cmp) const {
 	optimize();
 	return genSort(cmp,*this, this->size());
 }
-
-template<typename Fn>
-Value Value::find(const Fn &orderFn, const Value &key) const {
-	Fn cmp(orderFn);
-	std::size_t l = 0, h = size();
-	while (l < h) {
-		std::size_t m = (l+h)/2;
-		Value v = operator[](m);
-		int c = cmp(key,v);
-		if (c < 0) {
-			h = m;
-		} else if (c > 0) {
-			l = m+1;
-		} else {
-			return v;
-		}
-	}
-	return undefined;
-}
-
 
 }
 
