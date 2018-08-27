@@ -580,6 +580,9 @@ public:
 	///Retrieves cnnection's context
 	PRpcConnContext getConnContext() const {return data->connctx;}
 
+	///Retrieves flags used during request creation
+	RpcFlags::Type getFlags() const {return data->flags;}
+
 protected:
 	RpcRequest(RefCntPtr<RequestData> data):data(data) {}
 

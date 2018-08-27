@@ -100,7 +100,7 @@ namespace _details {
 
 ///Packs arbitrary value into json::Value
 /** Packed value can be used as json value, so you are able to put the value into an object or an array.
- * You can later extact the value using the function cast.
+ * You can later extract the value using the function cast.
  *
  * @param object value to be packed
  * @param value json substitute value. You need the supply subsitute value to retain all features of the json::Value.
@@ -113,9 +113,9 @@ namespace _details {
 
 
 
-template<typename Object>
-inline Value makeValue(Object&& object, Value value) {
-	PValue v = new _details::ObjWrap<typename std::remove_reference<Object>::type>(std::forward<Object>(object),value.getHandle()->unproxy());
+template<typename T>
+inline Value makeValue(T&& object, Value value) {
+	PValue v = new _details::ObjWrap<typename std::remove_reference<T>::type>(std::forward<T>(object),value.getHandle()->unproxy());
 	return Value(v);
 }
 
@@ -130,9 +130,9 @@ inline Value makeValue(Object&& object, Value value) {
  * @exception std::bad_cast function is unable to cast the value. This exception happen, when non-pointer target is
  * requested and the target type is not compatibile with the content
  */
-template<typename Object>
-inline auto cast(Value value) -> decltype(_details::CastHelper<Object>::cast(value)) {
-	return _details::CastHelper<Object>::cast(value);
+template<typename T>
+inline auto cast(Value value) -> decltype(_details::CastHelper<T>::cast(value)) {
+	return _details::CastHelper<T>::cast(value);
 }
 
 

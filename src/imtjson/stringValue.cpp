@@ -182,7 +182,7 @@ PreciseNumberValue<T>::~PreciseNumberValue() {
 }
 
 template<typename T>
-void PreciseNumberValue<T>::operator delete(void* ptr,	std::size_t sz) {
+void PreciseNumberValue<T>::operator delete(void* ptr,	std::size_t ) {
 	Value::allocator->dealloc(ptr);
 }
 
