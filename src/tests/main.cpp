@@ -1368,6 +1368,80 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		v.toStream(out);
 	};
 
+
+	tst.test("Operation.find","42") >> [](std::ostream &out) {
+		Value res = Value({10,20,42,5,11,32,19}).find([](Value x){return x.getUInt()>20;});
+		res.toStream(out);
+	};
+	tst.test("Operation.rfind","32") >> [](std::ostream &out) {
+		Value res = Value({10,20,42,5,11,32,19}).rfind([](Value x){return x.getUInt()>20;});
+		res.toStream(out);
+	};
+	tst.test("Operation.filter_arr","[42,32]") >> [](std::ostream &out) {
+		Value res = Value({10,20,42,5,11,32,19}).filter([](Value x){return x.getUInt()>20;});
+		res.toStream(out);
+	};
+	tst.test("Operation.filter_obj","{\"k3\":42,\"k6\":32}") >> [](std::ostream &out) {
+		Value res = Value(Object("k1",10)
+				("k2",20)
+				("k3",42)
+				("k4",5)
+				("k5",11)
+				("k6",32)
+				("k7",19)).filter([](Value x){return x.getUInt()>20;});
+		res.toStream(out);
+	};
+	tst.test("Operation.shift","[[20,30,40,50],10,[10,20,30,40,50]]") >> [](std::ostream &out) {
+		Value z = {10,20,30,40,50};
+		Value q = z;
+		Value s = z.shift();
+		Value res = {z,s,q};
+		res.toStream(out);
+	};
+
+	tst.test("Operation.unshift","[[10,20,30,40,50],5,[20,30,40,50]]") >> [](std::ostream &out) {
+		Value z = {20,30,40,50};
+		Value q = z;
+		auto s = z.unshift(10);
+		Value res = {z,s,q};
+		res.toStream(out);
+	};
+	tst.test("Operation.unshift2","[[1,2,3,20,30,40,50],7,[20,30,40,50]]") >> [](std::ostream &out) {
+		Value z = {20,30,40,50};
+		Value q = z;
+		auto s = z.unshift({1,2,3});
+		Value res = {z,s,q};
+		res.toStream(out);
+	};
+	tst.test("Operation.pop","[[10,20,30,40],50,[10,20,30,40,50]]") >> [](std::ostream &out) {
+		Value z = {10,20,30,40,50};
+		Value q = z;
+		Value s = z.pop();
+		Value res = {z,s,q};
+		res.toStream(out);
+	};
+	tst.test("Operation.pop2","[[],10,[10]]") >> [](std::ostream &out) {
+		Value z = {10};
+		Value q = z;
+		Value s = z.pop();
+		Value res = {z,s,q};
+		res.toStream(out);
+	};
+	tst.test("Operation.pop3","[10,10]") >> [](std::ostream &out) {
+		Value z = 10;
+		Value q = z;
+		Value s = z.pop();
+		Value res = {z,s,q};
+		res.toStream(out);
+	};
+	tst.test("Operation.push","[[1,2,3,4],4,[1,2,3]]") >> [](std::ostream &out) {
+		Value z = {1,2,3};
+		Value q = z;
+		auto s = z.push(4);
+		Value res = {z,s,q};
+		res.toStream(out);
+	};
+
 	runValidatorTests(tst);
 	//runRpcTests(tst);
 

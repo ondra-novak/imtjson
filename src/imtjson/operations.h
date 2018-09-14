@@ -499,6 +499,73 @@ inline Array Object::sort(const Cmp& cmp) const {
 	return genSort(cmp,*this, this->size());
 }
 
+template<typename Iter1, typename Iter2>
+std::uintptr_t Value::unshift(const Iter1 &start, const Iter2 &end) {
+	Array newval;
+	Iter1 p(start);
+	while (p != end) {
+		newval.push_back(Value(*p));
+		++p;
+	}
+	for (Value x: *this) {
+		newval.push_back(x);
+	}
+	*this = newval;
+	return size();
+}
+
+template<typename Fn, typename A, typename B, typename C>
+auto call_fn_3args(Fn &&fn, A &&a, B &&, C &&) -> decltype(fn(std::forward<A>(a))) {
+	return fn(std::forward<A>(a));
+}
+template<typename Fn, typename A, typename B, typename C>
+auto call_fn_3args(Fn &&fn, A &&a, B &&b, C &&) -> decltype(fn(std::forward<A>(a),std::forward<B>(b))) {
+	return fn(std::forward<A>(a),std::forward<B>(b));
+}
+template<typename Fn, typename A, typename B, typename C>
+auto call_fn_3args(Fn &&fn, A &&a, B &&b, C &&c) -> decltype(fn(std::forward<A>(a),std::forward<B>(b),std::forward<C>(c))) {
+	return fn(std::forward<A>(a),std::forward<B>(b),std::forward<C>(c));
+}
+
+template<typename Fn>
+std::intptr_t Value::findIndex(Fn &&fn) const {
+	for (std::uintptr_t x = 0, cnt = size(); x < cnt; x++)
+		if (call_fn_3args(std::forward<Fn>(fn), (*this)[x], x, *this)) return x;
+	return -1;
+}
+
+template<typename Fn>
+std::intptr_t Value::rfindIndex(Fn &&fn) const {
+	for (std::uintptr_t x = size(); x > 0; x--)
+		if (call_fn_3args(std::forward<Fn>(fn), (*this)[x-1], x-1, *this)) return x-1;
+	return -1;
+}
+template<typename Fn>
+Value Value::find(Fn &&fn) const {
+	auto f = findIndex(std::forward<Fn>(fn));
+	if (f == -1) return undefined;
+	else return (*this)[f];
+}
+template<typename Fn>
+Value Value::rfind(Fn &&fn) const {
+	auto f = rfindIndex(std::forward<Fn>(fn));
+	if (f == -1) return undefined;
+	else return (*this)[f];
+}
+template<typename Fn>
+Value Value::filter(Fn &&fn) const {
+	std::vector<Value> buffer;
+	buffer.reserve(size());
+	for (std::uintptr_t x = 0, cnt = size(); x < cnt; x++)
+		if (call_fn_3args(std::forward<Fn>(fn), (*this)[x], x, *this))
+			buffer.push_back((*this)[x]);
+
+	return Value(type(), StringView<Value>(buffer.data(),buffer.size()));
+}
+
+
+
+
 }
 
 

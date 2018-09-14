@@ -160,6 +160,10 @@ public:
 	///Finds substring
 	std::size_t lastIndexOf(const StringView<char> other, std::size_t start = 0) const;
 
+	const char *begin() const {return c_str();}
+	const char *end() const {return c_str()+length();}
+
+
 
 	bool operator==(const String &other) const {return StringView<char>(*this) == StringView<char>(other);}
 	bool operator!=(const String &other) const {return StringView<char>(*this) != StringView<char>(other);}

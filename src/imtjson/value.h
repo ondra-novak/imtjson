@@ -862,6 +862,147 @@ namespace json {
 		std::size_t lastIndexOf(const Value &v, std::size_t start = npos) const;
 
 
+		///Shifts all items of the container left and returns first item
+		/** The function modifies the variable, but it doesn't modifies original
+		 * array. So after return, current variable contains shifted sequence and
+		 * the first item is returned
+		 *
+		 * @return The first item removed from the array.
+		 *
+		 * If the value is not container, the function returns undefined
+		 *
+		 * @note The function works with objects.
+		 *
+		 * @note complexity O(N)
+		 */
+		Value shift();
+
+
+		///Inserts item at begin of container
+		/**
+		 * The function modifies current variable, but it doesn't modifies
+		 * original conatiner. If the current value is object, result is stored as array
+		 *
+		 * @param item item to insert at the beging
+		 * @return count of items in the result
+
+		 * @note complexity O(N)
+
+		 */
+		std::uintptr_t unshift(const Value &item);
+
+		///Inserts items at begin of container
+		/**
+		 * The function modifies current variable, but it doesn't modifies
+		 * original conatiner. If the current value is object, result is stored as array
+		 *
+		 * @param start start iterator
+		 * @param end end iterator
+		 * @return count of items in the result
+		 *
+		 * @note complexity O(N)
+		 *
+		 */
+		template<typename Iter1, typename Iter2>
+		std::uintptr_t unshift(const Iter1 &start, const Iter2 &end);
+
+		///Inserts items at begin of container
+		/**
+		 * The function modifies current variable, but it doesn't modifies
+		 * original conatiner. If the current value is object, result is stored as array
+		 *
+		 * @param items list of items
+		 * @return count of items in the result
+		 */
+		std::uintptr_t unshift(const std::initializer_list<Value> &items);
+
+		///Removes item from the pop and returns it
+		/** Note:due the immutable nature, the function only modifies current variable,
+		 * but not the original container. Current variable receives rest of the
+		 * array while the last item is returned as result
+		 *
+		 * @return removed item.
+		 *
+		 * @note also works with the objects. If the
+		 * @note complexity O(N)
+		 */
+		Value pop();
+
+		///Appends one item
+		/**
+		 *
+		 * @param v item to put
+		 * @return count of items in final container
+		 *
+		 *
+		 * @note complexity O(N)
+		 *@note complexity O(N)
+		 * @note due the immutable nature, the function only modifies current variable,
+		 * but not the original container.
+		 */
+		std::uintptr_t push(const Value &v);
+
+
+		String join(StrViewA separator=",") const;
+
+		Value slice(std::intptr_t start) const;
+		Value slice(std::intptr_t start, std::intptr_t end) const;
+
+
+		///Returns the value of the first element in the array that satisfies the provided testing function. Otherwise undefined is returned.
+		/**
+		 * @param fn function which receives the item. The function must return true or false to accept or reject item
+		 * @return found item or undefined
+		 *
+		 * @note the function can have one, two or three arguments
+		 *    - 1st argument is element of type Value
+		 *    - 2nd argument is index
+		 *    - 3rd argument is this object
+		 */
+		template<typename Fn>
+		Value find(Fn &&fn) const;
+
+		///Returns the value of the last element in the array that satisfies the provided testing function. Otherwise undefined is returned.
+		/**
+		 * @param fn function which receives the item. The function must return true or false to accept or reject item
+		 * @return found item or undefined
+		 * @note the function can have one, two or three arguments
+		 *    - 1st argument is element of type Value
+		 *    - 2nd argument is index
+		 *    - 3rd argument is this object
+		 */
+		template<typename Fn>
+		Value rfind(Fn &&fn) const;
+
+		///returns the index of the first element in the array that satisfies the provided testing function. Otherwise -1 is returned.
+		/**
+		 * @see find
+		 */
+		template<typename Fn>
+		std::intptr_t findIndex(Fn &&fn) const;
+
+		///returns the index of the last element in the array that satisfies the provided testing function. Otherwise -1 is returned.
+		/**
+		 * @see find
+		 */
+		template<typename Fn>
+		std::intptr_t  rfindIndex(Fn &&fn) const;
+
+		///The filter() method creates a new array with all elements that pass the test implemented by the provided function.
+		/**
+		 *
+		 * @param fn Function is a predicate, to test each element of the array. Return true to keep the element, false otherwise. It accepts one, two or three arguments
+		 *    - 1st argument is element of type Value
+		 *    - 2nd argument is index
+		 *    - 3rd argument is this object
+		 *
+		 * @return new array or object
+		 *
+		 * @note if the function is called on a object, the result is also the object
+		 */
+		template<typename Fn>
+		Value filter(Fn &&fn) const;
+
 public:
 
 		///Pointer to custom allocator

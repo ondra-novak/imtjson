@@ -12,6 +12,7 @@
 #include "fnv.h"
 #include "binjson.tcc"
 #include "path.h"
+#include "operations.h"
 
 namespace json {
 
@@ -744,6 +745,116 @@ namespace json {
 		return msg.c_str();
 	}
 
+
+	Value Value::shift() {
+		Value ret;
+		switch (type()) {
+		case string: ret = String(*this).substr(0,1);
+					 (*this) = String(*this).substr(1);
+					 break;
+		case object:
+		case array: ret = (*this)[0];
+					(*this) = slice(1);
+					break;
+		default:	ret = *this;
+					*this = undefined;
+					break;
+		}
+		return ret;
+	}
+
+	std::uintptr_t Value::unshift(const Value &item) {
+		Array newval;
+		newval.reserve(1+item.size());
+		newval.push_back(item);
+		for (Value x: *this) {
+			newval.push_back(x);
+		}
+		*this = newval;
+		return size();
+	}
+
+
+	std::uintptr_t Value::push(const Value &item) {
+		Array nw(*this);
+		nw.push_back(item);
+		*this = nw;
+		return size();
+	}
+
+	Value Value::pop() {
+		auto sz = size();
+		if (!sz) return undefined;
+		Array nw(*this);
+
+		Value ret = nw[sz-1];
+		nw.erase(sz-1);
+		*this = nw;
+		return ret;
+	}
+
+	String Value::join(StrViewA separator) const {
+		Array tmp;
+		tmp.reserve(size());
+		std::size_t needsz = 0;
+		for(Value x: *this) {
+			String s = x.toString();
+			tmp.push_back(x);
+			needsz+=s.length();
+		}
+		needsz+=(tmp.size()-1)*separator.length;
+		return String(needsz, [&](char *c){
+			char *anchor = c;
+			for (std::size_t i =0, cnt = tmp.size(); i < cnt; i++) {
+				if (i) {
+					std::copy(separator.begin(), separator.end(), c);
+					c+=separator.length;
+				}
+				String v(tmp[i]);
+				std::copy(v.begin(), v.end(), c);
+			}
+			return c - anchor;
+		});
+	}
+
+	Value Value::slice(std::intptr_t start) const {
+		return slice(start, size());
+	}
+	Value Value::slice(std::intptr_t start, std::intptr_t end) const {
+		std::intptr_t sz = size();
+		if (empty()) return json::array;
+		if (start < 0) return slice(sz-start);
+		if (end < 0) return slice(sz-end);
+		if (start >= end || start >= sz) return json::array;
+		if (end >= sz) end = sz;
+		std::uintptr_t cnt = end - start;
+		std::vector<Value> out;
+		out.reserve(cnt);
+		for (std::intptr_t x = start; x < end; x++)
+			out.push_back((*this)[x]);
+
+		if (type() == object) {
+			return Value(json::object, StringView<Value>(out.data(), out.size()));
+		} else {
+			return Value(json::array, StringView<Value>(out.data(), out.size()));
+		}
+
+	}
+
+
+	std::uintptr_t Value::unshift(const std::initializer_list<Value> &items) {
+		return unshift(items.begin(), items.end());
+	}
+
+	template Value Value::find(std::function<bool(Value)> &&) const;
+	template Value Value::rfind(std::function<bool(Value)> &&) const;
+	template Value Value::filter(std::function<bool(Value)> &&) const;
+	template Value Value::find(std::function<bool(Value, std::uintptr_t)> &&) const;
+	template Value Value::rfind(std::function<bool(Value, std::uintptr_t)> &&) const;
+	template Value Value::filter(std::function<bool(Value, std::uintptr_t)> &&) const;
+	template Value Value::find(std::function<bool(Value, std::uintptr_t, Value)> &&) const;
+	template Value Value::rfind(std::function<bool(Value, std::uintptr_t, Value)> &&) const;
+	template Value Value::filter(std::function<bool(Value, std::uintptr_t, Value)> &&) const;
 }
 
 namespace std {
