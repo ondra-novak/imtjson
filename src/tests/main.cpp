@@ -1442,6 +1442,13 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		res.toStream(out);
 	};
 
+	tst.test("Operation.join","red,green,blue,10,true,null") >> [](std::ostream &out) {
+		Value z = {"red","green","blue",10,true,null};
+		Value res = z.join();
+		out << res.getString();
+	};
+
+
 	runValidatorTests(tst);
 	//runRpcTests(tst);
 

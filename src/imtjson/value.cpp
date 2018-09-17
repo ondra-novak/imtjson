@@ -799,7 +799,7 @@ namespace json {
 		std::size_t needsz = 0;
 		for(Value x: *this) {
 			String s = x.toString();
-			tmp.push_back(x);
+			tmp.push_back(s);
 			needsz+=s.length();
 		}
 		needsz+=(tmp.size()-1)*separator.length;
@@ -812,6 +812,7 @@ namespace json {
 				}
 				String v(tmp[i]);
 				std::copy(v.begin(), v.end(), c);
+				c+=v.length();
 			}
 			return c - anchor;
 		});
