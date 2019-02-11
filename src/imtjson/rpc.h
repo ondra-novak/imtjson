@@ -753,6 +753,8 @@ public:
 	 */
 	void setCustomValidationRules(Value curstomRules);
 
+	static Value defaultFormatError(int code, const String& message, Value data);
+
 protected:
 	struct HashStr {
 		std::size_t operator()(StrViewA str) const;

@@ -65,7 +65,7 @@ RpcRequest::RequestData::RequestData(const ParseRequest& request, RpcFlags::Type
 	if (flags & RpcFlags::preResponseNotify) notifyEnabled = true;
 }
 
-static Value defaultFormatError(int code, const String& message, Value data) {
+Value RpcServer::defaultFormatError(int code, const String& message, Value data) {
 	return Value(object,{
 			Value("code",code),
 			Value("message",message),
@@ -269,7 +269,7 @@ void RpcRequest::setArgError() {
 
 void RpcRequest::setError(int code, String message, Value d) {
 	if (data->srvsvc == nullptr) {
-		return setError(defaultFormatError(code,message,d));
+		return setError(RpcServer::defaultFormatError(code,message,d));
 	} else {
 		return setError(data->srvsvc->formatError(code,message,d));
 	}
