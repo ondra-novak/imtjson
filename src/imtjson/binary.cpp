@@ -5,6 +5,7 @@
 
 #include "stringValue.h"
 #include "base64.h"
+#include "utf8.h"
 
 namespace json {
 
@@ -111,12 +112,62 @@ Value AbstractBinaryEncoder::encodeBinaryValue(const BinaryView &binary) const  
 }
 
 
+class UTF8Encoding: public AbstractBinaryEncoder {
+protected:
+
+	virtual Value decodeBinaryValue(const StrViewA &string) const override {
+		Utf8ToWide conv;
+		std::size_t needsz;
+		conv(fromString(string), WriteCounter<std::size_t>(needsz));
+		RefCntPtr<StringValue> strVal = new(needsz) StringValue(utf8encoding,needsz, [&](char *c) {
+			unsigned char *cc = reinterpret_cast<unsigned char *>(c);
+			conv(fromString(string),[&](int d){*cc++=static_cast<unsigned char>(d);});
+			return needsz;
+		});
+		return PValue::staticCast(strVal);
+	}
+	virtual void encodeBinaryValue(const BinaryView &binary, const WriteFn &fn) const override{
+		WideToUtf8 conv;
+		char buff[256];
+		int pos = 0;
+		conv(fromBinary(binary),[&](char c) {
+			buff[pos++] = c;
+			if (pos == sizeof(buff)) {
+				fn(StrViewA(buff,pos));
+				pos=0;
+			}
+		});
+		if (pos) fn(StrViewA(buff,pos));
+	}
+	Value encodeBinaryValue(const BinaryView &binary) const  {
+		WideToUtf8 conv;
+		std::size_t needsz;
+		conv(fromBinary(binary), WriteCounter<std::size_t>(needsz));
+		RefCntPtr<StringValue> strVal = new(needsz) StringValue(nullptr,needsz, [&](char *c) {
+			conv(fromBinary(binary),[&](char d){*c++=d;});
+			return needsz;
+		});
+		return PValue::staticCast(strVal);
+	}
+
+
+	virtual StrViewA getName() const override {
+		return "utf8encoding";
+	}
+
+
+
+};
+
+
 static Base64Encoding base64Var;
 static Base64EncodingUrl base64UrlVar;
 static UrlEncoding urlEncodingVar;
+static UTF8Encoding utf8encodingVar;
 BinaryEncoding base64 = &base64Var;
 BinaryEncoding base64url = &base64UrlVar;
 BinaryEncoding urlEncoding = &urlEncodingVar;
 BinaryEncoding defaultBinaryEncoding = &base64Var;
+BinaryEncoding utf8encoding = &utf8encodingVar;
 
 }

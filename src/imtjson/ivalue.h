@@ -44,6 +44,7 @@ namespace json {
 	extern BinaryEncoding base64url;  ///< base64 for urls and files (with "-" and "_" and without padding character)
 	extern BinaryEncoding urlEncoding; ///url encoding - for encoding uri components
 	extern BinaryEncoding directEncoding;
+	extern BinaryEncoding utf8encoding; ///<encode binary to UTF-8 valid characters
 	extern BinaryEncoding defaultBinaryEncoding;
 
 	///Various flags tied with JSON's type

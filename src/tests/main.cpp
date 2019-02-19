@@ -1448,6 +1448,14 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		out << res.getString();
 	};
 
+	tst.test("utf8encoding","\"abc\\u0080\\u0085\\u0001\\u00C0\\u00F0\\u00FF_ABC\"") >> [](std::ostream &out) {
+		Value z = utf8encoding->encodeBinaryValue(BinaryView(StrViewA("abc\x80\x85\x01\xC0\xF0\xFF_ABC")));
+		z.toStream(out);
+	};
+	tst.test("utf8decoding","abc\x80\x85\x01\xC0\xF0\xFF_ABC") >> [](std::ostream &out) {
+		Value z = utf8encoding->decodeBinaryValue(Value::fromString("\"abc\\u0080\\u0085\\u0001\\u00C0\\u00F0\\u00FF_ABC\"").getString());
+		out << StrViewA(z.getBinary(utf8encoding));
+	};
 
 	runValidatorTests(tst);
 	//runRpcTests(tst);

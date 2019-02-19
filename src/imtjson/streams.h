@@ -42,17 +42,20 @@ inline StreamFromStdStream fromStream(std::istream &stream) {
 }
 
 ///A helper class which provides reading from a string
-class StreamFromString {
+template<typename Src>
+class StreamFromStringT {
 public:
-	StreamFromString(const StrViewA &string):string(string),pos(0) {}
+	StreamFromStringT(const Src &string):string(string),pos(0) {}
 	int operator()() const {
 		if (pos < string.length) return (unsigned char)string[pos++];
 		else return eof;
 	}
 private:
-	StrViewA string;
+	Src string;
 	mutable std::size_t pos;
 };
+
+using StreamFromString = StreamFromStringT<StrViewA>;
 
 ///Creates stream for the parser which reads bytes from the string
 /**
@@ -61,6 +64,10 @@ private:
  */
 inline StreamFromString fromString(const StrViewA &string) {
 	return StreamFromString(string);
+}
+
+inline StreamFromStringT<BinaryView> fromBinary(const BinaryView &string) {
+	return StreamFromStringT<BinaryView>(string);
 }
 
 ///A helper class which provides writing to a stream
@@ -99,6 +106,20 @@ protected:
 inline OneCharStream oneCharStream(int item) {
 	return OneCharStream(item);
 }
+
+template<typename T>
+class WriteCounter {
+public:
+	WriteCounter(T &cnt):cnt(cnt) {cnt = 0;}
+
+	template<typename ... Args>
+	void operator()(Args&& ... ) {
+		++cnt;
+	}
+
+protected:
+	T &cnt;
+};
 
 }
 
