@@ -284,6 +284,7 @@ private:
 		virtual void postSendResponse(bool sendResult);
 
 		virtual bool response(const Value &result) = 0;
+		virtual bool hearthbeat();
 
 
 		virtual ~RequestData() {}
@@ -383,6 +384,18 @@ public:
 			return false;
 		}
 
+
+		///Implements hearthbeat
+		/**
+		 * @param req request
+		 * @retval true connection is online
+		 * @retval false disconnected
+		 */
+		virtual bool onHearthbeat(const RpcRequest &req) noexcept {
+			(void)req;
+			return true;
+		}
+
 		///Method is called when the instance is no longer needed
 		/**
 		 * Default implemenation is to call delete this to end lifetime of the instance because
@@ -412,6 +425,8 @@ public:
 	 * @param connCtx context associated with the connection, if there is such thing. The argument can
 	 * be nullptr. The method can access this context.
 	 * @return request object. The object can be passed to the server for execution
+	 *
+	 * @note function fn can receive nullptr as the server calls function hearthbeat()
 	 */
 	template<typename Fn, typename = decltype(_details::callCB(std::declval<Fn>(), std::declval<Value>(), std::declval<RpcRequest>()))>
 	static RpcRequest create(const ParseRequest &reqdata, Fn &&fn, RpcFlags::Type flags = 0, const PRpcConnContext &connCtx = PRpcConnContext());
@@ -583,6 +598,16 @@ public:
 	///Retrieves flags used during request creation
 	RpcFlags::Type getFlags() const {return data->flags;}
 
+	///Ensures that connection is still open and other side waiting for response
+	/** Especially when function takes a long time to process, it is better to time to
+	 * tima call hearthbeat() to refresh the connection. It also detects any possible
+	 * disconnect.
+	 *
+	 * @retval true go on
+	 * @retval false disconnected, stop
+	 *
+	 */
+	bool hearthbeat() noexcept;
 protected:
 	RpcRequest(RefCntPtr<RequestData> data):data(data) {}
 

@@ -671,6 +671,15 @@ bool RpcRequest::sendNotify(const String name, Value data) {
 
 
 }
+
+bool RpcRequest::RequestData::hearthbeat() {
+	return response(Value());
+}
+
+bool RpcRequest::hearthbeat() noexcept {
+	return this->data->hearthbeat();
+}
+
 ///Determines whether notification is enabled
 bool RpcRequest::isSendNotifyEnabled() const {
 		return data->notifyEnabled;
@@ -763,6 +772,10 @@ RpcRequest RpcRequest::create(const ParseRequest& reqdata, Callbacks* cbs, const
 			return cbs->onCallback(RpcRequest(this), request);
 		}
 		virtual bool response(const Value &) noexcept {return false;}
+
+		virtual bool hearthbeat() noexcept {
+			return cbs->onHearthbeat(RpcRequest(this));
+		}
 
 		~Call() {
 			if (!responseSent) {
