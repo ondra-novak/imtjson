@@ -331,7 +331,7 @@ namespace json {
 
 	Value Value::reverse() const {
 		Array out;
-		for (std::uintptr_t i = size(); i > 0; i++) {
+		for (std::uintptr_t i = size(); i > 0; i--) {
 			out.add(this->operator [](i-1));
 		}
 		return out;
