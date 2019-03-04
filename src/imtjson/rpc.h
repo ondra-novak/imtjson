@@ -623,9 +623,9 @@ template<typename Fn, typename>
 inline RpcRequest json::RpcRequest::create(const ParseRequest &req, Fn&& fn, RpcFlags::Type flags, const PRpcConnContext &connCtx) {
 	class Call: public RequestData {
 	public:
-		Call(const ParseRequest &req, const Fn& fn, RpcFlags::Type flags, const PRpcConnContext &connCtx)
+		Call(const ParseRequest &req, Fn&& fn, RpcFlags::Type flags, const PRpcConnContext &connCtx)
 			:RequestData(req,flags,connCtx)
-			,fn(fn) {}
+			,fn(std::forward<Fn>(fn)) {}
 		virtual bool response(const Value &result) {
 			return !!(_details::callCB(fn,result,RefCntPtr<RequestData>(this)));
 		}
@@ -635,10 +635,10 @@ inline RpcRequest json::RpcRequest::create(const ParseRequest &req, Fn&& fn, Rpc
 			}
 		}
 	protected:
-		Fn fn;
+		typename std::remove_reference<Fn>::type fn;
 	};
 
-	return RpcRequest(new Call(req, fn,flags,connCtx));
+	return RpcRequest(new Call(req, std::forward<Fn>(fn),flags,connCtx));
 }
 
 
