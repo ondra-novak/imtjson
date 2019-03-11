@@ -824,8 +824,14 @@ namespace json {
 	Value Value::slice(std::intptr_t start, std::intptr_t end) const {
 		std::intptr_t sz = size();
 		if (empty()) return json::array;
-		if (start < 0) return slice(sz-start);
-		if (end < 0) return slice(sz-end);
+		if (start < 0) {
+			if (-start >= sz) return *this;
+			return slice(sz+start);
+		}
+		if (end < 0) {
+			if (-end >= sz) return json::array;
+			return slice(start,sz+end);
+		}
 		if (start >= end || start >= sz) return json::array;
 		if (end >= sz) end = sz;
 		std::uintptr_t cnt = end - start;
