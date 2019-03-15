@@ -69,7 +69,7 @@ char Validator::commentEscape = '#';
 bool Validator::validate(const Value& subject, const StrViewA& rule, const Path &path) {
 
 	Value ver = def["_version"];
-	if (ver.defined() && ver.getNumber() != 1.0) {
+	if (ver.defined() && ver.getNumber() != 1.0 && ver.getNumber() != 2.0) {
 		addRejection(Path::root/"_version", ver);
 		return false;
 	}
@@ -77,7 +77,11 @@ bool Validator::validate(const Value& subject, const StrViewA& rule, const Path 
 	rejections.clear();
 	emits.clear();
 	curPath = &path;
-	return validateInternal(subject,rule);
+	if (ver.getNumber() == 2.0) {
+		return v2validate(subject,rule);
+	} else {
+		return validateInternal(subject,rule);
+	}
 }
 
 Validator::Validator(const Value& definition):def(definition),curPath(nullptr) {
@@ -971,5 +975,293 @@ bool Validator::opEmit(const Value& subject, const Value& args) {
 	return r;
 }
 
+//------------------------------- version 2 ------------------------------------------
+
+
+Validator::State Validator::State::enter(Value newNode, Value newPath) const {return State {newNode, Array(path).push_back(newPath) };}
+
+
+bool Validator::processRule(const State &state, Value rule, bool sequence) {
+
+	if (rule == nullptr) return report(state,rule,state.subj == nullptr);
+	if (rule == undefined) return report(state,rule,state.subj == undefined);
+
+	if (rule.type() == array) {
+		if (sequence) return report(state,rule,processSequence(state,rule));
+		return processAlternateRule(state,rule);
+	}
+	if (rule.type() == object) {
+		return processObjectRule(state,rule);
+	}
+	if (rule.type() == string) {
+		return processSimpleRule(state,rule);
+	}
+	return report(State,rule,rule == State.subj);
 }
 
+std::size_t Validator::mark_state() {
+	return emits.size();
+}
+
+bool Validator::failure(std::size_t mark) {
+	emits.resize(mark);
+	return false;
+}
+
+bool Validator::report(const State &state, Value rule, bool result) {
+	if (!result)  {
+		rejections.push_back(Object
+			("node",state.subj)
+			("path",state.path)
+			("rule",rule.defined()?rule:rule.toString())
+		);
+	}
+	return result;
+}
+
+void Validator::report_exception(const State &state,Value rule,  const char *what) {
+	rejections.push_back(Object
+		("node",state.subj)
+		("path",state.path)
+		("rule",rule.defined()?rule:rule.toString())
+		("error",what)
+	);
+}
+
+bool Validator::processAlternateRule(const State &state, Value rule) {
+	std::size_t me = mark_state();
+	std::size_t cnt = rejections.size();
+	std::size_t rejcnt = rejections.size();
+	for (std::size_t i = 0; i < cnt; ++i) {
+		Value r = rule[i];
+		if (processRule(State(state) ,r, true)) {
+			rejections.resize(rejcnt);
+			return true;
+		}
+	}
+	return failure(me);
+}
+
+Value Validator::collapseObjRule(Value rule,std::set<StrViewA> &visited) {
+	Value p = rule["^^^"];
+	if (!p.defined()) return p;
+
+	Object z;
+	if (p.type() != array) p = {p};
+	for (Value itm: p) {
+		if (visited.find(itm.getString()) == visited.end())
+		{
+			visited.insert(itm.getString());
+			Value o = collapseObjRule(def[itm.getString()], visited);
+			for (Value k : o) {
+				if (k.getKey() != "...") z.set(k);
+			}
+		}
+	}
+	for (Value k:rule) {
+		if (k.getKey() != "^^^") {
+			z.set(k);
+		}
+	}
+	return z;
+}
+
+bool Validator::processObjectRule(const State &state,Value r) {
+	Value subj = state.subj;
+	auto me = mark_state();
+	if (subj.type() != object) {
+		return report(state, r, false);
+	}
+
+	std::set<StrViewA> visited;
+	Value rule = collapseObjRule(r, visited);
+
+	Value other = rule["..."];
+
+	for (Value k : rule) {
+
+		if (k.getKey() != "...") {
+			Value v = subj[k.getKey()];
+			bool b = processRule(state.enter(v, k.getKey()), k);
+			if (!b) return failure(me);
+		}
+	}
+
+	for (Value k : subj) {
+		if (!rule[k.getKey()].defined()) {
+			bool b = processRule(state.enter(k, k.getKey()), other);
+			if (!b) return failure(me);
+		}
+	}
+
+	return true;
+}
+
+
+
+
+bool Validator::processSequence(const State &state, Value rule) {
+	std::size_t l = rule.size();
+	std::size_t i = 0;
+	std::size_t me = mark_state();
+	while (i < l) {
+		Value r = rule[i];
+
+		try {
+
+			if (r.type() != json::string) {
+				if (!processRule(state, r)) return false;
+			} else {
+				StrViewA rl = r.getString();
+				if (rl.begins("//")) {
+					++i;
+					continue;
+				}
+				if (rl.begins(".")) {
+
+					auto k = rl.substr(1);
+					state.subj = state.subj[k];
+
+				} else if (rl.begins("#")) {
+
+					auto k = parseInt(rl.substr(1));
+					state.subj = state.subj[k];
+
+				} else {
+
+					switch (r) {
+					case ">": if (!report(state,r,nd > rule[++i])) return failure(me);break;
+					case "<": if (!report(state,r,nd < rule[++i])) return failure(me);break;
+					case "==": if (!report(state,r,nd == rule[++i])) return failure(me);break;
+					case "=": if (!report(state,r,nd == rule[++i])) return failure(me);break;
+					case "!=": if (!report(state,r,nd != rule[++i])) return failure(me);break;
+					case "<>":if (!report(state,r,nd != rule[++i])) return failure(me);break;
+					case ">=":if (!report(state,r,nd >= rule[++i])) return failure(me);break;
+					case "<=":if (!report(state,r,nd <= rule[++i])) return failure(me);break;
+					default: {
+
+
+
+						var arg = undefined;
+						var rr = r;
+						var simple_rule_name = r;
+						var nd = state.subj;
+						if (r.endsWith("()")) {
+							arg = rule[++i];
+							rr = r.substr(0,r.length-2);
+						} else if (r.endsWith("(:)")) {
+							arg = rule[++i];
+							rr = r.substr(0,r.length-3);
+							arg = doTransform(state, arg);
+							if (arg === undefined) return failure(me);
+							simple_rule_name = rr+"()";
+						} else if (r.endsWith("(^)")) {
+							arg = rule[++i];
+							rr = r.substr(0,r.length-3);
+							arg = custom_map(state, arg);
+							if (arg === undefined) return failure(me);
+							simple_rule_name = rr+"()";
+						}
+
+						    if (rr.startsWith(":/")) {
+						    	if (typeof(nd) != "string") return report(state,rr, failure(me));
+						    	var rx = parseRegExp(rr.substr(1));
+						    	nd = rx.exec(nd);
+
+						    } else if (rr.startsWith(":")) {
+
+								switch (rr) {
+								case ":length": nd = nd.length; break;
+								case ":key":nd = state.getKey();break;
+								case ":string": nd = nd.toString();break;
+								case ":stringify": nd = JSON.stringify(nd);break;
+								case ":parse": nd = JSON.parse(nd);break;
+								case ":upper": nd = nd.toUpperCase;break;
+								case ":lower": nd = nd.toLowerCase;break;
+								case ":sign": nd = nd<0?-1:nd>0?1:0;break;
+								case ":neg": nd = -nd;break;
+								case ":sum": nd = nd.reduce(function(a,b){return a===undefined?b:a+b});break;
+								case ":sub": nd = nd.reduce(function(a,b){return a===undefined?b:a-b});break;
+								case ":mul": nd = nd.reduce(function(a,b){return a===undefined?b:a*b});break;
+								case ":div": nd = nd.reduce(function(a,b){return a===undefined?b:a/b});break;
+								case ":inv": nd = 1.0/nd;break;
+								case ":keys": nd = Object.keys(nd);break;
+								case ":values": nd = Object.values(nd);break;
+								case ":first": nd = nd[0];break;
+								case ":last": nd = nd[nd.length-1];break;
+								case ":shift": nd = nd.slice(1);break;
+								case ":rev": nd = nd.slice().reverse();break;
+								case ":slice": nd = nd.slice(arg[0],arg[1]);break;
+								case ":explode": nd = rule_explode(nd, arg);break;
+								case ":":
+								case ":set": nd = arg;rr=rule[i];break;
+								case ":prefix": nd = rule_prefix(state, arg);break;
+								case ":suffix": nd = rule_suffix(state, arg);break;
+								case ":pop": nd = state.pop();break;
+								case ":round": nd = rule_round(nd,arg);break;
+								case ":root": nd = root_node;break;
+								case ":root_rule": nd = root_rule;break;
+								case ":delete" : nd = delete_key(nd,arg);break;
+								case ":merge": nd = merge_obj(nd, arg);break;
+								case ":rmerge": nd = merge_rec_obj(nd, arg);break;
+								default:
+									nd = processCustomTransform(state, simple_rule_name, arg);
+								}
+								state.subj = nd;
+								state.path = state.path.concat({arg:arg,node:nd,transform:rr});
+							}
+							else {
+								switch (rr) {
+								case "push": if (arg === undefined) arg = nd; state.push(arg);break;
+								case "array" : if (!processArray(state, arg)) return failure(me);break;
+								case "tuple" : if (!processTuple(state, arg)) return failure(me);break;
+								case "object": if (!processObject(state, arg)) return failure(me);break;
+								case "emit" : emits.push({type:"emit",value:nd,arg:arg});break;
+								case "prefix": rule_prefix(state, arg);break;
+								case "suffix": rule_prefix(state, arg);break;
+								case "not": {
+									var m = mark_state();
+									var r = rejs.length;
+									var res = processRule(state.clone(), arg);
+									failure(m);
+									rejs.splice(r);
+									if (res) return failure(me);
+									break;
+								}
+								case "postpone": emits.push({type:"postpone", rule:arg, state:state});break;
+								case "link":
+								case "extern": emits.push({type:"extern",rule:arg, value:nd});break;
+								default:
+									{
+										var newstate = state.clone();
+										if (arg !== undefined) newstate.push(arg);
+										if (!processSimpleRule(newstate, simple_rule_name)) return failure(me);
+									}
+									break;
+								}
+
+							}
+						}
+
+					}
+				}
+			}
+		} catch (e) {
+			report_exception(state,r,e.toString());
+					return failure(me);
+		}
+		++i;
+
+	}
+	return true;
+
+
+}
+
+
+
+bool Validator::v2validate(Value subj, Value rule) {
+
+}
+
+}

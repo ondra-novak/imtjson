@@ -5,9 +5,12 @@
  *      Author: ondra
  */
 
+
+
 #ifndef IMMUJSON_VALIDATOR_H_
 #define IMMUJSON_VALIDATOR_H_
 #include <vector>
+#include <set>
 #include "path.h"
 #include "stringview.h"
 #include "string.h"
@@ -135,6 +138,15 @@ public:
 
 	Value getEmits() const;
 
+	///Default version
+	/** Because version 2 is complete different, to compile version 1 schema set defaultVersion=1 at the beginning of the code
+	 *
+	 */
+	static int defaultVersion;
+
+
+
+
 protected:
 
 
@@ -203,8 +215,34 @@ protected:
 	Value walkObject(const Value &subject,  const Value &v);
 	bool opExplode(const Value& subject, StrViewA str, const Value& rule, const Value& limit);
 
+	//--------------------- v2 --------------------------------------------
+
+
+	struct State {
+		Value subj;
+		Value path;
+
+		State setSubj(Value subj) const {return State {subj,path};}
+		State enter(Value newNode, Value newPath) const;
+	};
+
+	bool v2validate(Value subj, Value rule);
+	bool processRule(const State &state, Value rule, bool sequence = false);
+	bool processAlternateRule(const State &state, Value rule);
+
+	std::size_t mark_state();
+	bool failure(std::size_t mark);
+	bool report(const State &state, Value rule, bool result);
+	void report_exception(const State &state,Value rule, const char *what);
+
+
+
+	Value collapseObjRule(Value rule,std::set<StrViewA> &visited);
+	bool processObjectRule(const State &state,Value rule);
+	bool processSequence(const State &state, Value rule);
 
 };
+
 
 
 
