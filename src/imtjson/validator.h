@@ -15,6 +15,7 @@
 #include "stringview.h"
 #include "string.h"
 #include "value.h"
+#include "shared/stack.h"
 
 
 
@@ -217,29 +218,44 @@ protected:
 
 	//--------------------- v2 --------------------------------------------
 
-
 	struct State {
-		Value subj;
-		Value path;
+		Value subject;
+		Path path;
+		ondra_shared::SharedStack<Value> stack;
 
-		State setSubj(Value subj) const {return State {subj,path};}
-		State enter(Value newNode, Value newPath) const;
+		State(Value subject,Path path):subject(subject),path(path) {}
+		State(Value subject,Path path,ondra_shared::SharedStack<Value> stack)
+			:subject(subject),path(path),stack(stack) {}
+
+		State enter(StrViewA key) {
+			return State(subject[key],Path(path,key),stack);
+		}
+		State enter(std::size_t index) {
+			return State(subject[index],Path(path,index),stack);
+		}
+		void push(Value v) {
+			stack = stack.push(v);
+		}
+		Value top() {
+			if (stack.empty()) return undefined;
+			else return stack.top();
+		}
+		Value pop() {
+			if (stack.empty()) return undefined;
+			else {
+				Value ret = stack.top();
+				stack = stack.pop();
+			}
+		}
 	};
 
-	bool v2validate(Value subj, Value rule);
-	bool processRule(const State &state, Value rule, bool sequence = false);
-	bool processAlternateRule(const State &state, Value rule);
-
-	std::size_t mark_state();
-	bool failure(std::size_t mark);
-	bool report(const State &state, Value rule, bool result);
-	void report_exception(const State &state,Value rule, const char *what);
-
-
-
-	Value collapseObjRule(Value rule,std::set<StrViewA> &visited);
-	bool processObjectRule(const State &state,Value rule);
-	bool processSequence(const State &state, Value rule);
+	bool v2validate(Value subj, const Path &path, StrViewA rule);
+	bool v2processRule(State &&state, const Value &rule, bool sequence);
+	bool v2processAlternative(State &&state, const Value &rule);
+	Value collapseObject(const Value &obj, const Path &seen);
+	bool v2processObject(State &&state, Value rule);
+	bool v2processSequence(State &&state, Value rule);
+	bool v2processSimpleRule(State &&state, Value rule);
 
 };
 
