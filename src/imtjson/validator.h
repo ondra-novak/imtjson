@@ -16,6 +16,7 @@
 #include "string.h"
 #include "value.h"
 #include "shared/stack.h"
+#include "namedEnum.h"
 
 
 
@@ -202,6 +203,8 @@ protected:
 
 
 	void addRejection(const Path &path, const Value &rule);
+	bool addRejection(const Path& path, const Value& rule, bool result);
+
 	
 	void pushVar(String name, Value value);
 	void popVar();
@@ -218,20 +221,19 @@ protected:
 
 	//--------------------- v2 --------------------------------------------
 
+	using Stack = ondra_shared::ImtStack<Value>;
+
 	struct State {
 		Value subject;
-		Path path;
-		ondra_shared::SharedStack<Value> stack;
+		Stack path;
+		Stack stack;
 
-		State(Value subject,Path path):subject(subject),path(path) {}
-		State(Value subject,Path path,ondra_shared::SharedStack<Value> stack)
+		State(Value subject,Stack path):subject(subject),path(path) {}
+		State(Value subject,Stack path,Stack stack)
 			:subject(subject),path(path),stack(stack) {}
 
-		State enter(StrViewA key) {
-			return State(subject[key],Path(path,key),stack);
-		}
-		State enter(std::size_t index) {
-			return State(subject[index],Path(path,index),stack);
+		State enter(Value key) {
+			return State(subject[key],path.push(key),stack);
 		}
 		void push(Value v) {
 			stack = stack.push(v);
@@ -250,12 +252,31 @@ protected:
 	};
 
 	bool v2validate(Value subj, const Path &path, StrViewA rule);
-	bool v2processRule(State &&state, const Value &rule, bool sequence);
+	bool v2processRule(State &&state, const Value &rule, bool sequence = false);
 	bool v2processAlternative(State &&state, const Value &rule);
 	Value collapseObject(const Value &obj, const Path &seen);
 	bool v2processObject(State &&state, Value rule);
 	bool v2processSequence(State &&state, Value rule);
 	bool v2processSimpleRule(State &&state, Value rule);
+
+	bool v2report(const State &state, Value rule, bool result = false);
+	bool v2report_exception(const State &state, Value rule, const char *what);
+
+	virtual bool testRegExpr(StrViewA pattern, StrViewA subject);
+
+	class V2Guard;
+
+	enum Keyword {
+		kString, kNumber, kInteger, kUnsigned, kObject, kArray,
+		kBoolean, kBool, kNull, kUndefined, kAny, kBase64, kBase64url,
+		kHex, kUpper, kLower, kIdentifier, kCamelCase, kAlpha, kAlnum,
+		kDigits, kAsc, kDesc,kAscDup, kDescDup, kStart, kRootRule
+	};
+
+	static NamedEnum<Keyword> keywords;
+
+	static Stack path2stack(const Path &path, const Stack &initial = Stack());
+	static Value stack2path(const Stack &stack);
 
 };
 

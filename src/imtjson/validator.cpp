@@ -66,6 +66,37 @@ char Validator::charSetEnd = ']';
 char Validator::commentEscape = '#';
 
 
+ NamedEnum<Validator::Keyword> Validator::keywords({
+	{Validator::kString, "string"},
+	{Validator::kNumber, "number"},
+	{Validator::kInteger, "integer"},
+	{Validator::kUnsigned, "unsigned"},
+	{Validator::kObject, "object"},
+	{Validator::kArray, "array"},
+	{Validator::kBoolean, "boolean"},
+	{Validator::kBool, "bool"},
+	{Validator::kNull, "null"},
+	{Validator::kUndefined, "undefined"},
+	{Validator::kAny, "any"},
+	{Validator::kBase64, "base64"},
+	{Validator::kBase64url,"base64url"},
+	{Validator::kHex, "hex"},
+	{Validator::kUpper, "upper"},
+	{Validator::kLower, "lower"},
+	{Validator::kIdentifier, "identifier"},
+	{Validator::kCamelCase, "camelcase"},
+	{Validator::kAlpha, "alpha"},
+	{Validator::kAlnum, "alnum"},
+	{Validator::kDigits, "digits"},
+	{Validator::kAsc, "<"},
+	{Validator::kDesc,">"},
+	{Validator::kAscDup, "<="},
+	{Validator::kDescDup, ">="},
+	{Validator::kStart, "start"},
+	{Validator::kRootRule,"rootrule"}
+});
+
+
 bool Validator::validate(const Value& subject, const StrViewA& rule, const Path &path) {
 
 	Value ver = def["_version"];
@@ -860,6 +891,11 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 	lastRejectedRule = rule;
 }
 
+bool Validator::addRejection(const Path& path, const Value& rule, bool result) {
+	if (!result) addRejection(path,rule);
+	return result;
+}
+
 void Validator::pushVar(String name, Value value)
 {
 	varList.push_back(Value(name,value));
@@ -977,11 +1013,30 @@ bool Validator::opEmit(const Value& subject, const Value& args) {
 
 //------------------------------- version 2 ------------------------------------------
 
+Validator::Stack Validator::path2stack(const Path &path, const Stack &initial) {
+	if (path.isRoot()) return initial;
+	else {
+		Stack prev = path2stack(path.getParent(), initial);
+		if (path.isIndex()) prev.push(path.getIndex()); else prev.push(path.getKey());
+		return prev;
+	}
+}
+Value Validator::stack2path(const Stack &stack) {
+	Array x;
+	x.reserve(stack.size());
+	Stack s = stack;
+	while (!s.empty()) {
+		x.push_back(s.top()); s = s.pop();
+	}
+	x.reverse();
+	return x;
+}
+
 
 
 bool Validator::v2validate(Value subj, const Path &path, StrViewA rule) {
 	Value jrule = def[rule];
-	return v2processRule(State(subj,path),rule, false);
+	return v2processRule(State(subj, path2stack(path)),rule, false);
 }
 
 bool Validator::v2processRule(State &&state, const Value &rule, bool sequence) {
@@ -1000,25 +1055,41 @@ bool Validator::v2processRule(State &&state, const Value &rule, bool sequence) {
 		case string:
 			return v2processSimpleRule(std::move(state),rule);
 		default:
-			addRejection(state.path,rule);
+			v2report(state,rule);
 			return false;
 	}
 }
 
-bool Validator::v2processAlternative(State &&state, const Value &rule) {
-	std::size_t emitpos = emits.size();
-	try {
-		for (Value x: rule) {
-			bool r = v2processRule(State(state), x, true);
-			if (r) return true;
-		}
-		addRejection(state.path,rule);
-		emits.resize(emitpos);
-		return false;
-	} catch (...) {
-		emits.resize(emitpos);
-	    return false;
+class Validator::V2Guard {
+public:
+	V2Guard(Validator *owner):owner(*owner),emitpos(owner->emits.size()) {}
+	~V2Guard() {
+		owner.emits.resize(emitpos);
 	}
+	bool commit() {
+		emitpos = owner.emits.size();return true;
+	}
+	V2Guard(const V2Guard &) = delete;
+	V2Guard &operator=(const V2Guard &) = delete;
+
+protected:
+	Validator &owner;
+	std::size_t emitpos;
+
+};
+
+bool Validator::v2processAlternative(State &&state, const Value &rule) {
+	V2Guard g(this);
+	for (Value x: rule) {
+		try {
+			bool r = v2processRule(State(state), x, true);
+			if (r) return g.commit();
+		} catch (std::exception &e) {
+			v2report_exception(state, rule, e.what());
+			return false;
+		}
+	}
+	v2report(state,rule);
 }
 
 Value Validator::collapseObject(const Value &obj, const Path &seen) {
@@ -1058,14 +1129,13 @@ Value Validator::collapseObject(const Value &obj, const Path &seen) {
 }
 
 bool Validator::v2processObject(State &&state, Value rule) {
-	std::size_t emitpos = emits.size();
+	V2Guard g(this);
 
 
 	Value crule = collapseObject(rule,Path::root);
 	for (Value r: crule) {
 		Value v = state.subject[v.getKey()];
 		if (!v2processRule(state.enter(r.getKey()),r,false)) {
-			emits.resize(emitpos);
 			return false;
 		}
 	}
@@ -1074,22 +1144,124 @@ bool Validator::v2processObject(State &&state, Value rule) {
 	for (Value v: state.subject) {
 		if (!crule[v.getKey()].defined()) {
 			if (!v2processRule(state.enter(v.getKey()), others, false)) {
-				emits.resize(emitpos);
 				return false;
 			}
 		}
 	}
-
-	return true;
+	return g.commit();
 }
 
 bool Validator::v2processSequence(State &&state, Value rule) {
+	V2Guard g(this);
+	for (Value rv: rule) {
+		try {
+
+			if (rv.type() != string) {
+				if (!v2processRule(std::move(state), rv)) return false;
+			} else {
+				StrViewA r = rv.getString();
+				if (r.begins("//")) continue;
+				if (r.begin(".")) {
+
+				}
+			}
+
+
+
+		} catch (const std::exception &e) {
+
+		}
+	}
+
+
 
 
 
 }
-bool Validator::v2processSimpleRule(State &&state, Value rule) {
 
+bool Validator::testRegExpr(StrViewA pattern, StrViewA subject) {
+	return false;
+}
+
+bool Validator::v2report(const State &state, Value rule, bool result) {
+	if (!result) {
+		rejections.push_back(Object
+				("node", state.subject)
+				("path", state.path.toValue())
+				("rule", rule.defined()?rule:"undefined")
+		);
+	}
+	return result;
+}
+
+bool Validator::v2report_exception(const State &state, Value rule, const char *what) {
+	rejections.push_back(Object
+			("node", state.subject)
+			("path", state.path.toValue())
+			("rule", rule.defined()?rule:"undefined")
+			("error", what)
+	);
+	return false;
+
+}
+
+template<typename Cmp>
+static bool checkOrder(const Value &array, Cmp &&cmp) {
+	std::size_t cnt = array.size();
+	if (cnt < 2) return true;
+	Value ref = array[0];
+	for (std::size_t i = 1; i < cnt; i++) {
+		Value x = array[i];
+		if (!cmp(Value::compare(ref, x),0)) return false;
+		ref = x;
+	}
+	return true;
+}
+
+bool Validator::v2processSimpleRule(State &&state, Value rule) {
+	StrViewA srule = rule.getString();
+	if (srule.begins("'")) {
+		return v2report(state, rule, srule.substr(1) == state.subject.toString());
+	}
+	if (srule.begins("//")) {
+		return v2report(state, rule);
+	}
+	if (srule.begins("/")) {
+		return v2report(state, rule, testRegExpr(rule.getString(), state.subject.toString()));
+	}
+	auto k = keywords.find(srule);
+	if (k) {
+		switch (*k) {
+		case kString: return v2report(state,rule, state.subject.type() == string);
+		case kNumber: return v2report(state,rule, state.subject.type() == number);
+		case kInteger: return v2report(state,rule, state.subject.type() == number && state.subject.flags() & numberInteger);
+		case kUnsigned: return v2report(state,rule, state.subject.type() == number && state.subject.flags() & numberUnsignedInteger);
+		case kObject: return v2report(state,rule, state.subject.type() == object);
+		case kArray: return v2report(state,rule, state.subject.type() == array);
+		case kBool:
+		case kBoolean: return v2report(state,rule, state.subject.type() == boolean);
+		case kNull: return v2report(state,rule, state.subject.type() == null);
+		case kUndefined: return v2report(state,rule, !state.subject.defined());
+		case kAny: return v2report(state,rule, state.subject.defined());
+		case kBase64: return v2report(state,rule, opBase64(state.subject));
+		case kBase64url: return v2report(state,rule, opBase64url(state.subject));
+		case kHex: return v2report(state,rule, opHex(state.subject));
+		case kUpper: return v2report(state,rule, opUppercase(state.subject));
+		case kLower: return v2report(state,rule, opLowercase(state.subject));
+		case kIdentifier: return v2report(state,rule, opIsIdentifier(state.subject));
+		case kAlpha: return v2report(state,rule, opAlpha(state.subject));
+		case kAlnum: return v2report(state,rule, opAlnum(state.subject));
+		case kDigits: return v2report(state,rule, opDigits(state.subject));
+		case kAsc: return v2report(state,rule, checkOrder(state.subject, std::less<int>()));
+		case kAscDup: return v2report(state,rule, checkOrder(state.subject, std::less_equal<int>()));
+		case kDesc: return v2report(state,rule, checkOrder(state.subject, std::greater<int>()));
+		case kDescDup: return v2report(state,rule, checkOrder(state.subject, std::greater_equal<int>()));
+		case kStart:
+		case kRootRule: return v2processRule(std::move(state), rule, false);
+		}
+	}
+	Value custom = def[srule];
+	return v2report(state, rule, v2processRule(std::move(state), custom,false));
 }
 
 
