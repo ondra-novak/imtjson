@@ -88,10 +88,10 @@ char Validator::commentEscape = '#';
 	{Validator::kAlpha, "alpha"},
 	{Validator::kAlnum, "alnum"},
 	{Validator::kDigits, "digits"},
-	{Validator::kAsc, "<"},
-	{Validator::kDesc,">"},
-	{Validator::kAscDup, "<="},
-	{Validator::kDescDup, ">="},
+	{Validator::kAsc, "<<"},
+	{Validator::kDesc,">>"},
+	{Validator::kAscDup, "<<="},
+	{Validator::kDescDup, ">>="},
 	{Validator::kStart, "start"},
 	{Validator::kRootRule,"rootrule"}
 });
@@ -1036,6 +1036,8 @@ Value Validator::stack2path(const Stack &stack) {
 
 bool Validator::v2validate(Value subj, const Path &path, StrViewA rule) {
 	Value jrule = def[rule];
+	rootRule = jrule;
+	rootValue = subj;
 	return v2processRule(State(subj, path2stack(path)),rule, false);
 }
 
@@ -1152,8 +1154,12 @@ bool Validator::v2processObject(State &&state, Value rule) {
 }
 
 bool Validator::v2processSequence(State &&state, Value rule) {
+	if (rule.type() != array) rule = Value(array, {rule});
 	V2Guard g(this);
-	for (Value rv: rule) {
+	std::size_t len = rule.size();
+	std::size_t i = 0;
+	while (i<len) {
+		rv = rule[i++];
 		try {
 
 			if (rv.type() != string) {
@@ -1161,7 +1167,116 @@ bool Validator::v2processSequence(State &&state, Value rule) {
 			} else {
 				StrViewA r = rv.getString();
 				if (r.begins("//")) continue;
-				if (r.begin(".")) {
+				if (r.begins(".")) {
+					state = state.enter(r.substr(1));
+				} else if (r.begins("#")) {
+					state = state.enter(atol(r.substr(1)));
+				} else {
+					Value arg;
+					if (r.ends("()")) {
+						arg = rule[i++];
+						r = r.substr(0,r.lengh-2);
+					} else if (r.ends("(:)")) {
+						arg = rule[i++];
+						r = r.substr(0,r.lengh-3);
+						State st(state);
+						if (!v2processSequence(st, arg)) return false;
+						arg = st.subject;
+					} else if (r.ends("(^)")) {
+						arg = rule[i++];
+						r = r.substr(0,r.lengh-3);
+						arg = doMap(State(state), arg);
+						if (!arg.defined()) return v2report(state,rv,false);
+					}
+
+
+					if (r.begins(":")) {
+
+						StrViewA simple_rule_name = r;
+						//conversion
+						r = r.substr(1);
+						Value out;
+						if (r.begins("/")) {
+							r = r.substr(1);
+							if (!extractRegExpr(r,arg.toString(),out)) return v2report(state,rv,false);
+						} else {
+							auto k = keywords.find(r);
+							auto kk = k?*k:kUnknown;
+							switch (kk) {
+								case kLength:
+								case kLen:  out = state.subject.type() == string
+														?state.subject.getString().length
+														:state.subject.size();
+											break;
+								case kKey: out = state.getKey(); break;
+								case kString: out = state.subject.toString();break;
+								case kStringify: out = state.subject.stringify();break;
+								case kParse:out = Value::fromString(state.subject.getString());break;
+								case kUpper: out = toUpperCase(state.subject.toString());break;
+								case kLower: out = toLowerCase(state.subject.toString());break;
+								case kSign: out = state.subject.getNumber()<0?-1:state.subject.getNumber()>0?1:0;break;
+								case kNeg: out = -state.subject.getNumber();break;
+								case kSum: out = state.subject.reduce([](Value a,Value b){
+										if (a.defined()) return a.merge(b);else return a;
+									},Value());
+									break;
+								case kSub: out = state.subject.reduce([](Value a,Value b){
+										if (a.defined()) return a.diff(b);else return a;
+									},Value());
+									break;
+								case kMul: out = state.subject.reduce([](Value a,Value b){
+										return a.getNumber() * b.getNumber();
+									},Value(1.0));
+									break;
+								case kDiv: out = state.subject.reduce([](Value a,Value b){
+										if (a.defined())
+											return a.getNumber() / b.getNumber();
+										else
+											return a;
+									},Value());
+									break;
+								case kInv: out = 1.0/state.subject.getNumber();break;
+								case kKeys: out = state.subject.map([](Value a){return a.getKey();});break;
+								case kValues: out = state.subject.map([](Value a){return a.stripKey();});break;
+								case kFirst: out = state.subject[0];break;
+								case kLast: out = state.subject[state.subject.size()-1];break;
+								case kShift: out = state.subject.slice(1);break;
+								case kRev: out = state.subject.reverse();break;
+								case kSlice: out = state.subject.slice(arg[0].getInt(),arg[1].getInt());break;
+								case kExplode: out = doExplode(state.subject, arg);break;
+								case kSet: out = arg;break;
+								case kPrefix: out = doPrefix(state.subject, arg);break;
+								case kSuffix: out = doSuffix(state.subject, arg);break;
+								case kPop: out = state.pop();break;
+								case kDelete: out = state.subject.replace(PPath::fromValue(arg),undefined);break;
+								case kRound: out = round(state.subject.getNumber());break;
+								case kMerge: out = Object(state.subject).merge(arg);break;
+								case kRMerge: out = state.subject.merge(arg);break;
+								case KRoot: out = rootValue;break;
+								default:
+									out = processCustomTransform(State(state), simple_rule_name, arg);
+									break;
+							}
+						}
+						if (!out.defined()) return v2report(state,rv,false);
+						state.subject = out;
+						state.path.push(Object
+								("arg",arg)
+								("node",state.subject)
+								("transform",rv));
+					} else {
+						auto k = keywords.find(r);
+						auto kk = k?*k:kUnknown;
+						switch (kk) {
+							case kPush: if (arg.defined()) state.push(arg);else state.push(state.subject);break;
+							case kArray: if (!v2processArray(state,arg)) return false;break;
+							case kTuple: if (!v2processTuple(state,arg)) return false;break;
+							case kObject: if (!v2processObject(state,arg)) return false;break;
+							case kEmit: emits.push_back(Object("type","emit")("value",state.subj)("arg",arg));break;
+							case kPostpone: emits.push_back(Object("type","postpone")("rule",arg)("state",makeValue(state)));break;
+							case kExtern: emits.push_back(Object("type","extern")("rule",arg)("value",state.subject));break;
+						}
+					}
 
 				}
 			}
@@ -1257,7 +1372,7 @@ bool Validator::v2processSimpleRule(State &&state, Value rule) {
 		case kDesc: return v2report(state,rule, checkOrder(state.subject, std::greater<int>()));
 		case kDescDup: return v2report(state,rule, checkOrder(state.subject, std::greater_equal<int>()));
 		case kStart:
-		case kRootRule: return v2processRule(std::move(state), rule, false);
+		case kRootRule: return v2processRule(std::move(state), rootRule, false);
 		}
 	}
 	Value custom = def[srule];

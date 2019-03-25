@@ -232,8 +232,11 @@ protected:
 		State(Value subject,Stack path,Stack stack)
 			:subject(subject),path(path),stack(stack) {}
 
-		State enter(Value key) {
+		State enter(StrViewA key) {
 			return State(subject[key],path.push(key),stack);
+		}
+		State enter(std::size_t index) {
+			return State(subject[index],path.push(key),stack);
 		}
 		void push(Value v) {
 			stack = stack.push(v);
@@ -249,6 +252,9 @@ protected:
 				stack = stack.pop();
 			}
 		}
+		Value getKey() {
+			return path[path.size()-1];
+		}
 	};
 
 	bool v2validate(Value subj, const Path &path, StrViewA rule);
@@ -263,17 +269,28 @@ protected:
 	bool v2report_exception(const State &state, Value rule, const char *what);
 
 	virtual bool testRegExpr(StrViewA pattern, StrViewA subject);
+	virtual bool extractRegExpr(StrViewA pattern, StrViewA subject, Value &result);
 
 	class V2Guard;
 
 	enum Keyword {
+		kUnknown,
+
 		kString, kNumber, kInteger, kUnsigned, kObject, kArray,
 		kBoolean, kBool, kNull, kUndefined, kAny, kBase64, kBase64url,
 		kHex, kUpper, kLower, kIdentifier, kCamelCase, kAlpha, kAlnum,
-		kDigits, kAsc, kDesc,kAscDup, kDescDup, kStart, kRootRule
+		kDigits, kAsc, kDesc,kAscDup, kDescDup, kStart, kRootRule,
+
+		kLength,kLen,kKey,kStringify,kParse,kSign,kNeg,kSum,kSub,kMul,
+		kDiv,kInv,kKeys,kValues,kFirst,kLast,kShift,kRev,kSlice,kExplode,
+		kSet,kPrefix,kSuffix,kPop, kDelete,kRound,kMerge,kRMerge,KRoot,
+		kPush, kTuple,kEmit, kPostpone, kExtern
+
+
 	};
 
 	static NamedEnum<Keyword> keywords;
+	Value rootRule,rootValue;
 
 	static Stack path2stack(const Path &path, const Stack &initial = Stack());
 	static Value stack2path(const Stack &stack);
