@@ -7,9 +7,13 @@
 
 #include <cstdarg>
 #include "validator.h"
+
+#include <cmath>
+
 #include "array.h"
 #include "string.h"
 #include "operations.h"
+#include "wrap.h"
 
 namespace json {
 
@@ -1064,12 +1068,12 @@ bool Validator::v2processRule(State &&state, const Value &rule, bool sequence) {
 
 class Validator::V2Guard {
 public:
-	V2Guard(Validator *owner):owner(*owner),emitpos(owner->emits.size()) {}
+	V2Guard(Validator *owner):owner(*owner),emitpos(owner->output.size()) {}
 	~V2Guard() {
-		owner.emits.resize(emitpos);
+		owner.output.resize(emitpos);
 	}
 	bool commit() {
-		emitpos = owner.emits.size();return true;
+		emitpos = owner.output.size();return true;
 	}
 	V2Guard(const V2Guard &) = delete;
 	V2Guard &operator=(const V2Guard &) = delete;
@@ -1153,13 +1157,101 @@ bool Validator::v2processObject(State &&state, Value rule) {
 	return g.commit();
 }
 
+template<typename Fn>
+static Value toXCase(const Value &v, Fn &&fn) {
+	String s = v.toString();
+	std::wstring w = s.wstr();
+	std::transform(w.begin(),w.end(),w.begin(),fn);
+	return String(w);
+}
+
+
+static Value doExplode(const Value &v, const Value arg) {
+	String src = v.toString();
+	String sep = arg.toString();
+	Array res;
+	auto splt = StrViewA(src).split(sep);
+	while (!!splt) {
+		res.push_back(splt());
+	}
+	return res;
+}
+
+static Value doPrefix(const Value &v, const Value arg) {
+	if (v.type() == array) {
+		if (arg.type() == array) {
+			if (v.size() >= arg.size()) {
+				if (v.slice(0,arg.size()) == arg)
+					return v.slice(arg.size());
+			}
+		}
+	} else if (v.type() == string) {
+		StrViewA sv = v.getString();
+		if (arg.type() == string) {
+			StrViewA sa = arg.getString();
+			if (sv.length >= sa.length) {
+				if (sv.substr(0,sa.length) == sa)
+					return sv.substr(sa.length);
+			}
+		}
+	}
+	return undefined;
+}
+
+static Value doSuffix(const Value &v, const Value arg) {
+	if (v.type() == array) {
+		if (arg.type() == array) {
+			if (v.size() >= arg.size()) {
+				auto df = v.size()-arg.size();
+				if (v.slice(df) == arg)
+					return v.slice(0,df);
+			}
+		}
+	} else if (v.type() == string) {
+		StrViewA sv = v.getString();
+		if (arg.type() == string) {
+			StrViewA sa = arg.getString();
+			if (sv.length >= sa.length) {
+				auto df = sv.length-sa.length;
+				if (sv.substr(df) == sa)
+					return sv.substr(0,df);
+			}
+		}
+	}
+	return undefined;
+}
+
+bool Validator::v2processArray(State &&state, const Value rule, ValueType vt) {
+	V2Guard g(this);
+	if (state.subject.type() != vt) return false;
+	std::size_t idx = 0;
+	for (Value v:state.subject) {
+		if (!v2processRule(state.enter(idx), rule, false)) return false;
+		++idx;
+	}
+	return g.commit();
+}
+
+bool Validator::v2processTuple(State &&state, const Value rule) {
+	V2Guard g(this);
+	if (state.subject.type() != array) return false;
+	std::size_t cnt = state.subject.size();
+	for(std::size_t i = 0; i < cnt; i++) {
+		Value x = state.subject[i];
+		Value r = rule[i];
+		if (!v2processRule(state.enter(i), r, false)) return false;
+	}
+	return g.commit();
+}
+
+
 bool Validator::v2processSequence(State &&state, Value rule) {
 	if (rule.type() != array) rule = Value(array, {rule});
 	V2Guard g(this);
 	std::size_t len = rule.size();
 	std::size_t i = 0;
 	while (i<len) {
-		rv = rule[i++];
+		Value rv = rule[i++];
 		try {
 
 			if (rv.type() != string) {
@@ -1170,21 +1262,19 @@ bool Validator::v2processSequence(State &&state, Value rule) {
 				if (r.begins(".")) {
 					state = state.enter(r.substr(1));
 				} else if (r.begins("#")) {
-					state = state.enter(atol(r.substr(1)));
+					state = state.enter(atol(r.substr(1).data));
 				} else {
 					Value arg;
 					if (r.ends("()")) {
 						arg = rule[i++];
-						r = r.substr(0,r.lengh-2);
+						r = r.substr(0,r.length-2);
 					} else if (r.ends("(:)")) {
 						arg = rule[i++];
-						r = r.substr(0,r.lengh-3);
-						State st(state);
-						if (!v2processSequence(st, arg)) return false;
-						arg = st.subject;
+						r = r.substr(0,r.length-3);
+						if (!runConversion(State(state), arg, arg)) return v2report(state, rv, false);
 					} else if (r.ends("(^)")) {
 						arg = rule[i++];
-						r = r.substr(0,r.lengh-3);
+						r = r.substr(0,r.length-3);
 						arg = doMap(State(state), arg);
 						if (!arg.defined()) return v2report(state,rv,false);
 					}
@@ -1212,8 +1302,8 @@ bool Validator::v2processSequence(State &&state, Value rule) {
 								case kString: out = state.subject.toString();break;
 								case kStringify: out = state.subject.stringify();break;
 								case kParse:out = Value::fromString(state.subject.getString());break;
-								case kUpper: out = toUpperCase(state.subject.toString());break;
-								case kLower: out = toLowerCase(state.subject.toString());break;
+								case kUpper: out = toXCase(state.subject, towupper);break;
+								case kLower: out = toXCase(state.subject, towlower);break;
 								case kSign: out = state.subject.getNumber()<0?-1:state.subject.getNumber()>0?1:0;break;
 								case kNeg: out = -state.subject.getNumber();break;
 								case kSum: out = state.subject.reduce([](Value a,Value b){
@@ -1230,7 +1320,7 @@ bool Validator::v2processSequence(State &&state, Value rule) {
 									break;
 								case kDiv: out = state.subject.reduce([](Value a,Value b){
 										if (a.defined())
-											return a.getNumber() / b.getNumber();
+											return Value(a.getNumber() / b.getNumber());
 										else
 											return a;
 									},Value());
@@ -1249,12 +1339,12 @@ bool Validator::v2processSequence(State &&state, Value rule) {
 								case kSuffix: out = doSuffix(state.subject, arg);break;
 								case kPop: out = state.pop();break;
 								case kDelete: out = state.subject.replace(PPath::fromValue(arg),undefined);break;
-								case kRound: out = round(state.subject.getNumber());break;
+								case kRound: out = std::round(state.subject.getNumber());break;
 								case kMerge: out = Object(state.subject).merge(arg);break;
 								case kRMerge: out = state.subject.merge(arg);break;
 								case KRoot: out = rootValue;break;
 								default:
-									out = processCustomTransform(State(state), simple_rule_name, arg);
+									out = v2processCustomTransform(State(state), simple_rule_name, arg);
 									break;
 							}
 						}
@@ -1269,12 +1359,12 @@ bool Validator::v2processSequence(State &&state, Value rule) {
 						auto kk = k?*k:kUnknown;
 						switch (kk) {
 							case kPush: if (arg.defined()) state.push(arg);else state.push(state.subject);break;
-							case kArray: if (!v2processArray(state,arg)) return false;break;
-							case kTuple: if (!v2processTuple(state,arg)) return false;break;
-							case kObject: if (!v2processObject(state,arg)) return false;break;
-							case kEmit: emits.push_back(Object("type","emit")("value",state.subj)("arg",arg));break;
-							case kPostpone: emits.push_back(Object("type","postpone")("rule",arg)("state",makeValue(state)));break;
-							case kExtern: emits.push_back(Object("type","extern")("rule",arg)("value",state.subject));break;
+							case kArray: if (!v2processArray(std::move(state),arg,array)) return false;break;
+							case kTuple: if (!v2processTuple(std::move(state),arg)) return false;break;
+							case kObject: if (!v2processArray(std::move(state),arg,object)) return false;break;
+							case kEmit: output.push_back(Output(Output::emit,state, arg));break;
+							case kPostpone: output.push_back(Output(Output::postpone,state, arg));break;
+							case kExtern: output.push_back(Output(Output::external,state, arg));break;
 						}
 					}
 
@@ -1294,6 +1384,18 @@ bool Validator::v2processSequence(State &&state, Value rule) {
 
 }
 
+Value Validator::State::getPath() const {
+	Array r;
+	Stack z = path;
+	while (!z.empty()) {
+		r.push_back(z.top());
+		z = z.pop();
+	}
+	r.reverse();
+	return r;
+}
+
+
 bool Validator::testRegExpr(StrViewA pattern, StrViewA subject) {
 	return false;
 }
@@ -1302,7 +1404,7 @@ bool Validator::v2report(const State &state, Value rule, bool result) {
 	if (!result) {
 		rejections.push_back(Object
 				("node", state.subject)
-				("path", state.path.toValue())
+				("path", state.getPath())
 				("rule", rule.defined()?rule:"undefined")
 		);
 	}
@@ -1312,7 +1414,7 @@ bool Validator::v2report(const State &state, Value rule, bool result) {
 bool Validator::v2report_exception(const State &state, Value rule, const char *what) {
 	rejections.push_back(Object
 			("node", state.subject)
-			("path", state.path.toValue())
+			("path", state.getPath())
 			("rule", rule.defined()?rule:"undefined")
 			("error", what)
 	);
@@ -1379,5 +1481,42 @@ bool Validator::v2processSimpleRule(State &&state, Value rule) {
 	return v2report(state, rule, v2processRule(std::move(state), custom,false));
 }
 
+Value Validator::doMap(State &&state, Value rule) {
+	Value tmp;
+	if (rule.type() == object) {
+		Object obj;
+		for(Value x: rule) {
+			if (!runConversion(State(state),x,tmp)) return undefined;
+			obj.set(rule.getKey(), tmp);
+		};
+		return obj;
+	} else if (rule.type() == array) {
+		Array arr;
+		for(Value x: rule) {
+			if (!runConversion(State(state),x,tmp)) return undefined;
+			arr.push_back(tmp);
+		};
+		return arr;
+	} else {
+		if (!runConversion(State(state),rule,tmp)) return undefined;
+		return tmp;
+	}
+}
+
+bool Validator::runConversion(State &&state, Value rule, Value &output) {
+	State st(state);
+	if (!v2processSequence(std::move(st), rule)) return false;
+	output = st.subject;
+	return true;
+}
+
+Value Validator::v2processCustomTransform(State &&state, StrViewA name, Value arg) {
+	state.push(arg);
+	Value rule = def[name];
+	Value out;
+	if (!runConversion(std::move(state),rule,out)) v2report(state,rule,false);
+	return out;
+
+}
 
 }

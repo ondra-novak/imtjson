@@ -228,6 +228,7 @@ protected:
 		Stack path;
 		Stack stack;
 
+		State() {}
 		State(Value subject,Stack path):subject(subject),path(path) {}
 		State(Value subject,Stack path,Stack stack)
 			:subject(subject),path(path),stack(stack) {}
@@ -236,7 +237,7 @@ protected:
 			return State(subject[key],path.push(key),stack);
 		}
 		State enter(std::size_t index) {
-			return State(subject[index],path.push(key),stack);
+			return State(subject[index],path.push(index),stack);
 		}
 		void push(Value v) {
 			stack = stack.push(v);
@@ -253,9 +254,28 @@ protected:
 			}
 		}
 		Value getKey() {
-			return path[path.size()-1];
+			return path.top();
 		}
+		Value getPath() const;
 	};
+
+	struct Output {
+		enum Type {
+			emit,
+			postpone,
+			external,
+		};
+
+		Type type;
+		State state;
+		Value value;
+
+		Output(Type type, const State &state, const Value &value)
+			:type(type),state(state),value(value) {}
+		Output() {}
+	};
+
+	std::vector<Output> output;
 
 	bool v2validate(Value subj, const Path &path, StrViewA rule);
 	bool v2processRule(State &&state, const Value &rule, bool sequence = false);
@@ -267,6 +287,8 @@ protected:
 
 	bool v2report(const State &state, Value rule, bool result = false);
 	bool v2report_exception(const State &state, Value rule, const char *what);
+	bool v2processArray(State &&state, const Value rule, ValueType vt);
+	bool v2processTuple(State &&state, const Value rule);
 
 	virtual bool testRegExpr(StrViewA pattern, StrViewA subject);
 	virtual bool extractRegExpr(StrViewA pattern, StrViewA subject, Value &result);
@@ -294,7 +316,9 @@ protected:
 
 	static Stack path2stack(const Path &path, const Stack &initial = Stack());
 	static Value stack2path(const Stack &stack);
-
+	Value doMap(State &&state, Value rule);
+	bool runConversion(State &&state, Value rule, Value &output);
+	Value v2processCustomTransform(State &&state, StrViewA name, Value arg);
 };
 
 
