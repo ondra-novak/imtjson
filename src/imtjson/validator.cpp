@@ -687,7 +687,7 @@ bool Validator::evalRuleObject(const Value& subject, const Value& templateObj) {
 	else {
 
 		//this is set to true for not-matching object
-		bool notMatch = false;
+//		bool notMatch = false;
 		//extra fields are put there
 		std::vector<Value> extra;
 		//reserve space, there cannot be more than count items in the object
