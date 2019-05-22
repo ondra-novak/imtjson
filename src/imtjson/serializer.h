@@ -228,6 +228,7 @@ namespace json {
 				100000000, //8
  				1000000000 //9
 		};
+		const char *inf = "Inf";
 
 		bool sign = value < 0;
 		std::uintptr_t precisz = std::min<std::uintptr_t>(maxPrecisionDigits, 9);
@@ -237,6 +238,19 @@ namespace json {
 		//123897 -> 5 (1.23897e5)
 		//0.001248 -> 3 (1.248e-3)
 		double fexp = floor(log10(fabs(value)));
+		//if fexp is Inf, handle special case. -Inf means, that value is zero or very nearly zero
+		if (!std::isfinite(fexp)) {
+				if (fexp < 0) {
+					//print zero
+					target('0');
+				} else {
+					//in this case, value is infinity
+					if (sign) target('-');
+					const char *z = inf;
+					while (*z) target(*z++);
+				}
+				return;
+			}
 		//convert it to integer
 		std::intptr_t iexp = (std::intptr_t)fexp;
 		//if exponent is in some reasonable range, set iexp to 0
