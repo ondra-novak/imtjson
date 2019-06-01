@@ -305,6 +305,20 @@ namespace json {
 		bool operator!=(const ArrayIterator &other) const {
 			return !operator==(other);
 		}
+
+
+		typedef std::random_access_iterator_tag iterator_category;
+	    typedef Value        value_type;
+	    typedef void        pointer;
+	    typedef void  reference;
+	    typedef std::intptr_t  difference_type;
+
+	    ArrayIterator &operator+=(int p) {index+=p;return *this;}
+	    ArrayIterator &operator-=(int p) {index-=p;return *this;}
+	    ArrayIterator operator+(int p) const {return ArrayIterator(v,index+p);}
+	    ArrayIterator operator-(int p) const {return ArrayIterator(v,index-p);}
+		std::intptr_t operator-(ArrayIterator &other) const {return index - other.index;}
+
 	};
 
 
