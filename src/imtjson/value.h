@@ -66,6 +66,15 @@ namespace json {
 		 * @param value reference to C++ string
 		 */
 		Value(const std::string &value);
+
+		///Initialize the variable to string type
+		/**
+		 * @param value reference to C++ string-view		*/
+
+#if __cplusplus >= 201703L
+		Value(const std::string_view &value):Value(StringView<char>(value)) {}
+#endif
+
 		///Initialize the variable to string type
 		/**
 		 * @param value Reference to string view (introduced in this library improve performance
