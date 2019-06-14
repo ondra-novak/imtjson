@@ -11,11 +11,9 @@ namespace json {
 	public:
 		AutoCommitT(const Value &oldVal, Parent &parent, const Index &index)
 			:Provider(oldVal),parent(parent),index(index) {}
-		~AutoCommitT() noexcept(false) {
-			if (this->dirty()) try {
+		~AutoCommitT() {
+			if (this->dirty()) {
 				parent.set(index, *this);
-			} catch (...) {
-				if (!std::uncaught_exception()) throw;
 			}
 		}
 		void commit() {
