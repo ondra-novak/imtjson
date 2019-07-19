@@ -32,6 +32,7 @@ Binary Binary::decodeBinaryValue(const Value &s, BinaryEncoding encoding) {
 
 class DirectEncoding: public AbstractBinaryEncoder {
 public:
+	using AbstractBinaryEncoder::encodeBinaryValue;
 
 	virtual Value decodeBinaryValue(const StrViewA &string) const override {
 		return string;
@@ -61,6 +62,7 @@ public:
 
 class UrlEncoding: public AbstractBinaryEncoder {
 public:
+	using AbstractBinaryEncoder::encodeBinaryValue;
 	virtual Value decodeBinaryValue(const StrViewA &string) const override {
 		std::size_t srclen = string.length;
 		std::size_t trglen = 0;
@@ -139,7 +141,7 @@ protected:
 		});
 		if (pos) fn(StrViewA(buff,pos));
 	}
-	Value encodeBinaryValue(const BinaryView &binary) const  {
+	Value encodeBinaryValue(const BinaryView &binary) const  override {
 		WideToUtf8 conv;
 		std::size_t needsz;
 		conv(fromBinary(binary), WriteCounter<std::size_t>(needsz));

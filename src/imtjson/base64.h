@@ -16,6 +16,7 @@ public:
 class Base64Encoding: public AbstractBinaryEncoder {
 public:
 
+	using AbstractBinaryEncoder::encodeBinaryValue;
 	virtual StrViewA getName() const override;
 	static void decoderCore(unsigned char *buff, const StrViewA &str, std::size_t len, const Base64Table &t);
 	virtual Value decodeBinaryValue(const StrViewA &str) const override;

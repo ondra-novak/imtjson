@@ -398,7 +398,7 @@ void merge(Iter1 liter, Iter1 lend, Iter2 riter, Iter2 rend, Fn fn, Undefined un
 
 template<typename CompareFn, typename ReduceFn, typename InitVal>
 inline Value Value::group(const CompareFn& cmp, const ReduceFn& reduceFn, InitVal initVal) {
-	return Array(*this).group(cmp);
+	return Array(*this).group(cmp,reduceFn,initVal);
 }
 
 
@@ -476,7 +476,7 @@ inline Array Array::group(const Cmp& cmp, const ReduceFn& reduceFn, T init) cons
 		T x = init;
 		res.add(Value(item.reduce<ReduceFn, T>(reduceFn,x)));
 	}
-	return std::move(res);
+	return res;
 }
 
 template<typename Fn>
