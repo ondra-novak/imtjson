@@ -762,18 +762,18 @@ RpcRequest RpcRequest::create(const ParseRequest& reqdata, Callbacks* cbs, const
 		virtual void sendResult(const Value &result, const Value &context) override {
 			postSendResponse(cbs->onResult(RpcRequest(this),result,context));
 		}
-		virtual void sendError(const Value &error) noexcept {
+		virtual void sendError(const Value &error) noexcept override {
 			postSendResponse(cbs->onError(RpcRequest(this),error));
 		}
-		virtual bool sendNotify(const RpcNotify &notify) noexcept {
+		virtual bool sendNotify(const RpcNotify &notify) noexcept override{
 			return cbs->onNotify(RpcRequest(this),notify);
 		}
-		virtual bool sendCallback(RpcRequest request) noexcept {
+		virtual bool sendCallback(RpcRequest request) noexcept override {
 			return cbs->onCallback(RpcRequest(this), request);
 		}
-		virtual bool response(const Value &) noexcept {return false;}
+		virtual bool response(const Value &) noexcept override {return false;}
 
-		virtual bool hearthbeat() noexcept {
+		virtual bool hearthbeat() noexcept override {
 			return cbs->onHearthbeat(RpcRequest(this));
 		}
 
