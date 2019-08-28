@@ -504,8 +504,14 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parseString()
 	{
+		static auto createValue = [](StrViewA val) {
+			if (val == "∞") return Value(std::numeric_limits<double>::infinity());
+			else if (val == "-∞") return Value(-std::numeric_limits<double>::infinity());
+			else return Value(val);
+		};
+
 		StrIdx str = readString();
-		Value res (getString(str));
+		Value res (createValue(getString(str)));
 		freeString(str);
 		return res;
 	}

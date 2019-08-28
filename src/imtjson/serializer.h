@@ -228,6 +228,13 @@ namespace json {
 				100000000, //8
  				1000000000 //9
 		};
+
+		if (!std::isfinite(value)) {
+			if (value<0) writeString("-∞");
+			else writeString("∞");
+			return;
+		}
+
 		const char *inf = "Inf";
 
 		bool sign = value < 0;
