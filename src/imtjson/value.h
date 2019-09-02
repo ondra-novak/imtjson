@@ -566,6 +566,15 @@ namespace json {
 		///Returns true if content is null
 		bool isNull() const {return type() == null;}
 
+		///Returns true, if contains a value
+		/**
+		 * The object contains a value, if it is defined and is not null;
+		 *
+		 * @retval true has value (i.e. defined and not null)
+		 * @retval false doesn't have value - undefined or null
+		 */
+		bool hasValue() const {ValueType t = type(); return t != undefined && t != null;}
+
 		///Perform operation map on every item of the array or the object
 		/** Function works on containers. Result depend on type of value.
 		 * If called on object, result is object and values are bound with
