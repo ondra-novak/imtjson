@@ -195,6 +195,18 @@ namespace json {
 		 */
 		Value(const std::initializer_list<Value> &data);
 
+		///Serializes any container to JSON array or object through the map function
+		/**
+		 * @param type type of container, Only array or object are supported. If object
+		 * is selected, then every returned value must have a key
+		 * @param begin begin of iteration
+		 * @param end end of iteration
+		 * @param mapFn mapping function
+		 * @param skipUndef skip undefined results (on by default)
+		 */
+		template<typename InputIterator, typename Fn>
+		Value(ValueType type, InputIterator begin, InputIterator end, Fn &&mapFn, bool skipUndef = true);
+
 		template<typename  Iter>
 		Value(const Range<Iter> &data);
 
@@ -574,6 +586,17 @@ namespace json {
 		 * @retval false doesn't have value - undefined or null
 		 */
 		bool hasValue() const {ValueType t = type(); return t != undefined && t != null;}
+
+		///Returns true, if the value is container
+		/** The container is either array or object. It also means, that it can be iteratable.
+		 * Non-container values are treat as an empty container. To distinguish between
+		 * empty container and non-container value, you can use this function
+		 *
+		 * @retval true is container
+		 * @retval false not container (undefined and null are also non-container values)
+		 */
+		bool isContainer() const {ValueType t = type(); return t == array || t == object;}
+
 
 		///Perform operation map on every item of the array or the object
 		/** Function works on containers. Result depend on type of value.
@@ -1021,6 +1044,18 @@ namespace json {
 		template<typename Fn>
 		Value filter(Fn &&fn) const;
 
+
+		template<typename Fn>
+		void walk(Fn &&fn) const {
+			bool enter = fn(*this);
+			if (enter && isContainer()) {
+				for (Value v : *this) {
+					v.walk(fn);
+				}
+			}
+		}
+
+
 public:
 
 		///Pointer to custom allocator
@@ -1142,8 +1177,21 @@ protected:
 	};
 	extern KeyStart key;
 
+	template<typename InputIterator, typename Fn>
+	Value::Value(ValueType type, InputIterator begin, InputIterator end, Fn &&mapFn, bool skipUndef) {
+		std::vector<Value> buffer;
+		while (begin != end) {
+			buffer.push_back(mapFn(*begin));
+			++begin;
+		}
+		(*this) = Value(type,StringView<Value>(buffer.data(), buffer.size()),skipUndef);
+	}
+
+
 
 }
+
+
 
 namespace std {
 template<> struct hash<::json::Value> {
