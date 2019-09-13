@@ -19,7 +19,7 @@ static void printRej(std::ostream &out, Value path, Value rule) {
 int runValidator(std::istream &indef, std::istream &in, std::ostream &errors) {
 	Value def = Value::fromStream(indef);
 	Value input = Value::fromStream(in);
-	Validator2 v(def);
+	Validator v(def);
 	if (v.validate(input)) return 0;
 	Value rej = v.getRejections();
 

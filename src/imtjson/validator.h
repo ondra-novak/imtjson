@@ -18,9 +18,9 @@
 namespace json {
 
 
-class Validator2 {
+class Validator {
 public:
-	virtual ~Validator2() {}
+	virtual ~Validator() {}
 
 
 	static StrViewA strString;
@@ -104,7 +104,7 @@ public:
 
 
 	///Constructs validator above validator-definition (described above)
-	Validator2(const Value &definition);
+	Validator(const Value &definition);
 
 	///Retrieves array rejections
 	/**

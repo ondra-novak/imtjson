@@ -228,10 +228,10 @@ Value RpcRequest::operator [](const StrViewA name) const {
 	return data->context[name];
 }
 
-class RpcArgValidator: public Validator2 {
+class RpcArgValidator: public Validator {
 public:
-	RpcArgValidator():Validator2(object) {}
-	RpcArgValidator(const Value &customClasses):Validator2(customClasses) {}
+	RpcArgValidator():Validator(object) {}
+	RpcArgValidator(const Value &customClasses):Validator(customClasses) {}
 
 	bool checkArgs(const Value &subject, const Value &pattern) {
 		curPath = &Path::root;
