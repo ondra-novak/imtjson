@@ -13,60 +13,60 @@
 
 namespace json {
 
-StrViewA Validator::strString = "string";
-StrViewA Validator::strNumber = "number";
-StrViewA Validator::strBoolean = "boolean";
-StrViewA Validator::strAny = "any";
-StrViewA Validator::strBase64 = "base64";
-StrViewA Validator::strBase64url = "base64url";
-StrViewA Validator::strHex = "hex";
-StrViewA Validator::strUppercase = "uppercase";
-StrViewA Validator::strLowercase = "lowercase";
-StrViewA Validator::strIdentifier = "identifier";
-StrViewA Validator::strCamelCase = "camelcase";
-StrViewA Validator::strAlpha = "alpha";
-StrViewA Validator::strAlnum = "alnum";
-StrViewA Validator::strDigits = "digits";
-StrViewA Validator::strInteger = "integer";
-StrViewA Validator::strNative = "native";
-StrViewA Validator::strMinSize = "minsize";
-StrViewA Validator::strMaxSize = "maxsize";
-StrViewA Validator::strKey = "key";
-StrViewA Validator::strToString = "tostring";
-StrViewA Validator::strToNumber = "tonumber";
-StrViewA Validator::strPrefix = "prefix";
-StrViewA Validator::strSuffix = "suffix";
-StrViewA Validator::strSplit = "split";
-StrViewA Validator::strExplode = "explode"; ///< ["explode","delimiter",rule,limit]
-StrViewA Validator::strNull = "null";
-StrViewA Validator::strOptional = "optional";
-StrViewA Validator::strUndefined = "undefined";
-StrViewA Validator::strGreater = ">";
-StrViewA Validator::strGreaterEqual = ">=";
-StrViewA Validator::strLess = "<";
-StrViewA Validator::strLessEqual = "<=";
-StrViewA Validator::strAll = "all";
-StrViewA Validator::strAndSymb = "^";
-StrViewA Validator::strNot = "not";
-StrViewA Validator::strNotSymb = "!";
-StrViewA Validator::strDateTime = "datetime";
-StrViewA Validator::strDateTimeZ = "datetimez";
-StrViewA Validator::strDate = "date";
-StrViewA Validator::strTimeZ = "timez";
-StrViewA Validator::strTime = "time";
-StrViewA Validator::strSetVar = "setvar";
-StrViewA Validator::strUseVar = "usevar";
-StrViewA Validator::strEmit = "emit";
-StrViewA Validator::strEmpty = "empty";
-StrViewA Validator::strNonEmpty = "nonempty";
+StrViewA Validator2::strString = "string";
+StrViewA Validator2::strNumber = "number";
+StrViewA Validator2::strBoolean = "boolean";
+StrViewA Validator2::strAny = "any";
+StrViewA Validator2::strBase64 = "base64";
+StrViewA Validator2::strBase64url = "base64url";
+StrViewA Validator2::strHex = "hex";
+StrViewA Validator2::strUppercase = "uppercase";
+StrViewA Validator2::strLowercase = "lowercase";
+StrViewA Validator2::strIdentifier = "identifier";
+StrViewA Validator2::strCamelCase = "camelcase";
+StrViewA Validator2::strAlpha = "alpha";
+StrViewA Validator2::strAlnum = "alnum";
+StrViewA Validator2::strDigits = "digits";
+StrViewA Validator2::strInteger = "integer";
+StrViewA Validator2::strNative = "native";
+StrViewA Validator2::strMinSize = "minsize";
+StrViewA Validator2::strMaxSize = "maxsize";
+StrViewA Validator2::strKey = "key";
+StrViewA Validator2::strToString = "tostring";
+StrViewA Validator2::strToNumber = "tonumber";
+StrViewA Validator2::strPrefix = "prefix";
+StrViewA Validator2::strSuffix = "suffix";
+StrViewA Validator2::strSplit = "split";
+StrViewA Validator2::strExplode = "explode"; ///< ["explode","delimiter",rule,limit]
+StrViewA Validator2::strNull = "null";
+StrViewA Validator2::strOptional = "optional";
+StrViewA Validator2::strUndefined = "undefined";
+StrViewA Validator2::strGreater = ">";
+StrViewA Validator2::strGreaterEqual = ">=";
+StrViewA Validator2::strLess = "<";
+StrViewA Validator2::strLessEqual = "<=";
+StrViewA Validator2::strAll = "all";
+StrViewA Validator2::strAndSymb = "^";
+StrViewA Validator2::strNot = "not";
+StrViewA Validator2::strNotSymb = "!";
+StrViewA Validator2::strDateTime = "datetime";
+StrViewA Validator2::strDateTimeZ = "datetimez";
+StrViewA Validator2::strDate = "date";
+StrViewA Validator2::strTimeZ = "timez";
+StrViewA Validator2::strTime = "time";
+StrViewA Validator2::strSetVar = "setvar";
+StrViewA Validator2::strUseVar = "usevar";
+StrViewA Validator2::strEmit = "emit";
+StrViewA Validator2::strEmpty = "empty";
+StrViewA Validator2::strNonEmpty = "nonempty";
 
-char Validator::valueEscape = '\'';
-char Validator::charSetBegin = '[';
-char Validator::charSetEnd = ']';
-char Validator::commentEscape = '#';
+char Validator2::valueEscape = '\'';
+char Validator2::charSetBegin = '[';
+char Validator2::charSetEnd = ']';
+char Validator2::commentEscape = '#';
 
 
-bool Validator::validate(const Value& subject, const StrViewA& rule, const Path &path) {
+bool Validator2::validate(const Value& subject, const StrViewA& rule, const Path &path) {
 
 	Value ver = def["_version"];
 	if (ver.defined() && ver.getNumber() != 1.0) {
@@ -80,11 +80,11 @@ bool Validator::validate(const Value& subject, const StrViewA& rule, const Path 
 	return validateInternal(subject,rule);
 }
 
-Validator::Validator(const Value& definition):def(definition),curPath(nullptr) {
+Validator2::Validator2(const Value& definition):def(definition),curPath(nullptr) {
 
 }
 
-Value Validator::getRejections() const {
+Value Validator2::getRejections() const {
 	return StringView<Value>(rejections);
 }
 
@@ -299,26 +299,26 @@ static bool checkDateTimeGen(const StrViewA &format, const StrViewA &text) {
 	return true;
 }
 
-bool Validator::validateInternal(const Value& subject, const StrViewA& rule) {
+bool Validator2::validateInternal(const Value& subject, const StrViewA& rule) {
 
 
 	Value r = def[rule];
 	return evalRule(subject, r);
 }
 
-bool Validator::evalRuleSubObj(const Value& subject, const Value& rule, const StrViewA &key) {
+bool Validator2::evalRuleSubObj(const Value& subject, const Value& rule, const StrViewA &key) {
 	StackSave<const Path *> _(curPath);
 	Path newPath(*curPath, key);
 	curPath = &newPath;
 	return evalRule(subject, rule);
 }
-bool Validator::evalRuleSubObj(const Value& subject, const Value& rule, unsigned int index) {
+bool Validator2::evalRuleSubObj(const Value& subject, const Value& rule, unsigned int index) {
 	StackSave<const Path *> _(curPath);
 	Path newPath(*curPath, index);
 	curPath = &newPath;
 	return evalRule(subject, rule);
 }
-bool Validator::evalRuleSubObj(const Value& subject, const Value& rule, unsigned int index, unsigned int offset) {
+bool Validator2::evalRuleSubObj(const Value& subject, const Value& rule, unsigned int index, unsigned int offset) {
 	std::size_t rejsz = rejections.size();
 	StackSave<const Path *> _(curPath);
 	Path newPath(*curPath, index);
@@ -335,7 +335,7 @@ bool Validator::evalRuleSubObj(const Value& subject, const Value& rule, unsigned
 }
 
 
-bool Validator::evalRule(const Value& subject, const Value& rule) {
+bool Validator2::evalRule(const Value& subject, const Value& rule) {
 	
 	std::size_t rejsz = rejections.size();
 	bool res;
@@ -357,7 +357,7 @@ bool Validator::evalRule(const Value& subject, const Value& rule) {
 
 }
 
-bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
+bool Validator2::evalRuleWithParams(const Value& subject, const Value& rule) {
 	if (rule.empty()) {
 		return subject.type() == array && subject.empty();
 	}
@@ -439,7 +439,7 @@ bool Validator::evalRuleWithParams(const Value& subject, const Value& rule) {
 	}
 }
 
-bool Validator::opRangeDef(const Value& subject, const Value& rule, std::size_t offset) {
+bool Validator2::opRangeDef(const Value& subject, const Value& rule, std::size_t offset) {
 	std::size_t pos = offset;
 	std::size_t cnt = rule.size();
 	while (pos < cnt) {
@@ -478,7 +478,7 @@ bool Validator::opRangeDef(const Value& subject, const Value& rule, std::size_t 
 }
 
 
-bool Validator::evalRuleArray(const Value& subject, const Value& rule, unsigned int tupleCnt, unsigned int offset) {
+bool Validator2::evalRuleArray(const Value& subject, const Value& rule, unsigned int tupleCnt, unsigned int offset) {
 	if (subject.type() != array) return false;
 
 	for (unsigned int i = 0; i < tupleCnt; i++) {
@@ -492,7 +492,7 @@ bool Validator::evalRuleArray(const Value& subject, const Value& rule, unsigned 
 	return true;
 }
 
-bool Validator::evalRuleAlternatives(const Value& subject, const Value& rule, unsigned int offset) {
+bool Validator2::evalRuleAlternatives(const Value& subject, const Value& rule, unsigned int offset) {
 	unsigned int pos = offset;
 	unsigned int cnt = rule.size();
 	while (pos < cnt) {
@@ -566,7 +566,7 @@ static bool opIsNonEmpty(const Value &subject) {
 	}
 }
 
-bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
+bool Validator2::evalRuleSimple(const Value& subject, const Value& rule) {
 	StrViewA name = rule.getString();
 
 
@@ -679,7 +679,7 @@ static StrViewA parseKey(const StrViewA &key, bool &isProp) {
 	}
 }
 
-bool Validator::evalRuleObject(const Value& subject, const Value& templateObj) {
+bool Validator2::evalRuleObject(const Value& subject, const Value& templateObj) {
 	Value extraRules;
 	if (subject.type() != object) {
 		return false;
@@ -755,7 +755,7 @@ bool Validator::evalRuleObject(const Value& subject, const Value& templateObj) {
 	}
 
 }
-bool Validator::checkClass(const Value& subject, StrViewA name) {
+bool Validator2::checkClass(const Value& subject, StrViewA name) {
 	Value ruleline = def[name];
 	if (!ruleline.defined()) {
 		throw std::runtime_error(std::string("Undefined class: ")+std::string(name));
@@ -766,7 +766,7 @@ bool Validator::checkClass(const Value& subject, StrViewA name) {
 	}
 
 }
-bool Validator::opPrefix(const Value& subject, const Value& args) {
+bool Validator2::opPrefix(const Value& subject, const Value& args) {
 	Value pfix = getVar(args[1],subject);
 	Value rule = args[2];
 	if (pfix.type() == array) {
@@ -785,7 +785,7 @@ bool Validator::opPrefix(const Value& subject, const Value& args) {
 
 }
 
-bool Validator::opSuffix(const Value& subject, const Value& args) {
+bool Validator2::opSuffix(const Value& subject, const Value& args) {
 	Value sfix = getVar(args[1],subject);
 	Value rule = args[2];
 	if (sfix.type() == array) {
@@ -807,11 +807,11 @@ bool Validator::opSuffix(const Value& subject, const Value& args) {
 }
 
 
-bool Validator::opSplit(const Value& subject, std::size_t at, const Value& left, const Value& right) {
+bool Validator2::opSplit(const Value& subject, std::size_t at, const Value& left, const Value& right) {
 	Value::TwoValues s = subject.splitAt((int)at);
 	return evalRule(s.first,left) && evalRule(s.second,right);
 }
-bool Validator::opExplode(const Value& subject, StrViewA str, const Value& rule, const Value& limit) {
+bool Validator2::opExplode(const Value& subject, StrViewA str, const Value& rule, const Value& limit) {
 
 	StrViewA subtxt = subject.getString();
 	if (limit.defined()) {
@@ -840,7 +840,7 @@ bool Validator::opExplode(const Value& subject, StrViewA str, const Value& rule,
 
 
 
-void Validator::addRejection(const Path& path, const Value& rule) {
+void Validator2::addRejection(const Path& path, const Value& rule) {
 	if (!rule.defined())
 		return addRejection(path,"undefined");
 	if (rule == lastRejectedRule) return;
@@ -856,17 +856,17 @@ void Validator::addRejection(const Path& path, const Value& rule) {
 	lastRejectedRule = rule;
 }
 
-void Validator::pushVar(String name, Value value)
+void Validator2::pushVar(String name, Value value)
 {
 	varList.push_back(Value(name,value));
 }
 
-void Validator::popVar()
+void Validator2::popVar()
 {
 	if (!varList.empty()) varList.pop_back();
 }
 
-Value Validator::findVar(const StrViewA & name, const Value &thisVar)
+Value Validator2::findVar(const StrViewA & name, const Value &thisVar)
 {
 	if (name == "$this") return thisVar;
 	std::size_t cnt = varList.size();
@@ -877,7 +877,7 @@ Value Validator::findVar(const StrViewA & name, const Value &thisVar)
 	return undefined;
 }
 
-Value Validator::getVar(const Value & path, const Value &thisVar)
+Value Validator2::getVar(const Value & path, const Value &thisVar)
 {
 	if (path.type() == array && !path.empty()) {
 		Value n = path[0];
@@ -911,7 +911,7 @@ Value Validator::getVar(const Value & path, const Value &thisVar)
 	return path;
 }
 
-bool Validator::opSetVar(const Value& subject, const Value& args) {
+bool Validator2::opSetVar(const Value& subject, const Value& args) {
 	Value var = args[1];
 	if (var.getString().substr(0,1) == "$") {
 		pushVar(String(var), subject);
@@ -923,28 +923,28 @@ bool Validator::opSetVar(const Value& subject, const Value& args) {
 	}
 }
 
-bool Validator::opUseVar(const Value& subject, const Value& args) {
+bool Validator2::opUseVar(const Value& subject, const Value& args) {
 	Value id = args[1];
 	Value var = id.type() == array?getVar(id,subject):findVar(id.getString(),subject);
 	if (var.defined()) return evalRuleAlternatives(var, args, 2);
 	else return false;
 }
 
-void Validator::setVariables(const Value& varList) {
+void Validator2::setVariables(const Value& varList) {
 	this->varList.clear();
 	this->varList.reserve(varList.size());
 	for (auto &&v : varList) this->varList.push_back(v);
 }
 
-bool Validator::opCompareVar(const Value &subject, const Value &rule) {
+bool Validator2::opCompareVar(const Value &subject, const Value &rule) {
 	return subject == getVar(rule,subject);
 }
 
-Value Validator::getEmits() const {
+Value Validator2::getEmits() const {
 	return StringView<Value>(emits);
 }
 
-Value Validator::walkObject(const Value &subject, const Value &v) {
+Value Validator2::walkObject(const Value &subject, const Value &v) {
 	switch (v.type()) {
 	case array: {
 		Value z = getVar(v,subject);
@@ -963,7 +963,7 @@ Value Validator::walkObject(const Value &subject, const Value &v) {
 	}
 }
 
-bool Validator::opEmit(const Value& subject, const Value& args) {
+bool Validator2::opEmit(const Value& subject, const Value& args) {
 	bool r = evalRule(subject, args[2]);
 	if (r) {
 		emits.push_back(walkObject(subject,args[1]));

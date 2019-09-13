@@ -21,7 +21,7 @@ void ok(std::ostream &out, bool res) {
 
 
 void vtest(std::ostream &out, Value def, Value test) {
-	Validator vd(def);
+	Validator2 vd(def);
 	if (vd.validate(test,"_root")) {
 		out << "ok";
 	} else {
@@ -366,7 +366,7 @@ void runValidatorTests(TestSimple &tst) {
 	tst.test("Validator.selfValidate", "ok") >> [](std::ostream &out) {
 		std::ifstream fstr("src/imtjson/validator.json", std::ios::binary);
 		Value def = Value::fromStream(fstr);
-		Validator vd(def);
+		Validator2 vd(def);
 		if (vd.validate(def)) {
 			out << "ok";
 		}
