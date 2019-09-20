@@ -28,6 +28,8 @@ public:
 	typedef std::pair<Iter, Iter> Super;
 
 	using std::pair<Iter, Iter>::pair;
+	Range(Super &&x):Super(std::move(x)) {}
+	Range(const Super &x):Super(x) {}
 
 	typename Super::first_type &begin() {return this->first;}
 	const typename Super::first_type &begin() const {return this->first;}
