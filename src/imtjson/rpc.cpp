@@ -132,6 +132,7 @@ void RpcRequest::RequestData::sendResult(const Value &result, const Value &conte
 void RpcRequest::RequestData::sendError(const Value &error) {
 	if (id.defined() && !id.isNull() && !responseSent) {
 		responseSent = true;
+		errorSent = true;
 		switch (getVersion()) {
 		case RpcVersion::ver1:
 			return postSendResponse(
