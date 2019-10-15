@@ -1046,14 +1046,7 @@ namespace json {
 
 
 		template<typename Fn>
-		void walk(Fn &&fn) const {
-			bool enter = fn(*this);
-			if (enter && isContainer()) {
-				for (Value v : *this) {
-					v.walk(fn);
-				}
-			}
-		}
+		void walk(Fn &&fn) const;
 
 
 public:
@@ -1187,7 +1180,15 @@ protected:
 		(*this) = Value(type,StringView<Value>(buffer.data(), buffer.size()),skipUndef);
 	}
 
-
+	template<typename Fn>
+	void Value::walk(Fn &&fn) const {
+		bool enter = fn(*this);
+		if (enter && isContainer()) {
+			for (Value v : *this) {
+				v.walk(fn);
+			}
+		}
+	}
 
 }
 
