@@ -71,7 +71,13 @@ namespace json {
 		case undefined: return String("<undefined>");
 		case object: return stringify();
 		case array: return stringify();
-		case string: return String(*this);
+		case string:
+			if (flags() & binaryString) {
+				BinaryEncoding enc = Binary::getEncoding(v->unproxy());
+				Value v = enc->encodeBinaryValue(getBinary(enc));
+				return String(v);
+			}
+			else return String(*this);
 		default: return String("<unknown>");
 		}
 	}
