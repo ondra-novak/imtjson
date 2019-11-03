@@ -62,8 +62,10 @@ class PreciseNumberValue: public AbstractNumberValue {
 public:
 
 	virtual double getNumber() const override;
-	virtual std::intptr_t getInt() const override;
-	virtual std::uintptr_t getUInt() const override;
+	virtual Int getInt() const override;
+	virtual UInt getUInt() const override;
+	virtual LongInt getIntLong() const override;
+	virtual ULongInt getUIntLong() const override;
 	virtual bool getBool() const override;
 	virtual ValueTypeFlags flags() const override;
 	virtual StringView<char> getString() const override;
@@ -93,8 +95,10 @@ protected:
 };
 
 typedef PreciseNumberValue<double> PreciseNumberValueDouble;
-typedef PreciseNumberValue<std::uintptr_t> PreciseNumberValueUnsigned;
-typedef PreciseNumberValue<std::intptr_t> PreciseNumberValueSigned;
+typedef PreciseNumberValue<UInt> PreciseNumberValueUnsigned;
+typedef PreciseNumberValue<Int> PreciseNumberValueSigned;
+typedef PreciseNumberValue<ULongInt> PreciseNumberValueUnsignedLong;
+typedef PreciseNumberValue<LongInt> PreciseNumberValueSignedLong;
 
 
 

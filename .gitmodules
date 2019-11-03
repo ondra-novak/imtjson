@@ -1,3 +1,6 @@
 [submodule "src/imtjson/shared"]
 	path = src/imtjson/shared
-	url = https://www.github.com/ondra-novak/ondra_shared.git
+	url = https://github.com/ondra-novak/ondra_shared.git
+[submodule "src/shared"]
+	path = src/shared
+	url = https://github.com/ondra-novak/ondra_shared.git

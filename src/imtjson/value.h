@@ -264,7 +264,7 @@ namespace json {
 		 * there is floating point number stored, the function getUInt() returns only the integer part
 		 * of the number. The function returns zero for other types.
 		 */
-		std::uintptr_t getUInt() const { return v->getUInt(); }
+		UInt getUInt() const { return v->getUInt(); }
 		///Retrieve signed integer
 		/**
 		 * @return value as signed integer
@@ -272,7 +272,28 @@ namespace json {
 		 * there is floating point number stored, the function getInt() returns only the integer part
 		 * of the number. The function returns zero for other types.
 		 */
-		std::intptr_t getInt() const { return v->getInt(); }
+		Int getInt() const { return v->getInt(); }
+		///Retrieve unsigned integer of 64bit width.
+		/**
+		 * @return value as unsigned integer
+		 * @note Automatic conversion is limited to numbers only. This conversion is transparent. If
+		 * there is floating point number stored, the function getUIntLong() returns only the integer part
+		 * of the number. The function returns zero for other types.
+		 *
+		 * @note to maintain 32-bit compatibility
+		 */
+		ULongInt getUIntLong() const { return v->getUIntLong(); }
+		///Retrieve signed integer of 64bit width
+		/**
+		 * @return value as signed integer
+		 * @note Automatic conversion is limited to numbers only. This conversion is transparent. If
+		 * there is floating point number stored, the function getInt() returns only the integer part
+		 * of the number. The function returns zero for other types.
+		 *
+		 * @note to maintain 32-bit compatibility
+		 *
+		 */
+		LongInt getIntLong() const { return v->getIntLong(); }
 		///Retrieve floating point number
 		/**
 		 * @return value as floating point
@@ -930,7 +951,7 @@ namespace json {
 		 * @note complexity O(N)
 
 		 */
-		std::uintptr_t unshift(const Value &item);
+		UInt unshift(const Value &item);
 
 		///Inserts items at begin of container
 		/**
@@ -945,7 +966,7 @@ namespace json {
 		 *
 		 */
 		template<typename Iter1, typename Iter2>
-		std::uintptr_t unshift(const Iter1 &start, const Iter2 &end);
+		UInt unshift(const Iter1 &start, const Iter2 &end);
 
 		///Inserts items at begin of container
 		/**
@@ -955,7 +976,7 @@ namespace json {
 		 * @param items list of items
 		 * @return count of items in the result
 		 */
-		std::uintptr_t unshift(const std::initializer_list<Value> &items);
+		UInt unshift(const std::initializer_list<Value> &items);
 
 		///Removes item from the pop and returns it
 		/** Note:due the immutable nature, the function only modifies current variable,
@@ -981,13 +1002,13 @@ namespace json {
 		 * @note due the immutable nature, the function only modifies current variable,
 		 * but not the original container.
 		 */
-		std::uintptr_t push(const Value &v);
+		UInt push(const Value &v);
 
 
 		String join(StrViewA separator=",") const;
 
-		Value slice(std::intptr_t start) const;
-		Value slice(std::intptr_t start, std::intptr_t end) const;
+		Value slice(Int start) const;
+		Value slice(Int start, Int end) const;
 
 
 		///Returns the value of the first element in the array that satisfies the provided testing function. Otherwise undefined is returned.
@@ -1020,14 +1041,14 @@ namespace json {
 		 * @see find
 		 */
 		template<typename Fn>
-		std::intptr_t findIndex(Fn &&fn) const;
+		Int findIndex(Fn &&fn) const;
 
 		///returns the index of the last element in the array that satisfies the provided testing function. Otherwise -1 is returned.
 		/**
 		 * @see find
 		 */
 		template<typename Fn>
-		std::intptr_t  rfindIndex(Fn &&fn) const;
+		Int  rfindIndex(Fn &&fn) const;
 
 		///The filter() method creates a new array with all elements that pass the test implemented by the provided function.
 		/**
@@ -1096,9 +1117,9 @@ protected:
 	class ValueIterator {
 	public:
 		Value v;
-		std::uintptr_t index;
+		UInt index;
 
-		ValueIterator(Value v,std::uintptr_t index):v(v),index(index) {}
+		ValueIterator(Value v,UInt index):v(v),index(index) {}
 		Value operator *() const {return v[index];}
 		ValueIterator &operator++() {++index;return *this;}
 		ValueIterator operator++(int) {++index;return ValueIterator(v,index-1);}
@@ -1123,13 +1144,13 @@ protected:
 		ValueIterator &operator-=(int p) {index-=p;return *this;}
 		ValueIterator operator+(int p) const {return ValueIterator(v,index+p);}
 		ValueIterator operator-(int p) const {return ValueIterator(v,index-p);}
-		std::intptr_t operator-(ValueIterator &other) const {return index - other.index;}
+		Int operator-(ValueIterator &other) const {return index - other.index;}
 
 		typedef std::random_access_iterator_tag iterator_category;
 	    typedef Value        value_type;
 	    typedef Value *        pointer;
 	    typedef Value &        reference;
-	    typedef std::intptr_t  difference_type;
+	    typedef Int  difference_type;
 
 	};
 

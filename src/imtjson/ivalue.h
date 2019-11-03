@@ -5,6 +5,12 @@
 #include "allocator.h"
 namespace json {
 
+	using Int = long int;
+	using UInt = unsigned long int;
+	using LongInt = long long int;
+	using ULongInt = unsigned long long int;;
+
+
 	///Type of JSON value
 	enum ValueType {
 
@@ -119,6 +125,10 @@ namespace json {
 	const ValueTypeFlags preciseNumber = 128;
 
 
+	///States, that object is long integer 64bit number. It is used only in 32bit environment
+	const ValueTypeFlags longInt = 256;
+
+
 	typedef int BinarySerializeFlags;
 
 	///This flag allowes compression of the key
@@ -178,8 +188,10 @@ namespace json {
 		virtual ValueType type() const = 0;
 		virtual ValueTypeFlags flags() const = 0;
 		
-		virtual std::uintptr_t getUInt() const = 0;
-		virtual std::intptr_t getInt() const = 0;
+		virtual UInt getUInt() const = 0;
+		virtual Int getInt() const = 0;
+		virtual ULongInt getUIntLong() const = 0;
+		virtual LongInt getIntLong() const = 0;
 		virtual double getNumber() const = 0;
 		virtual bool getBool() const = 0;
 		virtual StringView<char> getString() const = 0;

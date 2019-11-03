@@ -20,8 +20,10 @@ public:
 	class StaticZeroNumber : public AbstractNumberValue {
 	public:
 		virtual double getNumber() const override { return 0.0; }
-		virtual std::intptr_t getInt() const override { return 0; }
-		virtual std::uintptr_t getUInt() const override {return 0;}
+		virtual Int getInt() const override { return 0; }
+		virtual UInt getUInt() const override {return 0;}
+		virtual LongInt getIntLong() const override { return 0; }
+		virtual ULongInt getUIntLong() const override {return 0;}
 		virtual ValueTypeFlags flags() const override { return numberUnsignedInteger; }
 	};
 
@@ -98,8 +100,10 @@ public:
 		return emptyObject;
 	}
 
-	template class NumberValueT<std::uintptr_t, numberUnsignedInteger>;
-	template class NumberValueT<std::intptr_t, numberInteger>;
+	template class NumberValueT<UInt, numberUnsignedInteger>;
+	template class NumberValueT<Int, numberInteger>;
+	template class NumberValueT<ULongInt, numberUnsignedInteger | longInt>;
+	template class NumberValueT<LongInt, numberInteger | longInt>;
 	template class NumberValueT<double,0>;
 
 	bool NullValue::equal(const IValue* other) const {

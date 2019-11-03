@@ -131,6 +131,29 @@ int testMain(bool showOutput) {
 	tst.test("Parse.numberDoubleLargeE","-1.024e+203") >> [](std::ostream &out) {
 		out << Value::fromString("-1024e200").getNumber();
 	};
+	tst.test("64bit number - serialize","1234567890123456789") >> [](std::ostream &out) {
+		Value v = 1234567890123456789LL;
+		v.toStream(out);
+	};
+	tst.test("64bit number - parse","1234567890123456768,-123456789123456784") >> [](std::ostream &out) {
+		out << Value::fromString("1234567890123456768").getUIntLong() << "," << Value::fromString("-123456789123456784").getIntLong();
+	};
+	tst.test("binary_serialize_64bit.pos","1234567890123456789") >> [](std::ostream &out) {
+		Value v (1234567890123456789);
+		std::vector<char> buff;
+		v.serializeBinary([&](char c){buff.push_back(c);});
+		auto iter = buff.begin();
+		Value c = Value::parseBinary([&]{return *iter++;});
+		out << v.getUIntLong();
+	};
+	tst.test("binary_serialize_64bit.neg","-1234567890123456789") >> [](std::ostream &out) {
+		Value v (-1234567890123456789);
+		std::vector<char> buff;
+		v.serializeBinary([&](char c){buff.push_back(c);});
+		auto iter = buff.begin();
+		Value c = Value::parseBinary([&]{return *iter++;});
+		out << v.getIntLong();
+	};
 	tst.test("Parse.numberLong","Parse error: 'Too long number' at <root>. Last input: 48('0').") >> [](std::ostream &out) {
 		int counter = 0;
 		try {
@@ -325,7 +348,7 @@ int testMain(bool showOutput) {
 		}
 		Value(res).toStream(out);
 	};
-	tst.test("Serialize.valueHash", "13532798998175024480") >> [](std::ostream &out) {
+	tst.test("Serialize.valueHash", sizeof(std::size_t)==8?"13532798998175024480":"149136928") >> [](std::ostream &out) {
 		Value v = Value::fromString("{\"a\":7,\"b\":{\"a\":2,\"b\":{\"a\":3,\"b\":{\"a\":4}},\"c\":6}}");
 		std::hash<Value> hv;
 		out << hv(v);
@@ -1349,11 +1372,11 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 			out << e.what();
 		}
 	};
-	tst.test("PreciseNumber.create_convert","132,424242") >> [](std::ostream &out) {
+	tst.test("PreciseNumber.create_convert","388,424242") >> [](std::ostream &out) {
 		Value numb = Value::preciseNumber("424242");
 		out << numb.flags() << "," << numb.getUInt();
 	};
-	tst.test("PreciseNumber.create_convert2","130,-584488") >> [](std::ostream &out) {
+	tst.test("PreciseNumber.create_convert2","386,-584488") >> [](std::ostream &out) {
 		Value numb = Value::preciseNumber("-584488");
 		out << numb.flags() << "," << numb.getInt();
 	};

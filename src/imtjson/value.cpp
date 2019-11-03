@@ -143,6 +143,7 @@ namespace json {
 	PValue allocUnsigned(T x) {
 		if (x == (T)0) return AbstractNumberValue::getZero();
 		if (sizeof(T) <= sizeof(uintptr_t)) return new UnsignedIntegerValue(uintptr_t(x));
+		else if (sizeof(T) <= sizeof(ULongInt)) return new UnsignedLongValue(ULongInt(x));
 		else return new NumberValue((double)x);
 	}
 
@@ -150,6 +151,7 @@ namespace json {
 	PValue allocSigned(T x) {
 		if (x == (T)0) return AbstractNumberValue::getZero();
 		if (sizeof(T) <= sizeof(intptr_t)) return new IntegerValue(intptr_t(x));
+		else if (sizeof(T) <= sizeof(LongInt)) return new LongValue(LongInt(x));
 		else return new NumberValue((double)x);
 	}
 
@@ -265,11 +267,11 @@ namespace json {
 
 	}
 
-/*	Value::Value(std::uintptr_t value):v(new UnsignedIntegerValue(value))
+/*	Value::Value(UInt value):v(new UnsignedIntegerValue(value))
 	{
 	}
 
-	Value::Value(std::intptr_t value):v(new IntegerValue(value))
+	Value::Value(Int value):v(new IntegerValue(value))
 	{
 	}
 */
@@ -316,7 +318,7 @@ namespace json {
 	UnicodeFormat defaultUnicodeFormat = emitEscaped;
 	bool enableParsePreciseNumbers = false;
 
-	///const double maxMantisaMult = pow(10.0, floor(log10(std::uintptr_t(-1))));
+	///const double maxMantisaMult = pow(10.0, floor(log10(UInt(-1))));
 
 	bool Value::operator ==(const Value& other) const {
 		if (other.v == v) return true;
@@ -337,7 +339,7 @@ namespace json {
 
 	Value Value::reverse() const {
 		Array out;
-		for (std::uintptr_t i = size(); i > 0; i--) {
+		for (UInt i = size(); i > 0; i--) {
 			out.add(this->operator [](i-1));
 		}
 		return out;
@@ -723,7 +725,7 @@ namespace json {
 
 
 	Value Value::preciseNumber(const StrViewA number) {
-		std::uintptr_t pos = 0;
+		UInt pos = 0;
 		auto reader = [&]() -> int {
 			if (pos > number.length) {
 				pos++;
@@ -769,7 +771,7 @@ namespace json {
 		return ret;
 	}
 
-	std::uintptr_t Value::unshift(const Value &item) {
+	UInt Value::unshift(const Value &item) {
 		Array newval;
 		newval.reserve(1+item.size());
 		newval.push_back(item);
@@ -781,7 +783,7 @@ namespace json {
 	}
 
 
-	std::uintptr_t Value::push(const Value &item) {
+	UInt Value::push(const Value &item) {
 		Array nw(*this);
 		nw.push_back(item);
 		*this = nw;
@@ -824,11 +826,11 @@ namespace json {
 		});
 	}
 
-	Value Value::slice(std::intptr_t start) const {
+	Value Value::slice(Int start) const {
 		return slice(start, size());
 	}
-	Value Value::slice(std::intptr_t start, std::intptr_t end) const {
-		std::intptr_t sz = size();
+	Value Value::slice(Int start, Int end) const {
+		Int sz = size();
 		if (empty()) return json::array;
 		if (start < 0) {
 			if (-start >= sz) return *this;
@@ -840,10 +842,10 @@ namespace json {
 		}
 		if (start >= end || start >= sz) return json::array;
 		if (end >= sz) end = sz;
-		std::uintptr_t cnt = end - start;
+		UInt cnt = end - start;
 		std::vector<Value> out;
 		out.reserve(cnt);
-		for (std::intptr_t x = start; x < end; x++)
+		for (Int x = start; x < end; x++)
 			out.push_back((*this)[x]);
 
 		if (type() == object) {
@@ -855,19 +857,19 @@ namespace json {
 	}
 
 
-	std::uintptr_t Value::unshift(const std::initializer_list<Value> &items) {
+	UInt Value::unshift(const std::initializer_list<Value> &items) {
 		return unshift(items.begin(), items.end());
 	}
 
 	template Value Value::find(std::function<bool(Value)> &&) const;
 	template Value Value::rfind(std::function<bool(Value)> &&) const;
 	template Value Value::filter(std::function<bool(Value)> &&) const;
-	template Value Value::find(std::function<bool(Value, std::uintptr_t)> &&) const;
-	template Value Value::rfind(std::function<bool(Value, std::uintptr_t)> &&) const;
-	template Value Value::filter(std::function<bool(Value, std::uintptr_t)> &&) const;
-	template Value Value::find(std::function<bool(Value, std::uintptr_t, Value)> &&) const;
-	template Value Value::rfind(std::function<bool(Value, std::uintptr_t, Value)> &&) const;
-	template Value Value::filter(std::function<bool(Value, std::uintptr_t, Value)> &&) const;
+	template Value Value::find(std::function<bool(Value, UInt)> &&) const;
+	template Value Value::rfind(std::function<bool(Value, UInt)> &&) const;
+	template Value Value::filter(std::function<bool(Value, UInt)> &&) const;
+	template Value Value::find(std::function<bool(Value, UInt, Value)> &&) const;
+	template Value Value::rfind(std::function<bool(Value, UInt, Value)> &&) const;
+	template Value Value::filter(std::function<bool(Value, UInt, Value)> &&) const;
 }
 
 namespace std {

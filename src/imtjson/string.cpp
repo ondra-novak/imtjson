@@ -199,7 +199,7 @@ Value String::split(const StringView<char> separator, std::size_t maxCount) cons
 
 }
 
-Value::TwoValues String::splitAt(std::intptr_t pos) const
+Value::TwoValues String::splitAt(Int pos) const
 {
 	std::size_t sz = length();
 	if (pos > 0) {

@@ -46,7 +46,7 @@ public:
 	 * @param parent reference to parent path. If you need to construct relative to root, use Path::root as reference
 	 * @param index index of item in array
 	 */
-	Path(const Path &parent, std::uintptr_t index):keyName(0), index(index),parent(parent) {}
+	Path(const Path &parent, UInt index):keyName(0), index(index),parent(parent) {}
 
 
 
@@ -59,15 +59,15 @@ public:
 	/**
 	 * @return index value. if element is key, result is an undetermined number
 	 */
-	std::uintptr_t getIndex() const {return index;}
+	UInt getIndex() const {return index;}
 
 	///Retrieves parent path
 	const Path &getParent() const {return parent;}
 
 	///Determines, whether current element is an index
-	bool isIndex() const {return index != (std::uintptr_t)-1;}
+	bool isIndex() const {return index != (UInt)-1;}
 	///Determines, whether current element is a key
-	bool isKey() const {return index == (std::uintptr_t)-1;}
+	bool isKey() const {return index == (UInt)-1;}
 
 	///returns true, if current element is root elemmenet
 	bool isRoot() const {return this == &root;}
@@ -76,7 +76,7 @@ public:
 	/**
 	 * @return length of the path. Note that function has linear complexity
 	 */
-	std::uintptr_t length() const {return isRoot()?0:(parent.length()+1);}
+	UInt length() const {return isRoot()?0:(parent.length()+1);}
 
 	///Allocates extra memory and copies path into it
 	/**
@@ -169,7 +169,7 @@ private:
 	///name of key;
 	StringView<char> keyName;
 	///index of value (used as keyname when keyName is not null)
-	std::uintptr_t index;
+	UInt index;
 	///Reference to parent path
 	const Path &parent;
 
@@ -185,7 +185,7 @@ private:
 class PathRef: public Path, public RefCntObj {
 private:
 	PathRef(const Path &parent, const StringView<char> &key):Path(parent,key) {}
-	PathRef(const Path &parent, std::uintptr_t index):Path(parent,index) {}
+	PathRef(const Path &parent, UInt index):Path(parent,index) {}
 	friend class Path;
 	friend class RootPath;
 };

@@ -22,8 +22,10 @@ public:
 	virtual ValueType type() const override { return value->type(); }
 	virtual ValueTypeFlags flags() const override { return value->flags() | proxy; }
 
-	virtual std::uintptr_t getUInt() const override { return value->getUInt(); }
-	virtual std::intptr_t getInt() const override { return value->getInt(); }
+	virtual UInt getUInt() const override { return value->getUInt(); }
+	virtual Int getInt() const override { return value->getInt(); }
+	virtual ULongInt getUIntLong() const override { return value->getUIntLong(); }
+	virtual LongInt getIntLong() const override { return value->getIntLong(); }
 	virtual double getNumber() const override { return value->getNumber(); }
 	virtual bool getBool() const override { return value->getBool(); }
 	virtual StringView<char> getString() const override { return value->getString(); }

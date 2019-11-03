@@ -34,12 +34,12 @@ StringView<char> StringValue::getString() const {
 	return StringView<char>(charbuff, sz);
 }
 
-std::intptr_t AbstractStringValue::getInt() const {
+Int AbstractStringValue::getInt() const {
 
 	return Value::fromString(getString()).getInt();
 }
 
-std::uintptr_t AbstractStringValue::getUInt() const {
+UInt AbstractStringValue::getUInt() const {
 
 	return Value::fromString(getString()).getUInt();
 }
@@ -98,32 +98,51 @@ template<> struct NumbParser<double> {
 	static const ValueTypeFlags flags = preciseNumber;
 };
 
-template<> struct NumbParser<std::uintptr_t> {
-	static std::uintptr_t parse(const char *v) {
-		std::uintptr_t x = 0;
-		while (isdigit(*v)) {
-			x = x * 10 +(*v - '0');++v;
-		}
-		return x;
+template<typename T>
+T parseUnsigned(const char *v) {
+	T x = 0;
+	while (isdigit(*v)) {
+		x = x * 10 +(*v - '0');++v;
 	}
+	return x;
+
+}
+
+template<typename T>
+T parseSigned(const char *v) {
+	T x = 0;
+	bool neg = false;
+	switch (*v) {
+	case '+': ++v;break;
+	case '-': ++v;neg = true;
+	default:break;
+	};
+	while (isdigit(*v)) {
+		x = x * 10 +(*v - '0');++v;
+	}
+	return neg?-x:x;
+}
+
+
+
+
+template<> struct NumbParser<UInt> {
+	static UInt parse(const char *v) {return parseUnsigned<UInt>(v);}
 	static const ValueTypeFlags flags = preciseNumber|numberUnsignedInteger;
 };
 
-template<> struct NumbParser<std::intptr_t> {
-	static std::intptr_t parse(const char *v) {
-		std::uintptr_t x = 0;
-		bool neg = false;
-		switch (*v) {
-		case '+': ++v;break;
-		case '-': ++v;neg = true;
-		default:break;
-		};
-		while (isdigit(*v)) {
-			x = x * 10 +(*v - '0');++v;
-		}
-		return neg?-(std::intptr_t)x:(std::intptr_t)x;
-	}
+template<> struct NumbParser<Int> {
+	static Int parse(const char *v) {return parseSigned<Int>(v);}
 	static const ValueTypeFlags flags = preciseNumber|numberInteger;
+};
+template<> struct NumbParser<ULongInt> {
+	static ULongInt parse(const char *v) {return parseUnsigned<ULongInt>(v);}
+	static const ValueTypeFlags flags = preciseNumber|numberUnsignedInteger|longInt;
+};
+
+template<> struct NumbParser<LongInt> {
+	static LongInt parse(const char *v) {return parseSigned<LongInt>(v);}
+	static const ValueTypeFlags flags = preciseNumber|numberInteger|longInt;
 };
 
 template<typename T>
@@ -140,15 +159,27 @@ double PreciseNumberValue<T>::getNumber() const {
 }
 
 template<typename T>
-std::intptr_t PreciseNumberValue<T>::getInt() const {
+Int PreciseNumberValue<T>::getInt() const {
 	if (!cached) cacheValue();
-	return (std::intptr_t)n;
+	return (Int)n;
 }
 
 template<typename T>
-std::uintptr_t PreciseNumberValue<T>::getUInt() const {
+UInt PreciseNumberValue<T>::getUInt() const {
 	if (!cached) cacheValue();
-	return (std::uintptr_t)n;
+	return (UInt)n;
+}
+
+template<typename T>
+LongInt PreciseNumberValue<T>::getIntLong() const {
+	if (!cached) cacheValue();
+	return (LongInt)n;
+}
+
+template<typename T>
+ULongInt PreciseNumberValue<T>::getUIntLong() const {
+	if (!cached) cacheValue();
+	return (ULongInt)n;
 }
 
 template<typename T>
@@ -213,15 +244,17 @@ void PreciseNumberValue<T>::operator delete(void* ptr, const std::size_t& ) {
 }
 
 template class PreciseNumberValue<double>;
-template class PreciseNumberValue<std::uintptr_t>;
-template class PreciseNumberValue<std::intptr_t>;
+template class PreciseNumberValue<UInt>;
+template class PreciseNumberValue<Int>;
+template class PreciseNumberValue<ULongInt>;
+template class PreciseNumberValue<LongInt>;
 
 
 Value ParserHelper::numberFromStringRaw(StrViewA str, bool force_double) {
 	if (force_double) return PreciseNumberValue<double>::create(str);
-	std::uintptr_t acclm = 0;
+	ULongInt acclm = 0;
 	bool neg = false;
-	std::uintptr_t pos = 0;
+	UInt pos = 0;
 	if (str[0] == '-' || str[0] == '+') {
 		neg = str[0] == '-';
 		pos++;
@@ -231,7 +264,7 @@ Value ParserHelper::numberFromStringRaw(StrViewA str, bool force_double) {
 		if  (!isdigit(c))  {
 			return PreciseNumberValue<double>::create(str);
 		}
-		std::uintptr_t newval = acclm * 10 + (c - '0');
+		UInt newval = acclm * 10 + (c - '0');
 		if (newval < acclm) {
 			return PreciseNumberValue<double>::create(str);
 		}
@@ -241,10 +274,10 @@ Value ParserHelper::numberFromStringRaw(StrViewA str, bool force_double) {
 		if (acclm > (acclm<<1))  {
 			return PreciseNumberValue<double>::create(str);
 		} else {
-			return PreciseNumberValue<std::intptr_t>::create(-(std::intptr_t)acclm,str);
+			return PreciseNumberValue<LongInt>::create(-(LongInt)acclm,str);
 		}
 	} else {
-		return PreciseNumberValue<std::uintptr_t>::create(acclm,str);
+		return PreciseNumberValue<ULongInt>::create(acclm,str);
 	}
 }
 

@@ -152,7 +152,7 @@ public:
 	///Splits string to array
 	Value split(const StringView<char> separator, std::size_t maxCount = -1) const;
 	///split at given position
-	Value::TwoValues splitAt(std::intptr_t pos) const;
+	Value::TwoValues splitAt(Int pos) const;
 	///Appends sting
 	String &operator += (const StringView<char> other);
 	///Finds substring

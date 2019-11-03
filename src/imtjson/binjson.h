@@ -44,9 +44,11 @@ protected:
 	Value parseObject(unsigned char tag,bool diff);
 	Value parseString(unsigned char tag, BinaryEncoding encoding);
 	std::size_t parseInteger(unsigned char tag);
+	std::uint64_t parse64bit();
 	Value parseNumberDouble();
 	Value parseNumberFloat();
 	Value parseDiff();
+
 
 	template<typename T>
 	void readPOD(T &x);
@@ -124,6 +126,7 @@ protected:
 	void serializeBoolean(const IValue *v);
 	void serializeNull(const IValue *v);
 	void serializeUndefined(const IValue *v);
+	void serialize64bit(std::uint64_t n, unsigned char type);
 
 	int tryCompressKey(const StrViewA &keyName);
 

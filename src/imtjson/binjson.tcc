@@ -174,17 +174,33 @@ void BinarySerializer<Fn>::serializeInteger(std::size_t n, unsigned char type) {
 
 }
 
+template<typename Fn>
+void BinarySerializer<Fn>::serialize64bit(std::uint64_t n, unsigned char type) {
+	writePOD(n, type | opcode::size64bit);
+}
+
 
 template<typename Fn>
 void BinarySerializer<Fn>::serializeNumber(const IValue *v) {
 	ValueTypeFlags flags = v->flags();
 	if (flags & numberInteger) {
-		std::intptr_t n = v->getInt();
-		if (n < 0) serializeInteger((std::size_t)(-n), opcode::negint);
-		else serializeInteger((std::size_t)(n), opcode::posint);
+		if (flags & longInt) {
+			LongInt n = v->getIntLong();
+			if (n < 0)serialize64bit((std::uint64_t)(-n), opcode::negint);
+			else serialize64bit((std::uint64_t)n, opcode::posint);
+		} else {
+			Int n = v->getInt();
+			if (n < 0)	serializeInteger((std::size_t)(-n), opcode::negint);
+			else serializeInteger((std::size_t)(n), opcode::posint);
+		}
 	} else if (flags & numberUnsignedInteger) {
-		std::size_t n = v->getUInt();
-		serializeInteger(n, opcode::posint);
+		if (flags & longInt) {
+			std::uint64_t n = v->getUIntLong();
+			serialize64bit(n, opcode::posint);
+		} else {
+			std::size_t n = v->getUInt();
+			serializeInteger(n, opcode::posint);
+		}
 	} else {
 		double d = v->getNumber();
 		writePOD(d,opcode::numberDouble);
@@ -331,6 +347,14 @@ void BinaryParser<Fn>::readPOD(T &x) {
 }
 
 template<typename Fn>
+uint64_t BinaryParser<Fn>::parse64bit() {
+	uint64_t n;
+	readPOD(n);
+	return n;
+ }
+
+
+template<typename Fn>
 Value BinaryParser<Fn>::parse() {	
 	return parseItem();
  }
@@ -359,9 +383,17 @@ Value BinaryParser<Fn>::parseItem() {
 	case opcode::binstring:
 		return parseString(tag,curBinaryEncoding);
 	case opcode::posint:
-		return Value((std::intptr_t)parseInteger(tag));
+		if (sizeof(std::size_t) < sizeof(std::uint64_t) && ((tag & 0xF) == opcode::size64bit)) {
+			return Value(parse64bit());
+		} else {
+			return Value((Int)parseInteger(tag));
+		}
 	case opcode::negint:
-		return Value(-(std::intptr_t)parseInteger(tag));
+		if (sizeof(std::size_t) < sizeof(std::uint64_t) && ((tag & 0xF) == opcode::size64bit)) {
+			return Value(-(LongInt)parse64bit());
+		} else {
+			return Value(-(Int)parseInteger(tag));
+		}
 	case opcode::key: {
 		String s(parseString(tag, nullptr));
 		storeKey(s);

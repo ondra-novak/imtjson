@@ -148,14 +148,14 @@ namespace json {
 		@retval true number is complete, no more digits in the stream
 		@retval false number is not complete, parser stopped on integer overflow
 		*/	    
-		bool parseUnsigned(std::uintptr_t &res, int &counter);
+		bool parseUnsigned(UInt &res, int &counter);
 		///parses integer and stores result to the double
 		/** By storing result into double causes, that final number will rounded
 		  @param intPart already parsed pard by parseUnsigned
 		  @return parsed number as double
 		  @note function stops on first non-digit character (including dot)
 		*/
-		double parseLargeUnsigned(std::uintptr_t intPart);
+		double parseLargeUnsigned(UInt intPart);
 		///Parses decimal part
 		/**
 			works similar as parseLargeUnsigned, but result is number between 0 and 1
@@ -174,7 +174,7 @@ namespace json {
 		 @note function doesn't extract leading sign '+' or '-' it expects that
 		 caller already used readSign() function
 		*/
-		Value parseDouble(std::uintptr_t intpart, bool neg);
+		Value parseDouble(UInt intpart, bool neg);
 		///Reads sign '+' or '-' from the stream
 		/**
 		@retval true there were sign '-'.
@@ -185,7 +185,7 @@ namespace json {
 		///Parses unicode sequence encoded as \uXXXX, stores it as UTF-8 into the tmpstr
 		void parseUnicode();
 		///Stores unicode character as UTF-8 into the tmpstr
-		void storeUnicode(std::uintptr_t uchar);
+		void storeUnicode(UInt uchar);
 
 
 		StrIdx parsePreciseNumber(bool &hint_is_float);
@@ -427,7 +427,7 @@ namespace json {
 	{
 		//unicode is parsed from \uXXXX (which can be between 0 and 0xFFFF)
 		// and it is stored as UTF-8 (which can be 1...3 bytes)
-		std::uintptr_t uchar = 0;
+		UInt uchar = 0;
 		for (int i = 0; i < 4; i++) {
 			int c = rd.readFast();
 			uchar *= 16;
@@ -441,7 +441,7 @@ namespace json {
 
 
 	template<typename Fn>
-	inline void Parser<Fn>::storeUnicode(std::uintptr_t uchar) {
+	inline void Parser<Fn>::storeUnicode(UInt uchar) {
 		WideToUtf8 conv;
 		conv(oneCharStream((int)uchar),[&](char c){tmpstr.push_back(c);});
 	}
@@ -459,7 +459,7 @@ namespace json {
 		} else {
 
 			//first try to read number as signed or unsigned integer
-			std::uintptr_t intpart;
+			UInt intpart;
 			//read sign and return true whether it is '-' (discard '+')
 			bool isneg = readSign();
 			//test next character
@@ -481,7 +481,7 @@ namespace json {
 			if (isneg) {
 				//tests, whether highest bit of unsigned integer is set
 				//if so, converting to signed triggers overflow
-				if (intpart & (std::uintptr_t(1) << (sizeof(intpart) * 8 - 1))) {
+				if (intpart & (UInt(1) << (sizeof(intpart) * 8 - 1))) {
 					//convert number to float
 					double v = (double)intpart;
 					//return negative value
@@ -586,9 +586,9 @@ namespace json {
 
 
 	template<typename Fn>
-	inline bool Parser<Fn>::parseUnsigned(std::uintptr_t & res, int &counter)
+	inline bool Parser<Fn>::parseUnsigned(UInt & res, int &counter)
 	{
-		const std::uintptr_t overflowDetection = ((std::uintptr_t)-1) / 10; //429496729
+		const UInt overflowDetection = ((UInt)-1) / 10; //429496729
 		//start at zero
 		res = 0;
 		//count read charactes
@@ -601,7 +601,7 @@ namespace json {
 				return false;
 			}
 			//calculate next val
-			std::uintptr_t nextVal = res * 10 + (c - '0');
+			UInt nextVal = res * 10 + (c - '0');
 			//detect overflow
 			if (nextVal < res) {
 				//report overflow (maintain already parsed value
@@ -621,7 +621,7 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline double Parser<Fn>::parseLargeUnsigned(std::uintptr_t intPart)
+	inline double Parser<Fn>::parseLargeUnsigned(UInt intPart)
 	{
 		//starts with given integer part - convert to double
 		double res = (double)intPart;
@@ -631,7 +631,7 @@ namespace json {
 
 		while (isdigit(c = rd.next())) {
 			//prepare next unsigned integer
-			std::uintptr_t part;
+			UInt part;
 			//prepare counter
 			int cnt;
 			//read next sequence of digits as integer
@@ -684,7 +684,7 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline Value Parser<Fn>::parseDouble(std::uintptr_t intpart, bool neg)
+	inline Value Parser<Fn>::parseDouble(UInt intpart, bool neg)
 	{
 		//float number is in format [+/-]digits[.digits][E[+/-]digits]
 		//sign is stored in neg
@@ -716,7 +716,7 @@ namespace json {
 			//read and discard any possible sign
 			bool negexp = readSign();
 			//prepare integer exponent
-			std::uintptr_t expn;
+			UInt expn;
 			//prepare counter (we don't need it)
 			int counter;
 			//next character must be a digit
@@ -725,7 +725,7 @@ namespace json {
 				throw ParseError("Expected '0'...'9' after 'E'", c);
 			//parse the exponent
 			if (!parseUnsigned(expn, counter))
-				//complain about too large exponent (two or three digits must match to std::uintptr_t)
+				//complain about too large exponent (two or three digits must match to UInt)
 				throw ParseError("Exponent is too large", c);
 			//if exponent is negative
 			if (negexp) {
@@ -751,7 +751,7 @@ namespace json {
 
 	template<typename Fn>
 	typename Parser<Fn>::StrIdx Parser<Fn>::parsePreciseNumber(bool& hint_is_float) {
-		std::uintptr_t start = tmpstr.size();
+		UInt start = tmpstr.size();
 		try {
 			int c = rd.nextCommit();
 			if (c == '+' || c== '-') {

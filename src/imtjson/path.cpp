@@ -61,7 +61,7 @@ PPath Path::copy() const {
 		if (p->isKey()) reqSize+=p->keyName.length+1;
 	}
 
-	void *buff = Value::allocator->alloc(reqSize+sizeof(std::uintptr_t));
+	void *buff = Value::allocator->alloc(reqSize+sizeof(UInt));
 
 
 	//get pointer to first item

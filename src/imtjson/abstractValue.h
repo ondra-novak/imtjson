@@ -11,8 +11,10 @@ namespace json {
 		virtual ValueType type() const override { return undefined; }
 		virtual ValueTypeFlags flags() const override { return 0; }
 
-		virtual std::uintptr_t getUInt() const override { return 0; }
-		virtual std::intptr_t getInt() const override { return 0; }
+		virtual UInt getUInt() const override { return 0; }
+		virtual Int getInt() const override { return 0; }
+		virtual ULongInt getUIntLong() const override { return 0; }
+		virtual LongInt getIntLong() const override { return 0; }
 		virtual double getNumber() const override { return 0.0; }
 		virtual bool getBool() const override { return false; }
 		virtual StringView<char> getString() const override { return StringView<char>(); }

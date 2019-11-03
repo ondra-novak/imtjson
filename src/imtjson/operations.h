@@ -500,7 +500,7 @@ inline Array Object::sort(const Cmp& cmp) const {
 }
 
 template<typename Iter1, typename Iter2>
-std::uintptr_t Value::unshift(const Iter1 &start, const Iter2 &end) {
+UInt Value::unshift(const Iter1 &start, const Iter2 &end) {
 	Array newval;
 	Iter1 p(start);
 	while (p != end) {
@@ -528,15 +528,15 @@ auto call_fn_3args(Fn &&fn, A &&a, B &&b, C &&c) -> decltype(fn(std::forward<A>(
 }
 
 template<typename Fn>
-std::intptr_t Value::findIndex(Fn &&fn) const {
-	for (std::uintptr_t x = 0, cnt = size(); x < cnt; x++)
+Int Value::findIndex(Fn &&fn) const {
+	for (UInt x = 0, cnt = size(); x < cnt; x++)
 		if (call_fn_3args(std::forward<Fn>(fn), (*this)[x], x, *this)) return x;
 	return -1;
 }
 
 template<typename Fn>
-std::intptr_t Value::rfindIndex(Fn &&fn) const {
-	for (std::uintptr_t x = size(); x > 0; x--)
+Int Value::rfindIndex(Fn &&fn) const {
+	for (UInt x = size(); x > 0; x--)
 		if (call_fn_3args(std::forward<Fn>(fn), (*this)[x-1], x-1, *this)) return x-1;
 	return -1;
 }
@@ -556,7 +556,7 @@ template<typename Fn>
 Value Value::filter(Fn &&fn) const {
 	std::vector<Value> buffer;
 	buffer.reserve(size());
-	for (std::uintptr_t x = 0, cnt = size(); x < cnt; x++)
+	for (UInt x = 0, cnt = size(); x < cnt; x++)
 		if (call_fn_3args(std::forward<Fn>(fn), (*this)[x], x, *this))
 			buffer.push_back((*this)[x]);
 

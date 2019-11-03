@@ -25,8 +25,10 @@ namespace _details {
 		virtual ValueType type() const {return pv->type();}
 		virtual ValueTypeFlags flags() const {return pv->flags() | customObject;}
 
-		virtual std::uintptr_t getUInt() const {return pv->getUInt();}
-		virtual std::intptr_t getInt() const {return pv->getInt();}
+		virtual UInt getUInt() const {return pv->getUInt();}
+		virtual Int getInt() const {return pv->getInt();}
+		virtual ULongInt getUIntLong() const {return pv->getUIntLong();}
+		virtual LongInt getIntLong() const {return pv->getIntLong();}
 		virtual double getNumber() const {return pv->getNumber();}
 		virtual bool getBool() const {return pv->getBool();}
 		virtual StringView<char> getString() const {return pv->getString();}
@@ -69,7 +71,7 @@ namespace _details {
 			const void *r = wp.cast(typeid(Object));
 			if (r) return *(const Object *)(r);
 			try {
-				wp.throwPtr();
+				wp.throwPtr(); throw;
 			} catch (const Object *ptr) {
 				return *ptr;
 			} catch (...) {
@@ -87,7 +89,7 @@ namespace _details {
 			const void *r = wp->cast(typeid(Object));
 			if (r) return (const Object *)(r);
 			try {
-				wp->throwPtr();
+				wp->throwPtr(); throw;
 			} catch (const Object *ptr) {
 				return ptr;
 			} catch (...) {

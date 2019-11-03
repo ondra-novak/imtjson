@@ -28,13 +28,13 @@ namespace json {
 				case boolean: return getBool()==other->getBool()?0:getBool()?1:-1;
 				case number:{
 					if ((flags() & numberUnsignedInteger) && (other->flags() & numberUnsignedInteger)) {
-						std::uintptr_t l = getUInt();
-						std::uintptr_t r = other->getUInt();
+						UInt l = getUInt();
+						UInt r = other->getUInt();
 						return l<r?-1:l>r?1:0;
 					}
 					if ((flags() & (numberInteger | numberUnsignedInteger)) && (other->flags() & (numberInteger|numberUnsignedInteger))) {
-						std::intptr_t l = getInt();
-						std::intptr_t r = other->getInt();
+						Int l = getInt();
+						Int r = other->getInt();
 						return l<r?-1:l>r?1:0;
 					}
 					{

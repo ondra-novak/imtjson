@@ -21,8 +21,10 @@ namespace json {
 		virtual ValueType type() const override { return boolean; }
 		virtual bool getBool() const override  = 0;		
 		virtual double getNumber() const override {return getBool()?1.0:0;}
-		virtual std::intptr_t getInt() const override {return getBool()?1:0;}
-		virtual std::uintptr_t getUInt() const override {return getBool()?1:0;}
+		virtual Int getInt() const override {return getBool()?1:0;}
+		virtual UInt getUInt() const override {return getBool()?1:0;}
+		virtual LongInt getIntLong() const override {return getBool()?1:0;}
+		virtual ULongInt getUIntLong() const override {return getBool()?1:0;}
 
 		static const IValue *getBool(bool v);
 
@@ -36,8 +38,10 @@ namespace json {
 	public:
 		virtual ValueType type() const override { return number; }
 		virtual double getNumber() const override = 0;
-		virtual std::intptr_t getInt() const override = 0;
-		virtual std::uintptr_t getUInt() const override = 0;
+		virtual Int getInt() const override = 0;
+		virtual UInt getUInt() const override = 0;
+		virtual LongInt getIntLong() const override = 0;
+		virtual ULongInt getUIntLong() const override  = 0;
 
 		static const IValue *getZero();
 
@@ -51,8 +55,8 @@ namespace json {
 		virtual ValueType type() const override { return string; }
 		virtual StringView<char> getString() const override = 0;
 
-		virtual std::intptr_t getInt() const override;
-		virtual std::uintptr_t getUInt() const override;
+		virtual Int getInt() const override;
+		virtual UInt getUInt() const override;
 		virtual double getNumber() const override;
 
 
@@ -90,8 +94,10 @@ namespace json {
 		NumberValueT(const T &v) :v(v) {}
 
 		virtual double getNumber() const override { return double(v); }
-		virtual std::intptr_t getInt() const override { return std::intptr_t(v); }
-		virtual std::uintptr_t getUInt() const override { return std::uintptr_t(v); }
+		virtual Int getInt() const override { return Int(v); }
+		virtual UInt getUInt() const override { return UInt(v); }
+		virtual LongInt getIntLong() const override {return LongInt(v);}
+		virtual ULongInt getUIntLong() const override {return ULongInt(v);}
 		virtual ValueTypeFlags flags() const override { return f; }
 		virtual bool equal(const IValue *other) const  override {
 			if (other->type() == number) {
@@ -109,8 +115,10 @@ namespace json {
 		T v;
 	};
 
-	using UnsignedIntegerValue = NumberValueT<std::uintptr_t, numberUnsignedInteger>;
-	using IntegerValue = NumberValueT<std::intptr_t, numberInteger>;
+	using UnsignedIntegerValue = NumberValueT<UInt, numberUnsignedInteger>;
+	using IntegerValue = NumberValueT<Int, numberInteger>;
+	using UnsignedLongValue = NumberValueT<ULongInt, numberUnsignedInteger|longInt>;
+	using LongValue = NumberValueT<LongInt, numberInteger|longInt>;
 	using NumberValue = NumberValueT<double,0>;
 /*
 	class StringValue : public AbstractStringValue {
@@ -123,8 +131,8 @@ namespace json {
 		}
 		virtual bool getBool() const override {return true;}
 
-		virtual std::intptr_t getInt() const override;
-		virtual std::uintptr_t getUInt() const override;
+		virtual Int getInt() const override;
+		virtual UInt getUInt() const override;
 		virtual double getNumber() const override;
 
 	protected:

@@ -52,7 +52,7 @@ public:
 	 *
 	 * The variable should exist
 	 */
-	ValueRef(Array &arr, std::uintptr_t index);
+	ValueRef(Array &arr, UInt index);
 	///Constructs a reference to a standalone variable
 	/**
 	 * @param var reference to the variable
@@ -94,13 +94,13 @@ public:
 protected:
 
 	///contains index in array. For non-array container, it contains type of container, see declaration of constants
-	std::uintptr_t typeOrIndex;
+	UInt typeOrIndex;
 
 
 	///Reference to object's member variable. The key can be retrieved by the function getKey()
-	static const std::uintptr_t objectRef = (std::uintptr_t)-1;
+	static const UInt objectRef = (UInt)-1;
 	///Direct reference to an instance of Value
-	static const std::uintptr_t valueRef = (std::uintptr_t)-2;
+	static const UInt valueRef = (UInt)-2;
 
 	union {
 		///pointer to object container, valid when typeOrIndex is equal to objectRef

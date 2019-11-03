@@ -273,12 +273,12 @@ Array& Array::reverse() {
 }
 
 
-Array& Array::slice(std::intptr_t start) {
+Array& Array::slice(Int start) {
 	if (start < 0) {
-		if (-start < (std::intptr_t)size()) {
+		if (-start < (Int)size()) {
 			return slice(size()+start);
 		}
-	} else if (start >= (std::intptr_t)size()) {
+	} else if (start >= (Int)size()) {
 		clear();
 	} else {
 		eraseSet(0,start);
@@ -287,14 +287,14 @@ Array& Array::slice(std::intptr_t start) {
 }
 
 
-Array& Array::slice(std::intptr_t start, std::intptr_t end) {
+Array& Array::slice(Int start, Int end) {
 	if (end < 0) {
-		if (-end < (std::intptr_t)size()) {
-			slice(start, (std::intptr_t)size()+end);
+		if (-end < (Int)size()) {
+			slice(start, (Int)size()+end);
 		} else {
 			clear();
 		}
-	} else if (end < (std::intptr_t)size()) {
+	} else if (end < (Int)size()) {
 		trunc(end);
 	}
 	return slice(start);

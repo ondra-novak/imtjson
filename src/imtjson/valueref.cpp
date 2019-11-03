@@ -22,7 +22,7 @@ ValueRef::ValueRef(Object& obj, const StrViewA& name)
 	:Value(getValueOrName(obj,name)),typeOrIndex(objectRef),objptr(&obj)
 {
 }
-ValueRef::ValueRef(Array& arr, std::uintptr_t index)
+ValueRef::ValueRef(Array& arr, UInt index)
 	:Value(arr[index]),typeOrIndex(index),arrptr(&arr)
 {
 

@@ -45,10 +45,13 @@ namespace json {
 		bool utf8output;
 
 		void write(const StringView<char> &text);
-		void writeUnsigned(std::uintptr_t value);
-		void writeUnsignedRec(std::uintptr_t value);
-		void writeUnsigned(std::uintptr_t value, std::uintptr_t digits);
-		void writeSigned(std::intptr_t value);
+		void writeUnsigned(UInt value);
+		void writeUnsignedRec(UInt value);
+		void writeUnsignedLong(ULongInt value);
+		void writeUnsignedRecLong(ULongInt value);
+		void writeUnsigned(UInt value, UInt digits);
+		void writeSigned(Int value);
+		void writeSignedLong(LongInt value);
 		void writeDouble(double value);
 		void writeUnicode(unsigned int uchar);
 		void writeString(const StringView<char> &text);
@@ -141,8 +144,20 @@ namespace json {
 	{
 		ValueTypeFlags f = ptr->flags();
 		if (f & preciseNumber) writePreciseNumber(ptr->getString());
-		else if (f & numberUnsignedInteger) writeUnsigned(ptr->getUInt());
-		else if (f & numberInteger) writeSigned(ptr->getInt());
+		else if (f & numberUnsignedInteger) {
+			if (f & longInt) {
+				writeUnsignedLong(ptr->getUIntLong());
+			} else {
+				writeUnsigned(ptr->getUInt());
+			}
+		}
+		else if (f & numberInteger) {
+			if (f & longInt) {
+				writeSignedLong(ptr->getIntLong());
+			} else {
+				writeSigned(ptr->getInt());
+			}
+		}
 		else writeDouble(ptr->getNumber());			
 	}
 
@@ -179,7 +194,7 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writeUnsignedRec(std::uintptr_t value) {
+	inline void Serializer<Fn>::writeUnsignedRec(UInt value) {
 		if (value) {
 			writeUnsignedRec(value / 10);
 			target('0' + (value % 10));
@@ -187,21 +202,35 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writeUnsigned(std::uintptr_t value)
+	inline void Serializer<Fn>::writeUnsigned(UInt value)
 	{
 		if (value) writeUnsignedRec(value);
 		else target('0');
 	}
+	template<typename Fn>
+	inline void Serializer<Fn>::writeUnsignedRecLong(ULongInt value) {
+		if (value) {
+			writeUnsignedRecLong(value / 10);
+			target('0' + (value % 10));
+		}
+	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writeUnsigned(std::uintptr_t value, std::uintptr_t digits)
+	inline void Serializer<Fn>::writeUnsignedLong(ULongInt value)
+	{
+		if (value) writeUnsignedRecLong(value);
+		else target('0');
+	}
+
+	template<typename Fn>
+	inline void Serializer<Fn>::writeUnsigned(UInt value, UInt digits)
 	{
 		if (digits>1) writeUnsigned(value/10,digits-1);
 		target('0'+(value % 10));
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writeSigned(std::intptr_t value)
+	inline void Serializer<Fn>::writeSigned(Int value)
 	{
 		if (value < 0) {
 			target('-');
@@ -211,12 +240,23 @@ namespace json {
 			writeUnsigned(value);
 		}
 	}
+	template<typename Fn>
+	inline void Serializer<Fn>::writeSignedLong(LongInt value)
+	{
+		if (value < 0) {
+			target('-');
+			writeUnsignedLong(-value);
+		}
+		else {
+			writeUnsignedLong(value);
+		}
+	}
 
 
 	template<typename Fn>
 	inline void Serializer<Fn>::writeDouble(double value)
 	{
-		static std::uintptr_t fracMultTable[10] = {
+		static UInt fracMultTable[10] = {
 				1, //0
 				10, //1
 				100, //2
@@ -238,7 +278,7 @@ namespace json {
 		const char *inf = "Inf";
 
 		bool sign = value < 0;
-		std::uintptr_t precisz = std::min<std::uintptr_t>(maxPrecisionDigits, 9);
+		UInt precisz = std::min<UInt>(maxPrecisionDigits, 9);
 
 		value = std::abs(value);
 		//calculate exponent of value
@@ -259,7 +299,7 @@ namespace json {
 				return;
 			}
 		//convert it to integer
-		std::intptr_t iexp = (std::intptr_t)fexp;
+		Int iexp = (Int)fexp;
 		//if exponent is in some reasonable range, set iexp to 0
 		if (iexp > -3 && iexp < 8) {
 			iexp = 0;
@@ -272,14 +312,14 @@ namespace json {
 		//separate number to integer and fraction
 		double frac = modf(value, &fint);
 		//calculate multiplication of fraction
-		std::uintptr_t fractMultiply = fracMultTable[precisz];
+		UInt fractMultiply = fracMultTable[precisz];
 		//multiplicate fraction to receive best rounded number to given decimal places
 		double fm = floor(frac * fractMultiply +0.5);
 
 		//convert finteger to integer
-		std::uintptr_t intp(fint);
+		UInt intp(fint);
 		//mantisa as integer number (without left zeroes)
-		std::uintptr_t m(fm);
+		UInt m(fm);
 
 
 		//if floating multiplied fraction is above or equal fractMultiply
@@ -302,7 +342,7 @@ namespace json {
 		if (sign) target('-');
 		//write absolute integer number (remove sign)
 		writeUnsigned(intp);
-		std::uintptr_t digits = precisz;
+		UInt digits = precisz;
 
 		if (m) {
 			//put dot

@@ -18,30 +18,30 @@ public:
 	}
 };
 
-template<> class ConvValueAs<std::uintptr_t > {
+template<> class ConvValueAs<UInt > {
 public:
-	static std::uintptr_t convert(const Value &v) {
+	static UInt convert(const Value &v) {
 		return v.getUInt();
 	}
 };
 
-template<> class ConvValueFrom<std::uintptr_t > {
+template<> class ConvValueFrom<UInt > {
 public:
-	static Value convert(std::uintptr_t v) {
+	static Value convert(UInt v) {
 		return Value(v);
 	}
 };
 
-template<> class ConvValueAs<std::intptr_t > {
+template<> class ConvValueAs<Int > {
 public:
-	static std::intptr_t convert(const Value &v) {
+	static Int convert(const Value &v) {
 		return v.getInt();
 	}
 };
 
-template<> class ConvValueFrom<std::intptr_t > {
+template<> class ConvValueFrom<Int > {
 public:
-	static Value convert(std::intptr_t v) {
+	static Value convert(Int v) {
 		return Value(v);
 	}
 };

@@ -247,8 +247,8 @@ namespace json {
 		Array &reverse();
 
 
-		Array &slice(std::intptr_t start);
-		Array &slice(std::intptr_t start, std::intptr_t end);
+		Array &slice(Int start);
+		Array &slice(Int start, Int end);
 
 		template<typename Fn>
 		Array map(Fn &&mapFn) const;
@@ -293,9 +293,9 @@ namespace json {
 	class ArrayIterator {
 	public:
 		const Array *v;
-		std::uintptr_t index;
+		UInt index;
 
-		ArrayIterator(const Array *v,std::uintptr_t index):v(v),index(index) {}
+		ArrayIterator(const Array *v,UInt index):v(v),index(index) {}
 		Value operator *() const {return (*v)[index];}
 		ArrayIterator &operator++() {++index;return *this;}
 		ArrayIterator operator++(int) {++index;return ArrayIterator(v,index-1);}
@@ -311,13 +311,13 @@ namespace json {
 	    typedef Value        value_type;
 	    typedef void        pointer;
 	    typedef void  reference;
-	    typedef std::intptr_t  difference_type;
+	    typedef Int  difference_type;
 
 	    ArrayIterator &operator+=(int p) {index+=p;return *this;}
 	    ArrayIterator &operator-=(int p) {index-=p;return *this;}
 	    ArrayIterator operator+(int p) const {return ArrayIterator(v,index+p);}
 	    ArrayIterator operator-(int p) const {return ArrayIterator(v,index-p);}
-		std::intptr_t operator-(ArrayIterator &other) const {return index - other.index;}
+		Int operator-(ArrayIterator &other) const {return index - other.index;}
 
 	};
 
