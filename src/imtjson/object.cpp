@@ -73,6 +73,7 @@ namespace json {
 	}
 
 	Object &Object::operator=(const Object &other) {
+		if (this == &other) return *this;
 		clear();
 		base = other.base;
 		ordered = other.commitAsDiffObject();
@@ -81,6 +82,7 @@ namespace json {
 	}
 
 	Object &Object::operator=(Object &&other) {
+		if (this == &other) return *this;
 		clear();
 		base = std::move(other.base);
 		ordered = std::move(other.ordered);

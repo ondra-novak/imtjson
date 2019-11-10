@@ -231,12 +231,14 @@ Array::Array(Array&& other):base(std::move(other.base)),changes(std::move(other.
 }
 
 Array& Array::operator =(const Array& other) {
+	if (this == &other) return *this;
 	base = other.base;
 	changes = other.changes;
 	return *this;
 }
 
 Array& Array::operator =(Array&& other) {
+	if (this == &other) return *this;
 	base = std::move(other.base);
 	changes = std::move(other.changes);
 	return *this;
