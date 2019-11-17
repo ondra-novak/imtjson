@@ -68,15 +68,15 @@ namespace json {
 
 
 	template<typename Fn>
-	inline void Value::serialize(const Fn & target) const
+	inline void Value::serialize(Fn && target) const
 	{
-		serialize<Fn>(defaultUnicodeFormat, target);
+		serialize<Fn>(defaultUnicodeFormat,std::forward<Fn>(target));
 	}
 
 	template<typename Fn>
-	inline void Value::serialize(UnicodeFormat format, const Fn & target) const
+	inline void Value::serialize(UnicodeFormat format, Fn && target) const
 	{
-		Serializer<Fn> serializer(target, format == emitUtf8);
+		Serializer<Fn> serializer(std::forward<Fn>(target), format == emitUtf8);
 		return serializer.serialize(*this);
 	}
 

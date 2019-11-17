@@ -505,7 +505,7 @@ namespace json {
 		 *
 		 */
 		template<typename Fn>
-		void serialize(const Fn &target) const;
+		void serialize(Fn &&target) const;
 
 		///Serializes the value to JSON
 		/**
@@ -516,7 +516,7 @@ namespace json {
 		*
 		*/
 		template<typename Fn>
-		void serialize(UnicodeFormat format, const Fn &target) const;
+		void serialize(UnicodeFormat format, Fn &&target) const;
 
 
 
