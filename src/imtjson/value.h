@@ -1070,6 +1070,41 @@ namespace json {
 		void walk(Fn &&fn) const;
 
 
+		///Returns number or default value, if the object is not number
+		double getValueOrDefault(double defval) {return type() == json::number?getNumber():defval;}
+		///Returns number or default value, if the object is not number
+		float getValueOrDefault(float defval) {return type() == json::number?static_cast<float>(getNumber()):defval;}
+		///Returns number or default value, if the object is not number
+		unsigned int getValueOrDefault(unsigned int defval) {return type() == json::number?static_cast<unsigned int>(getUInt()):defval;}
+		///Returns number or default value, if the object is not number
+		unsigned long getValueOrDefault(unsigned long defval) {return type() == json::number?static_cast<unsigned long>(getUInt()):defval;}
+		///Returns number or default value, if the object is not number
+		unsigned long long getValueOrDefault(unsigned long long defval) {return type() == json::number?static_cast<unsigned long long>(getUIntLong()):defval;}
+		///Returns number or default value, if the object is not number
+		signed int getValueOrDefault(signed int defval) {return type() == json::number?static_cast<signed int>(getInt()):defval;}
+		///Returns number or default value, if the object is not number
+		signed long getValueOrDefault(signed long defval) {return type() == json::number?static_cast<signed long>(getInt()):defval;}
+		///Returns number or default value, if the object is not number
+		signed long long getValueOrDefault(signed long long defval) {return type() == json::number?static_cast<signed long long>(getIntLong()):defval;}
+		///Returns boolean or default value, if the object is not boolean
+		bool getValueOrDefault(bool defval) {return type() == json::boolean?getBool():defval;}
+		///Returns string or default value, if the object is not string
+		String getValueOrDefault(String defval);
+		///Returns string or default value, if the object is not string
+		const char *getValueOrDefault(const char *defval);
+		///Returns string or default value, if the object is not string
+		std::string getValueOrDefault(const std::string &defval) {return type() == json::string?std::string(getString()):defval;}
+		///Returns string or default value, if the object is not string
+		StrViewA getValueOrDefault(const StrViewA &defval) {return type() == json::string?getString():defval;}
+		///Converts this to default value, if the type of the value is not expected
+		Value getValueOrDefault(const Value &defval) {return type() == defval.type()?*this:defval;}
+		///Converts this to default value, if the type of the value is not expected
+		/** @code
+		 * getValueOrDefault(json::array) - returns array, or empty array
+		 * @return
+		 */
+		Value getValueOrDefault(const ValueType &defval) {return type() == defval?*this:Value(defval);}
+
 public:
 
 		///Pointer to custom allocator

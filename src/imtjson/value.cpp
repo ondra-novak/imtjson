@@ -870,6 +870,15 @@ namespace json {
 	template Value Value::find(std::function<bool(Value, UInt, Value)> &&) const;
 	template Value Value::rfind(std::function<bool(Value, UInt, Value)> &&) const;
 	template Value Value::filter(std::function<bool(Value, UInt, Value)> &&) const;
+
+	String Value::getValueOrDefault(String defval) {
+		return type() == json::string?toString():defval;
+	}
+	const char *Value::getValueOrDefault(const char *defval) {
+		return type() == json::string?toString().c_str():defval;
+	}
+
+
 }
 
 namespace std {
@@ -879,6 +888,7 @@ size_t hash<::json::Value>::operator()(const ::json::Value &v)const {
 	v.stripKey().serializeBinary(fnvcalc,0);
 	return ret;
 }
+
 
 
 
