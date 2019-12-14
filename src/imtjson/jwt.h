@@ -100,7 +100,7 @@ protected:
  *
  * @note if the crypto is nullptr, signature is not checked. Note that if the token's
  * cryptographic method is "none", it is still passed through the PJWTCrypto object
- * to check, whether this king of token is accepted
+ * to check, whether this kind of token is accepted
  */
 Value parseJWT(const StrViewA token, PJWTCrypto crypto = nullptr, const AbstractJWTCrypto::SignMethod *forceMethod = nullptr);
 
