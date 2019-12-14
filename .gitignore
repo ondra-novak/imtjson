@@ -48,4 +48,4 @@ cmake_install.cmake
 /inst
 /bin
 language.settings.xml
-/src/tests
+/src/tests/test*

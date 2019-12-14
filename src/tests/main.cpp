@@ -29,6 +29,7 @@ using namespace json;
 
 void runValidatorTests(TestSimple &tst);
 void runRpcTests(TestSimple &tst);
+void runJwtTests(TestSimple &tst);
 
 
 bool compressTest(std::string file) {
@@ -1481,6 +1482,7 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 	};
 
 	runValidatorTests(tst);
+	runJwtTests(tst);
 	//runRpcTests(tst);
 
 
