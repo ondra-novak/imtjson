@@ -36,12 +36,20 @@ StringView<char> StringValue::getString() const {
 
 Int AbstractStringValue::getInt() const {
 
-	return Value::fromString(getString()).getInt();
+	try {
+		return Value::fromString(getString()).getInt();
+	} catch (ParseError) {
+		return 0;
+	}
 }
 
 UInt AbstractStringValue::getUInt() const {
 
-	return Value::fromString(getString()).getUInt();
+	try {
+		return Value::fromString(getString()).getUInt();
+	} catch (ParseError) {
+		return 0;
+	}
 }
 
 
@@ -60,8 +68,11 @@ void StringValue::operator delete(void* ptr, std::size_t ) {
 }
 
 double AbstractStringValue::getNumber() const {
-
-	return Value::fromString(getString()).getNumber();
+	try {
+		return Value::fromString(getString()).getNumber();
+	} catch (ParseError) {
+		return 0;
+	}
 }
 
 PValue StringValue::create(const StringView<char>& str) {
