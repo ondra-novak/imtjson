@@ -17,6 +17,7 @@ class AbstractJWTCrypto: public RefCntObj {
 public:
 
 	AbstractJWTCrypto() {}
+	virtual ~AbstractJWTCrypto() {}
 
 	struct SignMethod {
 		///algoritm
