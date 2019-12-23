@@ -38,7 +38,7 @@ Int AbstractStringValue::getInt() const {
 
 	try {
 		return Value::fromString(getString()).getInt();
-	} catch (ParseError) {
+	} catch (const ParseError &) {
 		return 0;
 	}
 }
@@ -47,7 +47,7 @@ UInt AbstractStringValue::getUInt() const {
 
 	try {
 		return Value::fromString(getString()).getUInt();
-	} catch (ParseError) {
+	} catch (const ParseError &) {
 		return 0;
 	}
 }
@@ -70,7 +70,7 @@ void StringValue::operator delete(void* ptr, std::size_t ) {
 double AbstractStringValue::getNumber() const {
 	try {
 		return Value::fromString(getString()).getNumber();
-	} catch (ParseError) {
+	} catch (const ParseError &) {
 		return 0;
 	}
 }
