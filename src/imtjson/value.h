@@ -469,7 +469,7 @@ namespace json {
 		 *
 		 */
 		template<typename Fn>
-		static Value parse(const Fn &source);
+		static Value parse(Fn &&source);
 
 		///Function parses JSON from string
 		/**

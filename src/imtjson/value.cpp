@@ -736,7 +736,7 @@ namespace json {
 			}
 		};
 		typedef Parser<decltype(reader)> P;
-		P parser(reader, P::allowPreciseNumbers);
+		P parser(std::move(reader), P::allowPreciseNumbers);
 		try {
 			Value v = parser.parseNumber();
 			if (pos <= number.length) throw InvalidNumericFormat(number);

@@ -40,7 +40,7 @@ namespace json {
 		static const Flags allowPreciseNumbers = 2;
 
 
-		Parser(const Fn &source, Flags flags = 0) :rd(source),flags(flags) {}
+		Parser(Fn &&source, Flags flags = 0) :rd(std::forward<Fn>(source)),flags(flags) {}
 
 		virtual Value parse();
 		Value parseObject();
@@ -135,7 +135,7 @@ namespace json {
 				return source();
 			}
 
-			Reader(const Fn &fn) :source(fn), loaded(false) {}
+			Reader(Fn &&fn) :source(std::forward<Fn>(fn)), loaded(false) {}
 
 		};
 
@@ -255,9 +255,9 @@ namespace json {
 
 
 	template<typename Fn>
-	inline Value Value::parse(const Fn & source)
+	inline Value Value::parse(Fn && source)
 	{
-		Parser<Fn> parser(source, enableParsePreciseNumbers?Parser<Fn>::allowPreciseNumbers:0);
+		Parser<Fn> parser(std::forward<Fn>(source), enableParsePreciseNumbers?Parser<Fn>::allowPreciseNumbers:0);
 		return parser.parse();
 	}
 
