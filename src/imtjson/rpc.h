@@ -708,7 +708,7 @@ public:
 	 * @param fn pointer to member function of given prototype
 	 */
 	template<typename ObjPtr, typename Fn>
-	void add(const String &name, ObjPtr &&objPtr, void (Fn::*fn)(RpcRequest));
+	void add(const String &name, const ObjPtr &objPtr, void (Fn::*fn)(RpcRequest));
 
 	///Remove method
 	void remove(const StrViewA &name);
@@ -810,11 +810,11 @@ inline void RpcServer::add(const String& name, Fn &&fn) {
 }
 
 template<typename ObjPtr, typename Fn>
-inline void RpcServer::add(const String& name, ObjPtr &&objPtr, void (Fn::*fn)(RpcRequest)) {
+inline void RpcServer::add(const String& name, const ObjPtr &objPtr, void (Fn::*fn)(RpcRequest)) {
 	class F: public AbstractMethodReg {
 	public:
-		F(const String &name, ObjPtr &&objPtr, void (Fn::*fn)(RpcRequest))
-				:AbstractMethodReg(name), objPtr(std::forward<ObjPtr>(objPtr)),fn(fn) {}
+		F(const String &name, const ObjPtr &objPtr, void (Fn::*fn)(RpcRequest))
+				:AbstractMethodReg(name), objPtr(objPtr),fn(fn) {}
 		virtual void call(const RpcRequest &req) const override {
 			((*objPtr).*fn)(req);
 		}
@@ -822,7 +822,7 @@ inline void RpcServer::add(const String& name, ObjPtr &&objPtr, void (Fn::*fn)(R
 		ObjPtr objPtr;
 		void (Fn::*fn)(RpcRequest);
 	};
-	RefCntPtr<AbstractMethodReg> f = new F(name, std::forward<ObjPtr>(objPtr), fn);
+	RefCntPtr<AbstractMethodReg> f = new F(name, objPtr, fn);
 	mapReg.insert(MapValue(f->name, f));
 }
 
