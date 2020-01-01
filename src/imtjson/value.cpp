@@ -871,10 +871,10 @@ namespace json {
 	template Value Value::rfind(std::function<bool(Value, UInt, Value)> &&) const;
 	template Value Value::filter(std::function<bool(Value, UInt, Value)> &&) const;
 
-	String Value::getValueOrDefault(String defval) {
+	String Value::getValueOrDefault(String defval) const {
 		return type() == json::string?toString():defval;
 	}
-	const char *Value::getValueOrDefault(const char *defval) {
+	const char *Value::getValueOrDefault(const char *defval) const {
 		return type() == json::string?toString().c_str():defval;
 	}
 

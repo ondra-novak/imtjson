@@ -323,6 +323,11 @@ public:
 		return ret;
 	}
 
+
+	std::string exportPublicKey() const {
+		return exportPublicKey(key);
+	}
+
 protected:
 	EC_KEY *key;
 	int size;
