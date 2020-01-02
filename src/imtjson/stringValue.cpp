@@ -52,6 +52,24 @@ UInt AbstractStringValue::getUInt() const {
 	}
 }
 
+LongInt AbstractStringValue::getIntLong() const {
+
+	try {
+		return Value::fromString(getString()).getIntLong();
+	} catch (const ParseError &) {
+		return 0;
+	}
+}
+
+ULongInt AbstractStringValue::getUIntLong() const {
+
+	try {
+		return Value::fromString(getString()).getUIntLong();
+	} catch (const ParseError &) {
+		return 0;
+	}
+}
+
 
 void* StringValue::operator new(std::size_t sz, const std::size_t &strsz) {
 	std::size_t objsz = sz - sizeof(StringValue::charbuff);

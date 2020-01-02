@@ -57,6 +57,8 @@ namespace json {
 
 		virtual Int getInt() const override;
 		virtual UInt getUInt() const override;
+		virtual LongInt getIntLong() const override;
+		virtual ULongInt getUIntLong() const override;
 		virtual double getNumber() const override;
 
 
