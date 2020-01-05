@@ -778,6 +778,21 @@ public:
 	 */
 	void setCustomValidationRules(Value curstomRules);
 
+	///Enables custom exception handler
+	/** When exception handler is disabled (default), any exception thrown from
+	 * the RPC function calls setInternalError. When exception handler is enabled, the
+	 * handler is called to allow server to set other status, if exception is known.
+	 *
+	 * The handler receives a request and because it is called in catch section, it
+	 * can capture exception, or rethrow the exception to determine, which exception
+	 * happened. The handler returns true, if the exception has been handled and state
+	 * of the request has been altered. If the false is returned, then setInternalError
+	 * is called
+	 *
+	 * @param eh exception handler
+	 */
+	void enableExceptionHandler(std::function<bool(RpcRequest)> eh) {this->exception_handler = eh;}
+
 	static Value defaultFormatError(int code, const String& message, Value data);
 
 protected:
@@ -789,6 +804,7 @@ protected:
 
 	MapReg mapReg;
 	std::function<bool(RpcRequest)> proxy;
+	std::function<bool(RpcRequest)> exception_handler;
 	Value customRules;
 };
 

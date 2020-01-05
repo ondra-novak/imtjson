@@ -300,9 +300,19 @@ void RpcServer::exec( RpcRequest req) const noexcept {
 			req.setError(errorInvalidRequest,"Invalid request");
 		}
 	} catch (std::exception &e) {
-		req.setInternalError(e.what());
+		try {
+			if (exception_handler==nullptr || !exception_handler(req))
+					req.setInternalError(e.what());
+		} catch (...) {
+			req.setInternalError(e.what());
+		}
 	} catch (...) {
-		req.setInternalError(nullptr);
+		try {
+			if (exception_handler==nullptr || !exception_handler(req))
+					req.setInternalError(nullptr);
+		} catch (...) {
+			req.setInternalError(nullptr);
+		}
 	}
 }
 
