@@ -560,7 +560,10 @@ Value Value::filter(Fn &&fn) const {
 		if (call_fn_3args(std::forward<Fn>(fn), (*this)[x], x, *this))
 			buffer.push_back((*this)[x]);
 
-	return Value(type(), StringView<Value>(buffer.data(),buffer.size()));
+	ValueType vt;
+	switch (type()) {default:case array: vt = array;break;case object: vt = object;break;}
+
+	return Value(vt, StringView<Value>(buffer.data(),buffer.size()));
 }
 
 

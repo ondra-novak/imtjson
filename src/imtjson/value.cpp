@@ -28,7 +28,7 @@ namespace json {
 		case number: return AbstractNumberValue::getZero();
 		case array: return AbstractArrayValue::getEmptyArray();
 		case object: return AbstractObjectValue::getEmptyObject();
-		default: throw std::runtime_error("Invalid argument");
+		default: throw std::runtime_error("json::createByType - Invalid type requested");
 		}
 	}
 
@@ -432,7 +432,7 @@ namespace json {
 
 		}
 		default:
-			 throw std::runtime_error("Invalid argument");
+			 throw std::runtime_error("json::Value(type,...) - Invalid type requested");
 
 		}
 	}
