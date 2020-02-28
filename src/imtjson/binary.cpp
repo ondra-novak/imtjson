@@ -23,7 +23,7 @@ Binary Binary::decodeBinaryValue(const Value &s, BinaryEncoding encoding) {
 	StrViewA str = s.getString();
 	if (str.empty()) {
 		return Binary(json::string);
-	} else if (s.flags() != binaryString) {
+	} else if ((s.flags() & binaryString) == 0) {
 		return Binary(encoding->decodeBinaryValue(str));
 	} else {
 		return Binary(s);
