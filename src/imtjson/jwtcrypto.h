@@ -143,9 +143,9 @@ public:
 	virtual SignMethod getPreferredMethod(StrViewA kid = StrViewA()) const {
 		switch (size) {
 		default:
-		case 256: return {"RS256"};
-		case 384: return {"RS384"};
-		case 512: return {"RS512"};
+		case 256: return {"RS256",kid};
+		case 384: return {"RS384",kid};
+		case 512: return {"RS512",kid};
 		}
 	}
 
@@ -178,9 +178,9 @@ public:
 	virtual SignMethod getPreferredMethod(StrViewA kid = StrViewA()) const {
 		switch (size) {
 		default:
-		case 256: return {"HS256"};
-		case 384: return {"HS384"};
-		case 512: return {"HS512"};
+		case 256: return {"HS256",kid};
+		case 384: return {"HS384",kid};
+		case 512: return {"HS512",kid};
 		}
 	}
 
@@ -219,9 +219,9 @@ public:
 	virtual SignMethod getPreferredMethod(StrViewA kid = StrViewA()) const {
 		switch (size) {
 		default:
-		case 256: return {"ES256"};
-		case 384: return {"ES384"};
-		case 512: return {"ES512"};
+		case 256: return {"ES256",kid};
+		case 384: return {"ES384",kid};
+		case 512: return {"ES512",kid};
 		}
 	}
 
