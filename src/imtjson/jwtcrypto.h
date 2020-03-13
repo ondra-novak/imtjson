@@ -286,12 +286,7 @@ public:
 	}
 
 
-	static EC_KEY *importPrivateKey(int size, const StrViewA &keyBase64)
-	{
-		Value k = base64url->decodeBinaryValue(keyBase64);
-		Binary b = k.getBinary(base64url);
-		if (b.empty()) return nullptr;
-
+	static EC_KEY *importPrivateKey(int size, const BinaryView &b) {
 		std::unique_ptr<BIGNUM,decltype(&BN_free)> priv_key (BN_bin2bn(b.data, b.length, BN_new()), &BN_free);
 		std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> key(initKey(size), &EC_KEY_free);
 	    std::unique_ptr<BN_CTX, decltype(&BN_CTX_free)> ctx (BN_CTX_new(), &BN_CTX_free);
@@ -308,6 +303,16 @@ public:
 	    EC_KEY_set_public_key(key.get(), pub_key.release());
 
 	    return key.release();
+	}
+
+	static EC_KEY *importPrivateKey(int size, const StrViewA &keyBase64)
+	{
+		Value k = base64url->decodeBinaryValue(keyBase64);
+		Binary b = k.getBinary(base64url);
+		if (b.empty()) return nullptr;
+
+		return importPrivateKey(size, b);
+
 	}
 
 	static std::string exportPublicKey(EC_KEY *key) {
