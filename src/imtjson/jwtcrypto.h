@@ -7,6 +7,7 @@
 #include <openssl/ecdsa.h>
 #include <openssl/hmac.h>
 #include <openssl/obj_mac.h>
+#include <openssl/pem.h>
 #include <memory>
 
 #include "binary.h"
@@ -97,40 +98,67 @@ inline bool verifyHS512(BinaryView message, BinaryView sign, BinaryView key) {
 	HMAC(EVP_sha512(),key.data, key.length, message.data, message.length,sbuff.buff, &sbuff.len);
 	return sbuff.check(sign);
 }
+
+inline void storeESSign(ECDSA_SIG *sig, SignBuffer &sbuff) {
+	const BIGNUM *r = ECDSA_SIG_get0_r(sig);
+	const BIGNUM *s = ECDSA_SIG_get0_s(sig);
+	unsigned char *c = sbuff.buff;
+	c = c + BN_bn2bin(r, c);
+	c = c + BN_bn2bin(s, c);
+	sbuff.len = c - sbuff.buff;
+	ECDSA_SIG_free(sig);
+}
+
+inline auto parseESSign(BinaryView signature) {
+	BinaryView br(signature.substr(0, signature.length/2));
+	BinaryView bs(signature.substr(signature.length/2));
+	BIGNUM *r = BN_new(), *s = BN_new();
+	BN_bin2bn(br.data, br.length, r);
+	BN_bin2bn(bs.data, bs.length, s);
+	ECDSA_SIG *sig = ECDSA_SIG_new();
+	ECDSA_SIG_set0(sig,r,s);
+	return std::unique_ptr<ECDSA_SIG, void(*)(ECDSA_SIG *)>(sig,&ECDSA_SIG_free);
+}
+
 inline bool verifyES256(BinaryView message, BinaryView signature, EC_KEY *eck) {
 	unsigned char buffer[SHA256_DIGEST_LENGTH];
+	auto sig = parseESSign(signature);
 	SHA256(message.data, message.length,buffer);
-	return ECDSA_verify(NID_sha256, buffer, SHA256_DIGEST_LENGTH, signature.data, signature.length, eck) == 1;
+	return ECDSA_do_verify(buffer, SHA256_DIGEST_LENGTH, sig.get(), eck) == 1;
 }
 inline bool verifyES384(BinaryView message, BinaryView signature, EC_KEY *eck) {
 	unsigned char buffer[SHA384_DIGEST_LENGTH];
+	auto sig = parseESSign(signature);
 	SHA384(message.data, message.length,buffer);
-	return ECDSA_verify(NID_sha384, buffer, SHA384_DIGEST_LENGTH, signature.data, signature.length, eck) == 1;
+	return ECDSA_do_verify(buffer, SHA384_DIGEST_LENGTH, sig.get(), eck) == 1;
 }
 inline bool verifyES512(BinaryView message, BinaryView signature, EC_KEY *eck) {
 	unsigned char buffer[SHA512_DIGEST_LENGTH];
+	auto sig = parseESSign(signature);
 	SHA512(message.data, message.length,buffer);
-	return ECDSA_verify(NID_sha512, buffer, SHA512_DIGEST_LENGTH, signature.data, signature.length, eck) == 1;
+	return ECDSA_do_verify(buffer, SHA512_DIGEST_LENGTH, sig.get(),  eck) == 1;
 }
 inline Binary signES256(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA256_DIGEST_LENGTH];
 	SignBuffer sbuff;
 	SHA256(message.data, message.length,buffer);
-	ECDSA_sign(NID_sha256, buffer, SHA256_DIGEST_LENGTH, sbuff.buff, &sbuff.len, eck);
+	storeESSign(ECDSA_do_sign(buffer, SHA256_DIGEST_LENGTH, eck), sbuff);
 	return sbuff.getBinary();
 }
 inline Binary signES384(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA384_DIGEST_LENGTH];
 	SignBuffer sbuff;
 	SHA384(message.data, message.length,buffer);
-	ECDSA_sign(NID_sha384, buffer, SHA384_DIGEST_LENGTH, sbuff.buff, &sbuff.len,eck);
+	storeESSign(ECDSA_do_sign(buffer, SHA384_DIGEST_LENGTH, eck), sbuff);
 	return sbuff.getBinary();
 }
+
+
 inline Binary signES512(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA512_DIGEST_LENGTH];
 	SHA512(message.data, message.length,buffer);
 	SignBuffer sbuff;
-	ECDSA_sign(NID_sha512, buffer, SHA512_DIGEST_LENGTH, sbuff.buff, &sbuff.len, eck);
+	storeESSign(ECDSA_do_sign(buffer, SHA512_DIGEST_LENGTH, eck), sbuff);
 	return sbuff.getBinary();
 }
 }
@@ -250,7 +278,7 @@ public:
 	 */
 	static EC_KEY *initKey(int size) {
 		switch (size) {
-		case 256: return EC_KEY_new_by_curve_name(NID_secp256k1);
+		case 256: return EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 		case 384: return EC_KEY_new_by_curve_name(NID_secp384r1);
 		case 512: return EC_KEY_new_by_curve_name(NID_secp521r1);
 		default: return nullptr;
@@ -325,6 +353,16 @@ public:
 		ret.reserve(nSize * 4/3+10);
 		base64url->encodeBinaryValue(BinaryView(binpubkey.data(), binpubkey.size()),
 				[&](StrViewA data) {ret.append(data.data, data.length);});
+		return ret;
+	}
+	static std::string exportPublicKeyPEM(EC_KEY *key) {
+		BIO *b = BIO_new(BIO_s_mem());
+		PEM_write_bio_EC_PUBKEY(b,key);
+		BUF_MEM *mem;
+		BIO_get_mem_ptr(b, &mem);
+		std::string ret;
+		ret.append(mem->data, mem->length);
+		BIO_free(b);
 		return ret;
 	}
 
