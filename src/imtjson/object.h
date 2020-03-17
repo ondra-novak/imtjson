@@ -193,6 +193,10 @@ namespace json {
 			base = object;
 		}
 
+		///Retrieves base object - aka object without modifications
+		Value getBaseObject() const {
+			return base;
+		}
 
 		///Inserts changes which are need to change from oldObject to the newObject
 		/**
