@@ -99,14 +99,17 @@ inline bool verifyHS512(BinaryView message, BinaryView sign, BinaryView key) {
 	return sbuff.check(sign);
 }
 
-inline void storeESSign(ECDSA_SIG *sig, SignBuffer &sbuff) {
-	const BIGNUM *r = ECDSA_SIG_get0_r(sig);
-	const BIGNUM *s = ECDSA_SIG_get0_s(sig);
+struct PECDSA_SIG_free {void operator()(ECDSA_SIG *p)const{ECDSA_SIG_free(p);}};
+using PECDSA_SIG = std::unique_ptr<ECDSA_SIG, PECDSA_SIG_free>;
+
+inline void storeESSign(PECDSA_SIG &&sig, SignBuffer &sbuff) {
+	const BIGNUM *r;
+	const BIGNUM *s;
+	ECDSA_SIG_get0(sig.get(),&r,&s);
 	unsigned char *c = sbuff.buff;
 	c = c + BN_bn2bin(r, c);
 	c = c + BN_bn2bin(s, c);
 	sbuff.len = c - sbuff.buff;
-	ECDSA_SIG_free(sig);
 }
 
 inline auto parseESSign(BinaryView signature) {
@@ -115,9 +118,9 @@ inline auto parseESSign(BinaryView signature) {
 	BIGNUM *r = BN_new(), *s = BN_new();
 	BN_bin2bn(br.data, br.length, r);
 	BN_bin2bn(bs.data, bs.length, s);
-	ECDSA_SIG *sig = ECDSA_SIG_new();
-	ECDSA_SIG_set0(sig,r,s);
-	return std::unique_ptr<ECDSA_SIG, void(*)(ECDSA_SIG *)>(sig,&ECDSA_SIG_free);
+	PECDSA_SIG sig (ECDSA_SIG_new());
+	ECDSA_SIG_set0(sig.get(),r,s);
+	return sig;
 }
 
 inline bool verifyES256(BinaryView message, BinaryView signature, EC_KEY *eck) {
@@ -142,14 +145,14 @@ inline Binary signES256(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA256_DIGEST_LENGTH];
 	SignBuffer sbuff;
 	SHA256(message.data, message.length,buffer);
-	storeESSign(ECDSA_do_sign(buffer, SHA256_DIGEST_LENGTH, eck), sbuff);
+	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA256_DIGEST_LENGTH, eck)), sbuff);
 	return sbuff.getBinary();
 }
 inline Binary signES384(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA384_DIGEST_LENGTH];
 	SignBuffer sbuff;
 	SHA384(message.data, message.length,buffer);
-	storeESSign(ECDSA_do_sign(buffer, SHA384_DIGEST_LENGTH, eck), sbuff);
+	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA384_DIGEST_LENGTH, eck)), sbuff);
 	return sbuff.getBinary();
 }
 
@@ -158,7 +161,7 @@ inline Binary signES512(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA512_DIGEST_LENGTH];
 	SHA512(message.data, message.length,buffer);
 	SignBuffer sbuff;
-	storeESSign(ECDSA_do_sign(buffer, SHA512_DIGEST_LENGTH, eck), sbuff);
+	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA512_DIGEST_LENGTH, eck)), sbuff);
 	return sbuff.getBinary();
 }
 }
