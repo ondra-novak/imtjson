@@ -8,8 +8,12 @@
 #ifndef SRC_IMTJSON_JWT_H_
 #define SRC_IMTJSON_JWT_H_
 #include <chrono>
+#include <unordered_map>
 
+#include "../../../shared/stringview.h"
 #include "value.h"
+
+using ondra_shared::StrViewA;
 
 namespace json {
 
@@ -157,6 +161,56 @@ std::string serializeJWT(Value payload, PJWTCrypto crypto, const AbstractJWTCryp
  * @return serialized object
  */
 std::string serializeJWT(Value header, Value payload, PJWTCrypto crypto, const AbstractJWTCrypto::SignMethod &method);
+
+///Simple cache for JWT tokens to speed up parsing and validating
+/**
+ * It is intended to store parsed and valid tokens. The cache is limited to centrain number of tokens.
+ *
+ * Because the parsing and validating token involves hashing and cryptographic functions, the parsing token is slow operation. Because tokens
+ * are used repeatedly during their validity, it can make validating faster to include a cache into process.
+ *
+ * The cache is implemented using unordered map (hash map) with very fast hashing function. The function uses fact, that the signature
+ * is already kind of hash, so hash is not really done, the hash map simple uses the tail of the token as hash.
+ */
+class JWTTokenCache {
+public:
+
+	///Initialize cache and specify its limit size
+	/**
+	 *
+	 * @param limit specifies limit for the cache in items. However the cache is split into two halfs. The limit specifies maximum items in
+	 * the each half. Once both halfs are filled, one of them is cleared.
+	 *
+	 * Example, specifiying number 1000 causes, that there can be 1000-2000 tokens in the cache. Once the count reaches 2000, the half of tokens
+	 * are removed from the cache
+	 */
+	JWTTokenCache(unsigned int limit);
+	///Find and get token from the cache
+	/**
+	 * @param token token
+	 * @return returns parsed token, or undefined when token is new
+	 */
+	json::Value get(const StrViewA &token) const;
+	///stores token to the cache
+	/**
+	 * @param token token string
+	 * @param content parsed content
+	 */
+	void store(const StrViewA &token, json::Value content);
+	///Clear the cache (whole)
+	void clear();
+
+
+protected:
+	struct Hash {
+		std::size_t operator()(const StrViewA &token) const;
+	};
+	using CacheMap=std::unordered_map<StrViewA, json::Value, Hash>;
+
+	CacheMap cache1, cache2;
+	unsigned int limit;
+
+};
 
 
 }

@@ -7,8 +7,12 @@
 
 #include "jwt.h"
 
+#include "../../../shared/stringview.h"
+#include "base64.h"
 #include "binary.h"
 #include "object.h"
+
+using ondra_shared::StrViewA;
 namespace json {
 
 
@@ -160,3 +164,41 @@ void JWTCryptoContainer::prepare() {
 
 }
 
+json::JWTTokenCache::JWTTokenCache(unsigned int limit):limit(limit) {
+	cache1.reserve(limit);
+	cache2.reserve(limit);
+}
+
+json::Value json::JWTTokenCache::get(const StrViewA &token) const {
+	auto iter = cache1.find(token);
+	if (iter == cache1.end()) {
+		iter = cache2.find(token);
+		if (iter == cache1.end()) {
+			return Value();
+		}
+	}
+	return iter->second;
+}
+
+void json::JWTTokenCache::store(const StrViewA &token, json::Value content) {
+	Value kt (token,content);
+	cache1.emplace(kt.getKey(), kt);
+	if (cache1.size() >= limit) {
+		std::swap(cache1, cache2);
+		cache1.clear();
+	}
+}
+
+void json::JWTTokenCache::clear() {
+	cache1.clear();
+	cache2.clear();
+}
+
+std::size_t json::JWTTokenCache::Hash::operator ()(const StrViewA &token) const {
+	static Base64Table t(Base64Table::base64urlchars);
+	constexpr unsigned int hlen = (sizeof(std::size_t) * 4 / 3);
+	StrViewA tail = token.substr(token.length- hlen);
+	unsigned char buff[hlen+2];
+	Base64Encoding::decoderCore(buff, tail, tail.length, t);
+	return *reinterpret_cast<std::size_t *>(buff);
+}
