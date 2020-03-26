@@ -368,6 +368,16 @@ public:
 		BIO_free(b);
 		return ret;
 	}
+	static std::string exportPrivKeyPEM(EC_KEY *key) {
+		BIO *b = BIO_new(BIO_s_mem());
+		PEM_write_bio_ECPrivateKey(b,key,0,0,0,0,0);
+		BUF_MEM *mem;
+		BIO_get_mem_ptr(b, &mem);
+		std::string ret;
+		ret.append(mem->data, mem->length);
+		BIO_free(b);
+		return ret;
+	}
 
 
 	std::string exportPublicKey() const {
