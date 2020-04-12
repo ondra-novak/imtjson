@@ -41,6 +41,8 @@ StrViewA Validator::strExplode = "explode"; ///< ["explode","delimiter",rule,lim
 StrViewA Validator::strNull = "null";
 StrViewA Validator::strOptional = "optional";
 StrViewA Validator::strUndefined = "undefined";
+StrViewA Validator::strObject = "object";
+StrViewA Validator::strArray= "array";
 StrViewA Validator::strGreater = ">";
 StrViewA Validator::strGreaterEqual = ">=";
 StrViewA Validator::strLess = "<";
@@ -647,6 +649,12 @@ bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	}
 	else if (name == strNonEmpty) {
 		return opIsNonEmpty(subject);
+	}
+	else if (name == strObject) {
+		return subject.type() == json::object;
+	}
+	else if (name == strArray) {
+		return subject.type() == json::array;
 	}
 	else {
 		return checkClass(subject, name);

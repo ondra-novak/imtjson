@@ -48,6 +48,8 @@ public:
 	static StrViewA strTime;
 	static StrViewA strEmpty;
 	static StrViewA strNonEmpty;
+	static StrViewA strObject;
+	static StrViewA strArray;
 
 	static StrViewA strGreater;
 	static StrViewA strGreaterEqual;
