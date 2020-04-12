@@ -629,10 +629,22 @@ namespace json {
 		 * result (note that for arrays it means, that result will have less
 		 * items then source).
 		 *
+		 * @param target_type required container type. Default value is undefined,
+		 * which means, that result type will be equal to source. You can specify
+		 * json::array or json::object if you need to output different container
+		 * type.
+		 *
+		 * @note if you map to object, every item must have a key.
+		 *
 		 * @return
 		 */
 		template<typename Fn>
 		Value map(Fn &&mapFn)  const;
+
+		template<typename Fn>
+		Value map(Fn &&mapFn, ValueType target_type)  const;
+
+
 
 		///Performs reduce operaton on the container
 		/**

@@ -335,12 +335,23 @@ Value Ordered<Cmp>::SortFn::group(const Value &container, const ReduceFn &reduce
 
 template<typename Fn>
 inline Value Value::map(Fn&& mapFn) const {
-	if (type() == object) {
-		return Object(*this).map(std::forward<Fn>(mapFn));
-	} else {
-		return Array(*this).map(std::forward<Fn>(mapFn));
+	switch (type()) {
+		case object: return Object(*this).map(std::forward<Fn>(mapFn));
+		case array: return Array(*this).map(std::forward<Fn>(mapFn));
+		default: return Value();
 	}
 }
+
+
+template<typename Fn>
+inline Value Value::map(Fn &&mapFn, ValueType target_type)  const {
+	switch (target_type) {
+		case object: return Object(*this).map(std::forward<Fn>(mapFn));
+		case array:return Array(*this).map(std::forward<Fn>(mapFn));
+		default: return map(std::forward<Fn>(mapFn));
+	}
+}
+
 
 template<typename Fn, typename Total>
 inline Total Value::reduce(Fn&& reduceFn, Total &&curVal) const {
@@ -483,7 +494,10 @@ template<typename Fn>
 inline Object Object::map(Fn &&mapFn) const {
 	Object out;
 	for (auto item:*this) {
-		out.set(item.getKey(),mapFn(item));
+		Value v = mapFn(item);
+		if ((v.flags() & proxy) == 0)
+			v = Value(item.getKey(), v);
+		out.set(v);
 	}
 	return Object(std::move(out));
 }
