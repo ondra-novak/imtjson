@@ -18,7 +18,6 @@ namespace json {
 		}
 		void commit() {
 			if (this->dirty()) {
-				parent.checkInstance();
 				parent.set(index, *this);
 				this->revert();
 			}
