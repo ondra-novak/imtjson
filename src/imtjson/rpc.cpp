@@ -73,14 +73,14 @@ Value RpcServer::defaultFormatError(int code, const String& message, Value data)
 	});
 }
 
-static Value formatNotify(RpcVersion ver, const String name, Value data) {
+static Value formatNotify(RpcVersion ver, const String name, Value data, Value context) {
 	Value obj;
 	switch (ver) {
 	case RpcVersion::ver1:
-		obj = Object("id", nullptr)("method", name)("params", data);
+		obj = Object("id", nullptr)("method", name)("params", data)("context",context);
 		break;
 	case RpcVersion::ver2:
-		obj = Object("method", name)("params", data)("jsonrpc", "2.0");
+		obj = Object("method", name)("params", data)("jsonrpc", "2.0")("context",context);
 		break;
 	}
 	return obj;
@@ -156,7 +156,7 @@ void RpcRequest::RequestData::postSendResponse(bool sendResult) {
 
 bool RpcRequest::RequestData::sendNotify(const RpcNotify &notify) {
 	if (notifyEnabled) {
-		notifyEnabled = response(formatNotify(getVersion(),notify.eventName, notify.data));
+		notifyEnabled = response(formatNotify(getVersion(),notify.eventName, notify.data, notify.context));
 	}
 	return notifyEnabled;
 
@@ -552,18 +552,24 @@ AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName
 	Sync _(lock);
 	Value id = genRequestID();
 	Value ctx = context.empty()?Value():context;
+	return this->operator ()(methodName, args, ctx);
+}
+
+AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName, Value args, Value context) {
+	Sync _(lock);
+	Value id = genRequestID();
 	switch (ver) {
 	case RpcVersion::ver1:
 		return PreparedCall(*this, id, Object("method", methodName)
 											 ("params",args)
 											 ("id",id)
-											 ("context",ctx));
+											 ("context",context));
 	case RpcVersion::ver2:
 		return PreparedCall(*this, id, Object("method", methodName)
 											 ("params",args)
 											 ("id",id)
 											 ("jsonrpc","2.0")
-											 ("context",ctx));
+											 ("context",context));
 	};
 	throw std::runtime_error("Invalid JSONRPC version (client-call)");
 }
@@ -699,7 +705,11 @@ bool RpcRequest::isSendNotifyEnabled() const {
 
 void AbstractRpcClient::notify(String notifyName, Value args) {
 	Sync _(lock);
-	sendRequest(formatNotify(ver, notifyName, args));
+	sendRequest(formatNotify(ver, notifyName, args, Value()));
+}
+void AbstractRpcClient::notify(String notifyName, Value args, Value context) {
+	Sync _(lock);
+	sendRequest(formatNotify(ver, notifyName, args, context));
 }
 
 AbstractRpcClient::AbstractRpcClient(RpcVersion version)
@@ -726,8 +736,16 @@ RpcNotify::RpcNotify(String eventName, Value data)
 {
 
 }
+RpcNotify::RpcNotify(String eventName, Value data, Value context)
+	:eventName(eventName)
+	,data(data)
+	,context(context)
+{
+
+}
+
 RpcRequest RpcNotify::asRequest() const {
-	return RpcRequest::create(RpcRequest::ParseRequest(eventName, data), [](Value){return false;}, 0);
+	return RpcRequest::create(RpcRequest::ParseRequest(eventName, data, Value(), context), [](Value){return false;}, 0);
 }
 
 
