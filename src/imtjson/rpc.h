@@ -68,12 +68,15 @@ class RpcRequest;
 struct RpcNotify {
 	String eventName;
 	Value data;
+	Value context;
 
 	///Construct notify from JSON
 	explicit RpcNotify(Value js);
 
 	///Construct notify
 	RpcNotify(String eventName, Value data);
+
+	RpcNotify(String eventName, Value data, Value context);
 
 	///Create request from the notify
 	/** this helps if you need to pass notify to the server as method call */
@@ -922,6 +925,9 @@ public:
 	 */
 	PreparedCall operator()(String methodName, Value args);
 
+
+	PreparedCall operator()(String methodName, Value args, Value context);
+
 	///Send notify to the server
 	/**
 	 * @param notifyName name of notify (or method)
@@ -930,6 +936,8 @@ public:
 	 * @nore notify is always asynchronous.
 	 */
 	void notify(String notifyName, Value args);
+
+	void notify(String notifyName, Value args, Value context);
 
 	///Cancels asynchronous call
 	/** Obsolete function */
