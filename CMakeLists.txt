@@ -19,4 +19,13 @@ add_compile_options(-Werror)
 add_custom_target( test bin/imtjson_test DEPENDS bin/imtjson_test)
 cmake_policy(POP) 
 
- 
+
+install(TARGETS imtjson
+        DESTINATION "lib"
+        ) 
+INSTALL(FILES ${imtjson_HDR}
+        DESTINATION "include/imtjson" 
+        )    
+INSTALL(FILES "shared/vla.h" "shared/refcnt.h" "shared/stringview.h"
+	DESTINATION "include/imtjson/shared"
+	)
