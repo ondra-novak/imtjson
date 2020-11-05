@@ -102,13 +102,13 @@ inline bool verifyHS512(BinaryView message, BinaryView sign, BinaryView key) {
 struct PECDSA_SIG_free {void operator()(ECDSA_SIG *p)const{ECDSA_SIG_free(p);}};
 using PECDSA_SIG = std::unique_ptr<ECDSA_SIG, PECDSA_SIG_free>;
 
-inline void storeESSign(PECDSA_SIG &&sig, SignBuffer &sbuff) {
+inline void storeESSign(PECDSA_SIG &&sig, SignBuffer &sbuff, int len) {
 	const BIGNUM *r;
 	const BIGNUM *s;
 	ECDSA_SIG_get0(sig.get(),&r,&s);
 	unsigned char *c = sbuff.buff;
-	c = c + BN_bn2bin(r, c);
-	c = c + BN_bn2bin(s, c);
+	c = c + BN_bn2binpad(r, c, len);
+	c = c + BN_bn2binpad(s, c, len);
 	sbuff.len = c - sbuff.buff;
 }
 
@@ -145,14 +145,14 @@ inline Binary signES256(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA256_DIGEST_LENGTH];
 	SignBuffer sbuff;
 	SHA256(message.data, message.length,buffer);
-	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA256_DIGEST_LENGTH, eck)), sbuff);
+	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA256_DIGEST_LENGTH, eck)), sbuff, 256/8);
 	return sbuff.getBinary();
 }
 inline Binary signES384(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA384_DIGEST_LENGTH];
 	SignBuffer sbuff;
 	SHA384(message.data, message.length,buffer);
-	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA384_DIGEST_LENGTH, eck)), sbuff);
+	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA384_DIGEST_LENGTH, eck)), sbuff, 384/8);
 	return sbuff.getBinary();
 }
 
@@ -161,7 +161,7 @@ inline Binary signES512(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA512_DIGEST_LENGTH];
 	SHA512(message.data, message.length,buffer);
 	SignBuffer sbuff;
-	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA512_DIGEST_LENGTH, eck)), sbuff);
+	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA512_DIGEST_LENGTH, eck)), sbuff, 512/8);
 	return sbuff.getBinary();
 }
 }
@@ -179,6 +179,7 @@ public:
 		case 512: return {"RS512",kid};
 		}
 	}
+
 
 	virtual Binary sign(StrViewA message, SignMethod method) const {
 		if (method.alg == "RS256") return alg::signRS256(BinaryView(message), rsa);
@@ -256,10 +257,23 @@ public:
 		}
 	}
 
+	template<typename Sig, typename Check>
+	Binary signAndCheck(Sig &&sig, Check &&check,  BinaryView message) const {
+		int i = 1;
+		do {
+			auto r = sig(message, key);
+			if (check(message, r, key)) return r;
+			i++;
+		} while (i < 100);
+		throw std::runtime_error("OpenSSL failed to sign message");
+
+
+	}
+
 	virtual Binary sign(StrViewA message, SignMethod method) const {
-		if (method.alg == "ES256" && size == 256) return alg::signES256(BinaryView(message), key);
-		if (method.alg == "ES384" && size == 384) return alg::signES384(BinaryView(message), key);
-		if (method.alg == "ES512" && size == 512) return alg::signES512(BinaryView(message), key);
+		if (method.alg == "ES256" && size == 256) return signAndCheck(alg::signES256, alg::verifyES256, BinaryView(message));
+		if (method.alg == "ES384" && size == 384) return signAndCheck(alg::signES384, alg::verifyES384, BinaryView(message));
+		if (method.alg == "ES512" && size == 512) return signAndCheck(alg::signES512, alg::verifyES512, BinaryView(message));
 		return Binary();
 	}
 
