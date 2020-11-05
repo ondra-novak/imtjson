@@ -836,7 +836,16 @@ namespace json {
 		bool isCopyOf(const Value &other) const {
 			return v->unproxy() == other.v->unproxy();
 		}
-		
+
+		///Same as isCopyOf but also checks if it is same "key"
+		/**
+		 * @param other
+		 * @return
+		 */
+		bool isSame(const Value &other) const {
+			return v == other.v;
+		}
+
 		///Allows to order values by internal address
 		/**
 		 Every value has internal address. This function allows to make order of
