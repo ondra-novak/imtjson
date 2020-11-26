@@ -979,6 +979,7 @@ public:
 	virtual ~AbstractRpcClient() {}
 	AbstractRpcClient(const AbstractRpcClient &):idCounter(0) {}
 
+
 protected:
 	Value context;
 
@@ -1029,6 +1030,9 @@ protected:
 	/** this allows to override default implementation of ID generation */
 	/** @note called under lock */
 	virtual Value genRequestID();
+
+	virtual void onUnregister() {};
+
 
 };
 
