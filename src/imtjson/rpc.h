@@ -1031,7 +1031,6 @@ protected:
 	/** @note called under lock */
 	virtual Value genRequestID();
 
-	virtual void onUnregister() {};
 
 
 };

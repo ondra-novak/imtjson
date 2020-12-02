@@ -584,7 +584,6 @@ bool AbstractRpcClient::cancelPendingCall(Value id, RpcResult result) {
 	if (it == callMap.end()) return false;
 	PPendingCall pc = std::move(it->second);
 	callMap.erase(it);
-	onUnregister();
 	_.unlock();
 	pc->onResponse(result);
 	return true;
