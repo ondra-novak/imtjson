@@ -1009,7 +1009,7 @@ protected:
 	typedef CallMap::value_type CallItemType;
 	CallMap callMap;
 
-	std::recursive_mutex lock;
+	mutable std::recursive_mutex lock;
 	typedef std::unique_lock<std::recursive_mutex> Sync;
 	typedef std::condition_variable_any CondVar;
 
