@@ -249,6 +249,7 @@ const Value &RpcRequest::getDiagData() const {
 }
 
 bool RpcRequest::checkArgs(const Value& argDefTuple) {
+	if (argDefTuple.type() != json::array) return checkArgs(Value(array, {argDefTuple}));
 	Value v = data->srvsvc->validateArgs(data->params,argDefTuple);
 	if (v.isNull() || !v.defined()) return true;
 	data->rejections = v;

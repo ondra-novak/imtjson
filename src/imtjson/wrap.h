@@ -40,7 +40,7 @@ namespace _details {
 		///some values are proxies with member name - this retrieves name
 		virtual StringView<char> getMemberName() const {return pv->getMemberName();}
 		///Returns pointer to first no-proxy object
-		virtual const IValue *unproxy() const {return pv->unproxy();}
+		virtual const IValue *unproxy() const {return this;}
 
 		virtual bool equal(const IValue *other) const {return pv->equal(other);}
 
@@ -134,7 +134,7 @@ inline Value makeValue(T&& object, Value value) {
  */
 template<typename T>
 inline auto cast(Value value) -> decltype(_details::CastHelper<T>::cast(value)) {
-	return _details::CastHelper<T>::cast(value);
+	return _details::CastHelper<T>::cast(value.stripKey());
 }
 
 
