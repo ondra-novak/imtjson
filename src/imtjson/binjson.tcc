@@ -475,7 +475,12 @@ std::size_t  BinarySerializer<Fn>::HashStr::operator()(const StrViewA &str) cons
 
 template<typename Fn>
 void BinaryParser<Fn>::storeKey(const String& s) {
-	keyHistory[keyIndex & 0x7F] = s;
+	auto idx = keyIndex & 0x7F;
+	if (keyHistory.size()==idx) {
+		keyHistory.push_back(s);
+	} else {
+		keyHistory[keyIndex & 0x7F] = s;
+	}
 	keyIndex++;
 }
 
@@ -493,8 +498,8 @@ inline bool BinarySerializer<Fn>::preloadKey(const StrViewA& str) {
 
 template<typename Fn>
 inline void BinaryParser<Fn>::clearKeys() {
-	for (auto &x : keyHistory) x = String();
-	keyIndex = 0;
+	keyHistory.clear();
+	keyIndex=0;
 }
 
 template<typename Fn>

@@ -58,7 +58,7 @@ protected:
 	BinaryEncoding curBinaryEncoding;
 
 	std::vector<char> keybuffer;
-	String keyHistory[128];
+	std::vector<String> keyHistory;
 	unsigned int keyIndex = 0;
 
 private:
