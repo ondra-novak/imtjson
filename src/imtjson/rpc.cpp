@@ -502,7 +502,7 @@ AbstractRpcClient::PreparedCall::PreparedCall(AbstractRpcClient& owner, const Va
 //object receives result and stores it
 class AbstractRpcClient::LocalPendingCall: public AbstractRpcClient::PendingCall {
 public:
-	virtual void onResponse(RpcResult response) override {
+	virtual void onResponse(const RpcResult &response) override {
 		res = response;
 	}
 
@@ -539,7 +539,7 @@ AbstractRpcClient::PreparedCall::operator RpcResult() {
 	owner.addPendingCall(id,PPendingCall(&lpc, [](PendingCall *d){
 		static_cast<LocalPendingCall *>(d)->release();}));
 	//send request now
-	owner.sendRequest(msg);
+	owner.sendRequest(id, msg);
 
 
 	lpc.trig.wait(_,[&]{return lpc.received;});
@@ -586,7 +586,7 @@ bool AbstractRpcClient::cancelPendingCall(Value id, RpcResult result) {
 	PPendingCall pc = std::move(it->second);
 	callMap.erase(it);
 	_.unlock();
-	pc->onResponse(result);
+	pc->onResponse(std::move(result));
 	return true;
 }
 
@@ -598,6 +598,59 @@ void AbstractRpcClient::cancelAllPendingCalls(RpcResult result) {
 		for (auto &&x: callMap) ids.push_back(x.first);
 	}
 	for (auto &&x: ids) cancelPendingCall(x, result);
+}
+
+void AbstractRpcClient::filterPendingCalls(const std::vector<Value> &ids, std::vector<PPendingCall> &out) {
+	Sync _(lock);
+	out.clear();
+	CallMap newMap;
+	for (const auto &x: ids) {
+		auto iter = callMap.find(x);
+		if (iter != callMap.end()) {
+			newMap.emplace(x, std::move(iter->second));
+		}
+	}
+	for (auto &x: callMap) {
+		if (x.second != nullptr)
+			out.emplace_back(std::move(x.second));
+	}
+	callMap = std::move(newMap);
+}
+
+AbstractRpcClient::Response AbstractRpcClient::parseResponse(Value response) {
+	Value id = response["id"];
+	if (id.defined() && !id.isNull()) {
+		Value result = response["result"];
+		Value error = response["error"];
+		if (result.defined() || error.defined()) {
+			Value ctx = response["context"];
+			updateContext(ctx);
+			RpcResult r;
+			if (result.defined() && (!error.defined() || error.isNull()))  {
+				r = RpcResult(result, false, ctx);
+			} else {
+				r = RpcResult(error, true, ctx);
+			}
+			auto iter = callMap.find(id);
+			if (iter == callMap.end()) {
+				return Response{unexpected, r, PPendingCall(nullptr,nullptr)};
+			} else {
+				PPendingCall pcall (std::move(iter->second));
+				callMap.erase(iter);
+				return Response{success, r, std::move(pcall)};
+			}
+		} else {
+			return Response {
+				request, RpcResult(), PPendingCall(nullptr,nullptr)
+			};
+		}
+	} else {
+		return Response {
+			notification, RpcResult(), PPendingCall(nullptr,nullptr)
+		};
+
+	}
+
 }
 
 AbstractRpcClient::ReceiveStatus AbstractRpcClient::processResponse(Value response) {
@@ -624,15 +677,18 @@ AbstractRpcClient::ReceiveStatus AbstractRpcClient::processResponse(Value respon
 }
 
 Value AbstractRpcClient::getContext() const {
+	std::lock_guard _(lock);
 	return context;
 }
 
 
 
 void AbstractRpcClient::setContext(const Value& value) {
+	std::lock_guard _(lock);
 	context = value;
 }
 void AbstractRpcClient::updateContext(const Value& value) {
+	std::lock_guard _(lock);
 	setContext(updateContext(context,value));
 }
 Value AbstractRpcClient::updateContext(const Value& context, const Value& value) {
@@ -645,7 +701,7 @@ Value AbstractRpcClient::updateContext(const Value& context, const Value& value)
 }
 
 void AbstractRpcClient::addPendingCall(const Value &id, PPendingCall &&pcall) {
-	callMap.insert(CallItemType(id,std::move(pcall)));
+	callMap.emplace(id,	std::move(pcall));
 }
 
 
@@ -720,9 +776,6 @@ AbstractRpcClient::AbstractRpcClient(RpcVersion version)
 {
 }
 
-void AbstractRpcClient::rejectAllPendingCalls() {
-	callMap.clear();
-}
 
 
 RpcNotify::RpcNotify(Value js)
@@ -833,6 +886,17 @@ Value RpcRequest::getVersionField() const {
 
 void RpcRequest::setParams(Value args) {
 	data->params = args;
+}
+
+RpcResult RpcResult::makeError(int error, const StrViewA &message, Value data) {
+	return RpcResult(Object
+		("code",error)
+		("message",message)
+		("data", data), true, json::undefined);
+}
+
+void AbstractRpcClient::sendRequest(const Value &, const Value &request) {
+	sendRequest(request);
 }
 
 }

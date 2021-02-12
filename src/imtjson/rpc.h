@@ -56,6 +56,8 @@ public:
 	StrViewA getErrorMessage() const {return this->operator []("message").getString();}
 	Value getErrorData() const {return this->operator []("data");}
 
+	static RpcResult makeError(int code, const StrViewA &message, Value data = json::undefined);
+
 protected:
 	Value context;
 	bool error;
@@ -798,6 +800,13 @@ public:
 
 	static Value defaultFormatError(int code, const String& message, Value data);
 
+	template<typename Fn>
+	void enumMethods(Fn &&fn) const {
+		for(auto &x : mapReg) {
+			fn(x.second->name);
+		}
+	}
+
 protected:
 	struct HashStr {
 		std::size_t operator()(StrViewA str) const;
@@ -968,6 +977,8 @@ public:
 	 */
 	ReceiveStatus processResponse(Value response);
 
+
+
 	///Retrieves current context
 	Value getContext() const;
 	///Sets current context
@@ -996,9 +1007,22 @@ protected:
 	 */
 	virtual void sendRequest(Value request) = 0;
 
+
+	///Implements serializing and sending the request to the output channel
+	/**
+	 * New version. This version also reports ID of the request. This allows perform
+	 * asynchronous sending implemented through the output buffer, where some
+	 * messages are already send and some not. In the event of break of the connection,
+	 * only pending messages can be canceled. See cancelPendingCallsFiltered
+	 *
+	 * @param id message request
+	 * @param request request
+	 */
+	virtual void sendRequest(const Value &id, const Value &request);
+
 	class PendingCall {
 	public:
-		virtual void onResponse(RpcResult response) = 0;
+		virtual void onResponse(const RpcResult &response) = 0;
 		virtual ~PendingCall() {}
 	};
 
@@ -1006,7 +1030,6 @@ protected:
 
 
 	typedef std::unordered_map<Value, PPendingCall > CallMap;
-	typedef CallMap::value_type CallItemType;
 	CallMap callMap;
 
 	mutable std::recursive_mutex lock;
@@ -1020,16 +1043,43 @@ protected:
 
 	void addPendingCall(const Value &id, PPendingCall &&pcall);
 
-	///call this function if you need to reject all pending calls
-	/** this can be needed when client lost connection so all pending calls are lost. Rejected
-	 * pending calls can be repeated, but it isn't often good idea
+	///Filters pending calls
+	/**
+	 * @param ids specifies filter
+	 * @param out filled by calls not specified by the filter
 	 */
-	void rejectAllPendingCalls();
+	void filterPendingCalls(const std::vector<Value> &ids, std::vector<PPendingCall> &out);
 
 	///Generates ID for the request
 	/** this allows to override default implementation of ID generation */
 	/** @note called under lock */
 	virtual Value genRequestID();
+
+	struct Response {
+		///status
+		ReceiveStatus status;
+		///result
+		RpcResult result;
+		///pending call, which must be called to process the response
+		PPendingCall pcall;
+	};
+
+
+	///New version: parses response and returns structure
+	/**
+	 * @param response to parse
+	 * @return parsed response and found pending call
+	 */
+	Response parseResponse(Value response);
+
+	///Processes delivered response and prepares the call
+	/**
+	 * @param response delivered response
+	 * @param prepared call, if the response is result. This variable must be initialized
+	 * as empty and it is filled by a valid function
+	 * @return status of the response
+	 */
+	ReceiveStatus processResponse(Value response, PPendingCall &pcall, RpcResult &result);
 
 
 
@@ -1042,7 +1092,7 @@ inline Value AbstractRpcClient::PreparedCall::operator >>(const Fn& fn) {
 		class PC: public PendingCall {
 		public:
 			PC(const Fn &fn):fn(fn) {}
-			virtual void onResponse(RpcResult response) override {
+			virtual void onResponse(const RpcResult &response) override {
 				res = response;
 			}
 			~PC() {
@@ -1059,7 +1109,7 @@ inline Value AbstractRpcClient::PreparedCall::operator >>(const Fn& fn) {
 
 		Sync _(owner.lock);
 		owner.addPendingCall(id,PPendingCall(new PC(fn),[](PendingCall *p){delete p;}));
-		owner.sendRequest(msg);
+		owner.sendRequest(id, msg);
 		executed = true;
 	}
 	return id;

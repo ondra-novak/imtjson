@@ -26,7 +26,7 @@ namespace json {
 
 
 
-		Serializer(const Fn &target, bool utf8output) :target(target), utf8output(utf8output) {}
+		Serializer(Fn &&target, bool utf8output) :target(std::forward<Fn>(target)), utf8output(utf8output) {}
 
 		void serialize(const Value &obj);
 		virtual void serialize(const IValue *ptr);
