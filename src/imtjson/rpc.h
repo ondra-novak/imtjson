@@ -665,7 +665,7 @@ class RpcServer: private RpcRequest::IServerServices {
 	class AbstractMethodReg: public RefCntObj {
 	public:
 		const String name;
-		virtual void call(const RpcRequest &req) const = 0;
+		virtual void call(const RpcRequest &req) = 0;
 		AbstractMethodReg(const String &name):name(name) {}
 
 		virtual ~AbstractMethodReg() {}
@@ -827,7 +827,7 @@ inline void RpcServer::add(const String& name, Fn &&fn) {
 	class F: public AbstractMethodReg {
 	public:
 		F(const String &name, Fn &&fn):AbstractMethodReg(name), fn(std::forward<Fn>(fn)) {}
-		virtual void call(const RpcRequest &req) const override {
+		virtual void call(const RpcRequest &req) override {
 			fn(req);
 		}
 	protected:
@@ -843,7 +843,7 @@ inline void RpcServer::add(const String& name, const ObjPtr &objPtr, void (Fn::*
 	public:
 		F(const String &name, const ObjPtr &objPtr, void (Fn::*fn)(RpcRequest))
 				:AbstractMethodReg(name), objPtr(objPtr),fn(fn) {}
-		virtual void call(const RpcRequest &req) const override {
+		virtual void call(const RpcRequest &req)  override {
 			((*objPtr).*fn)(req);
 		}
 	protected:
