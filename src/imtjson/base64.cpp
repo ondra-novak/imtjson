@@ -7,7 +7,7 @@ namespace json {
 
 Base64Table::Base64Table(const char *chars) {
 	for (std::size_t i = 0; i <256; i++) table[i] = 0xFF;
-	for (std::size_t i = 0; i < 64; i++) table[(unsigned char)(chars[i])] = i;
+	for (std::size_t i = 0; i < 64; i++) table[static_cast<unsigned char>(chars[i])] = static_cast<char>(i);
 }
 
 char Base64Table::base64chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

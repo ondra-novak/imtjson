@@ -317,9 +317,9 @@ namespace json {
 		double fm = floor(frac * fractMultiply +0.5);
 
 		//convert finteger to integer
-		UInt intp(fint);
+		UInt intp(static_cast<UInt>(fint));
 		//mantisa as integer number (without left zeroes)
-		UInt m(fm);
+		UInt m(static_cast<UInt>(fm));
 
 
 		//if floating multiplied fraction is above or equal fractMultiply

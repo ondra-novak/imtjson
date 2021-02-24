@@ -293,7 +293,7 @@ Value ParserHelper::numberFromStringRaw(StrViewA str, bool force_double) {
 		if  (!isdigit(c))  {
 			return PreciseNumberValue<double>::create(str);
 		}
-		UInt newval = acclm * 10 + (c - '0');
+		ULongInt newval = acclm * 10 + (c - '0');
 		if (newval < acclm) {
 			return PreciseNumberValue<double>::create(str);
 		}
