@@ -24,7 +24,7 @@ public:
 		virtual UInt getUInt() const override {return 0;}
 		virtual LongInt getIntLong() const override { return 0; }
 		virtual ULongInt getUIntLong() const override {return 0;}
-		virtual ValueTypeFlags flags() const override { return numberUnsignedInteger; }
+		virtual ValueTypeFlags flags() const override { return numberUnsignedInteger|numberInteger; }
 	};
 
 	class StaticEmptyStringValue : public AbstractStringValue {
