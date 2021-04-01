@@ -402,7 +402,7 @@ Value BinaryParser<Fn>::parseItem() {
 	}
 	default: {
 		unsigned int p = (keyIndex - 1 - tag) & 0x7F;
-		String s = keyHistory[p];
+		String s = p>=keyHistory.size()?String():keyHistory[p];
 		Value v = parseItem();
 		return Value(s,v);
 	}
