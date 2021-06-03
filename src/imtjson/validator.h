@@ -38,6 +38,7 @@ public:
 	static StrViewA strAlnum;
 	static StrViewA strDigits;
 	static StrViewA strInteger;
+	static StrViewA strUnsigned;
 	static StrViewA strNative;
 	static StrViewA strNull;
 	static StrViewA strOptional;
