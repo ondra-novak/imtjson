@@ -243,7 +243,7 @@ static bool opIsInteger(const Value &v) {
 }
 
 static bool opIsUnsigned(const Value &v) {
-	return v.type() == number && v.getNumber()>0;
+	return v.type() == number && v.getNumber()>=0;
 }
 
 
