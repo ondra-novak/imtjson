@@ -28,6 +28,7 @@ StrViewA Validator::strAlpha = "alpha";
 StrViewA Validator::strAlnum = "alnum";
 StrViewA Validator::strDigits = "digits";
 StrViewA Validator::strInteger = "integer";
+StrViewA Validator::strUnsigned = "unsigned";
 StrViewA Validator::strNative = "native";
 StrViewA Validator::strMinSize = "minsize";
 StrViewA Validator::strMaxSize = "maxsize";
@@ -239,6 +240,10 @@ static bool opIsIdentifier(const Value &v) {
 
 static bool opIsInteger(const Value &v) {
 	return v.type() == number && ((v.flags() & (numberInteger | numberUnsignedInteger)) != 0);
+}
+
+static bool opIsUnsigned(const Value &v) {
+	return v.type() == number && v.getNumber()>=0;
 }
 
 
@@ -640,6 +645,9 @@ bool Validator::evalRuleSimple(const Value& subject, const Value& rule) {
 	}
 	else if (name == strInteger) {
 		return opIsInteger(subject);
+	}
+	else if (name == strUnsigned) {
+		return opIsUnsigned(subject);
 	}
 	else if (name == strIdentifier) {
 		return opIsIdentifier(subject.toString());
