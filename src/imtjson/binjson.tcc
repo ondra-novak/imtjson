@@ -386,7 +386,7 @@ Value BinaryParser<Fn>::parseItem() {
 		if (sizeof(std::size_t) < sizeof(std::uint64_t) && ((tag & 0xF) == opcode::size64bit)) {
 			return Value(parse64bit());
 		} else {
-			return Value((Int)parseInteger(tag));
+			return Value(parseInteger(tag));
 		}
 	case opcode::negint:
 		if (sizeof(std::size_t) < sizeof(std::uint64_t) && ((tag & 0xF) == opcode::size64bit)) {
