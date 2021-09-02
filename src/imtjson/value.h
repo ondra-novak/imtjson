@@ -410,6 +410,21 @@ namespace json {
 		 */
 		Value setKey(const StringView<char> &key) const {return Value(key, *this);}
 
+		///Set items of an object
+		/**
+		 * Convenient way to set multiple items
+		 * @param items list of pairs to set. If you need to unset a particular item, use undefined as value
+		 *
+		 * @note function replaces current value with modified value.
+		 *
+		 * @note Performance tip: If you can, it is the most efficient to set multiple items by one call, then
+		 * set items in multiple calls.
+		 *
+		 * @see replace
+		 */
+		void setItems(const std::initializer_list<std::pair<StrViewA, Value> > &items);
+
+
 		///Converts the value to string
 		/**
 		 * In compare to getString(), this function converts anything in the variable to a

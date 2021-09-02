@@ -879,6 +879,53 @@ namespace json {
 	}
 
 
+	void Value::setItems(const std::initializer_list<std::pair<StrViewA, Value> > &fields) {
+		auto **buffer = static_cast<std::pair<StrViewA, Value> const **>(alloca(fields.size()*sizeof(std::pair<StrViewA, Value> *)));
+		int i = 0; for (const auto &x: fields) buffer[i++] = &x;
+		std::sort(buffer, buffer+fields.size(), [](const auto *a, const auto *b){return a->first < b->first;});
+		auto res = ObjectValue::create(fields.size()+size());
+		auto i1 = begin();
+		auto i2 = buffer;
+		auto e1 = end();
+		auto e2 = buffer+fields.size();
+		while (i1 != e1 && i2 != e2) {
+			Value left = *i1;
+			const auto *right = *i2;
+			if (left.getKey() < right->first) {
+				res->push_back(left.v);
+				i1++;
+			} else if (left.getKey() > right->first) {
+				if (right->second.defined()) {
+					auto pv = right->second.setKey(right->first).v;
+					res->push_back(std::move(pv));
+				}
+				i2++;
+			} else {
+				if (right->second.defined()) {
+					auto pv = right->second.setKey(right->first).v;
+					res->push_back(std::move(pv));
+				}
+				i1++;
+				i2++;
+			}
+		}
+		while (i1 != e1) {
+			Value left = *i1;
+			res->push_back(left.v);
+			i1++;
+		}
+		while (i2 != e2) {
+			const auto *right = *i2;
+			if (right->second.defined()) {
+				auto pv = right->second.setKey(right->first).v;
+				res->push_back(std::move(pv));
+			}
+			i2++;
+		}
+
+		v = PValue(res);
+	}
+
 }
 
 namespace std {

@@ -408,6 +408,18 @@ Object::Object(Object &&other)
 
 Value::Value(const StrViewA key, const Value &value) :v(bindKeyToPValue(key, value.getHandle())) {}
 
+Object::Object(const std::initializer_list<std::pair<StrViewA, Value> > &fields) {
+	auto obj = ObjectValue::create(fields.size());
+	for (const auto &x: fields) {
+		if (x.second.defined()) {
+			obj->push_back(bindKeyToPValue(x.first, x.second.getHandle()));
+		}
+	}
+	obj->sort();
+	base = PValue(obj);
+
+}
+
 
 }
 

@@ -53,6 +53,15 @@ namespace json {
 		///Destructor - performs cleanup, discards any changes.
 		~Object();
 
+		///Creates object from initializer list of Key, Value pairs.
+		/**
+		 * This is also convenient way to create object. Main benefit of this constructor is
+		 * that it initializes base object directly and commiting such object doesn't involves any extra processing.
+		 * Using intializer list is also effective for memory allocation because count of items is already
+		 * known
+		 */
+		Object(const std::initializer_list<std::pair<StrViewA, Value> >&fields);
+
 		Object(const Object &other);
 
 		Object(Object &&other);
@@ -103,6 +112,11 @@ namespace json {
 		*/
 		Object &unset(const StringView<char> &name);
 
+		///Set multiple keys in one request
+		Object &setItems(const std::initializer_list<std::pair<StrViewA, Value> > &keys) {
+			for (const auto &x: keys) set(x.first, x.second);
+			return *this;
+		}
 
 		///Sets member to value
 		/**
