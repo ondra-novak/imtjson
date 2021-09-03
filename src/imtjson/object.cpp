@@ -10,19 +10,6 @@
 
 namespace json {
 
-	template<typename Fn>
-	static RefCntPtr<ObjectValue> applyDiffImpl(const Value &baseObject, const Value &diffObject, Fn mergeFn);
-
-	const Value &Object::defaultMerge(const Value &, const Value &v) {
-		return v;
-	}
-
-	Value Object::recursiveMerge(const Value &b, const Value &d) {
-		if (b.type() == json::object && d.type() == json::object)
-			return applyDiff(b,d,recursiveMerge);
-		else
-			return d;
-	}
 
 	PValue bindKeyToPValue(const StrViewA &key, const PValue &value) {
 		if (key.empty()) {
@@ -55,29 +42,24 @@ namespace json {
 	{
 	}
 
-	Object::Object(const StringView<char>& name, const Value & value): base(AbstractObjectValue::getEmptyObject())
-	{
-		set(name, value);
-	}
 
 	Object::~Object()
 	{
-		//force delection here
-		ordered = nullptr;
-		unordered = nullptr;
 	}
 
 	Object::Object(const Object &other):base(other.base) {
-		ordered = other.commitAsDiffObject();
-		unordered = ordered != nullptr?ObjectValue::create(ordered->size()):nullptr;
+		other.optimize();
+		ordered = other.ordered;
+		unordered = nullptr;
 	}
 
 	Object &Object::operator=(const Object &other) {
 		if (this == &other) return *this;
 		clear();
 		base = other.base;
-		ordered = other.commitAsDiffObject();
-		unordered = ordered != nullptr?ObjectValue::create(ordered->size()):nullptr;
+		other.optimize();
+		ordered = other.ordered;
+		unordered = nullptr;
 		return *this;
 	}
 
@@ -96,7 +78,7 @@ void Object::set_internal(const Value& v) {
 	lastIterSnapshot = Value();
 
 	if (unordered == nullptr) {
-		unordered = ObjectValue::create(8);
+		unordered = ObjectValue::create(ordered?ordered->size():8);
 	}
 
 	bool ok = unordered->push_back(v.getHandle());
@@ -108,14 +90,13 @@ void Object::set_internal(const Value& v) {
 	}
 }
 
-	Object & Object::set(const StringView<char>& name, const Value & value)
+	void Object::set(const StringView<char>& name, const Value & value)
 	{
 		PValue v = value.getHandle();
 		if (v->flags() & proxy ) {
 			StringView<char> curName = v->getMemberName();
 			if (curName == name) {
 				set_internal(v);
-				return *this;
 			} else {
 				v = v->unproxy();
 			}
@@ -123,18 +104,17 @@ void Object::set_internal(const Value& v) {
 		}
 		v = new(name) ObjectProxy(name, v);
 		set_internal(v);
-		return *this;
+
 	}
 
-	Object & Object::set(const Value & value)
+	void Object::set(const Value & value)
 	{
 		set_internal(value.getHandle());
-		return *this;
 	}
 
-	Object & Object::unset(const StringView<char>& name)
+	void Object::unset(const StringView<char>& name)
 	{
-		return set(name, AbstractValue::getUndefined());
+		set(name, AbstractValue::getUndefined());
 	}
 
 	const Value Object::operator[](const StringView<char> &name) const {
@@ -149,11 +129,10 @@ void Object::set_internal(const Value& v) {
 				const PValue &z = (*unordered)[i-1];
 				if (z->getMemberName() == name) return z;
 			}
-
-			if (ordered != nullptr) {
-				const IValue *f = ordered->findSorted(name);
-				if (f) return f;
-			}
+		}
+		if (ordered != nullptr) {
+			const IValue *f = ordered->findSorted(name);
+			if (f) return f;
 		}
 
 		return base[name];
@@ -163,35 +142,85 @@ void Object::set_internal(const Value& v) {
 		return ValueRef(*this, name);
 	}
 
-	Object &Object::operator()(const StringView<char> &name, const Value &value) {
-		return set(name, value);		
+	
+	static RefCntPtr<ObjectValue> mergeObjectsDiff(const ObjectValue &back, const ObjectValue &front) {
+		RefCntPtr<ObjectValue> out = ObjectValue::create(back.size()+front.size());
+		auto bi = back.begin();
+		auto fi = front.begin();
+		auto be = back.end();
+		auto fe = front.end();
+		while (bi != be && fi != fe) {
+			auto kf = (*fi)->getMemberName();
+			auto kb = (*bi)->getMemberName();
+			if (kf < kb) {
+				out->push_back(*fi);
+				++fi;
+			} else if (kf > kb) {
+				out->push_back(*bi);
+				++bi;
+			} else {
+				out->push_back(*fi);
+				++fi;
+				++bi;
+			}
+		}
+		while (bi != be) {
+			out->push_back(*bi);
+			++bi;
+		}
+		while (fi != fe) {
+			out->push_back(*fi);
+			++fi;
+		}
+		out->isDiff = true;
+		return out;
 	}
 
-	/*
-	static const Value &defaultConflictResolv(const Path &, const Value &, const Value &right) {
-		return right;
+	static RefCntPtr<ObjectValue> mergeObjects(const ObjectValue &back, const ObjectValue &front) {
+		RefCntPtr<ObjectValue> out = ObjectValue::create(back.size()+front.size());
+		auto bi = back.begin();
+		auto fi = front.begin();
+		auto be = back.end();
+		auto fe = front.end();
+		while (bi != be && fi != fe) {
+			auto kf = (*fi)->getMemberName();
+			auto kb = (*bi)->getMemberName();
+			if (kf < kb) {
+				if ((*fi)->type() != json::undefined) out->push_back(*fi);
+				++fi;
+			} else if (kf > kb) {
+				if ((*bi)->type() != json::undefined) out->push_back(*bi);
+				++bi;
+			} else {
+				if ((*fi)->type() != json::undefined) out->push_back(*fi);
+				++fi;
+				++bi;
+			}
+		}
+		while (bi != be) {
+			if ((*bi)->type() != json::undefined) out->push_back(*bi);
+			++bi;
+		}
+		while (fi != fe) {
+			if ((*fi)->type() != json::undefined) out->push_back(*fi);
+			++fi;
+		}
+		out->isDiff = false;
+		return out;
 	}
-*/
-	
+
 
 	void Object::optimize() const {
 
 		if (unordered == nullptr || unordered->size() == 0) return;
 		unordered->sort();
 		if (ordered == nullptr) {
-			ordered = ordered->create(unordered->size());
-			*ordered = *unordered;
+			ordered = unordered;
 			ordered->isDiff = true;
 		} else {
-			//wild casting here, because applyDiffImpl need Value as argumeny
-			//however, it returns new ObjectValue
-			ordered = applyDiffImpl(
-					Value(PValue::staticCast(ordered)),
-					Value(PValue::staticCast(unordered)),
-					defaultMerge);
-
+			ordered = mergeObjectsDiff(*ordered, *unordered);
 		}
-		unordered->clear();
+		unordered = nullptr;
 	}
 
 
@@ -200,10 +229,16 @@ void Object::set_internal(const Value& v) {
 		if (ordered == nullptr) {
 			return base.v;
 		} else {
-			return applyDiff(base,commitAsDiff()).getHandle();
+			const ObjectValue *oval = dynamic_cast<const ObjectValue *>(static_cast<const IValue *>(base.getHandle()));
+			RefCntPtr<ObjectValue> res;
+			if (oval == nullptr) {
+				res = mergeObjects(ObjectValue(),*ordered);
+			} else {
+				res = mergeObjects(*oval,*ordered);
+			}
+			return PValue(res);
 		}
 	}
-
 
 	Object2Object Object::object(const StringView<char>& name)
 	{
@@ -222,14 +257,6 @@ void Object::set_internal(const Value& v) {
 	{
 		return (ordered != nullptr && !ordered->empty()) || (unordered != nullptr && !unordered->empty());
 	}
-	Object & Object::merge(Value object)
-	{
-		object.forEach([&](Value v) {
-			set(v); return true;
-		});
-		return *this;
-	}
-
 
 	void Object::revert() {
 		ordered = nullptr;
@@ -298,89 +325,12 @@ bool Object::createDiff(const Value oldObject, Value newObject, unsigned int rec
 }
 
 Value Object::commitAsDiff() const {
-	ObjectValue *obj = commitAsDiffObject();
-	if (obj == nullptr) return json::object;
-	else return Value(static_cast<const IValue *>(obj));
+	optimize();
+	if (ordered == nullptr) return json::object;
+	else return Value(PValue(ordered));
 }
 
-Value Object::applyDiff(const Value& baseObject, const Value& diffObject) {
-	if (diffObject.type() != json::object) return baseObject;
-	if (baseObject.type() != json::object) return applyDiff(json::object, diffObject);
 
-	return PValue::staticCast(applyDiffImpl(baseObject,diffObject,defaultMerge));
-}
-
-Value Object::applyDiff(const Value &baseObject, const Value &diffObject,
-		const std::function<Value(const Value &base, const Value &diff)> &mergeFn) {
-
-	if (diffObject.type() != json::object) return baseObject;
-	if (baseObject.type() != json::object) return applyDiff(json::object, diffObject);
-
-	return PValue::staticCast(applyDiffImpl(baseObject,diffObject,mergeFn));
-
-}
-
-template<typename Fn>
-static RefCntPtr<ObjectValue> applyDiffImpl(const Value &baseObject, const Value &diffObject, Fn mergeFn) {
-
-	RefCntPtr<ObjectValue> newobj = ObjectValue::create(baseObject.size()+diffObject.size());
-	bool createDiff = (baseObject.flags() & valueDiff) != 0;
-	newobj->isDiff = createDiff;
-
-	auto bp = baseObject.begin();
-	auto dp = diffObject.begin();
-	auto be = baseObject.end();
-	auto de = diffObject.end();
-
-	auto merge = [&mergeFn](const Value &old, const Value &nw) {
-		if (nw.type() & valueDiff) return Value(old.getKey(),old.replace(Path::root,nw));
-		else return Value(old.getKey(),mergeFn(old,nw));
-	};
-
-	auto merge2 = [](const Value &nw) {
-		if (nw.type() & valueDiff) return Value(nw.getKey(),Value(json::object).replace(Path::root,nw));
-		else return nw;
-	};
-
-	while (bp != be && dp != de) {
-		int cmp = (*bp).getKey().compare((*dp).getKey());
-		if (cmp < 0) {
-			newobj->push_back((*bp).getHandle());
-			++bp;
-		} else if (cmp > 0){
-			Value v = *dp;
-			if (v.defined()) {
-				newobj->push_back(merge2(v).getHandle());
-			} else if (createDiff) {
-				newobj->push_back(v.getHandle());
-			}
-			++dp;
-		} else {
-			Value v = *dp;
-			if (v.defined()) {
-				newobj->push_back(merge(*bp,v).getHandle());
-			} else if (createDiff) {
-				newobj->push_back(v.getHandle());
-			}
-			++dp;
-			++bp;
-		}
-	}
-	while (bp != be) {
-		newobj->push_back((*bp).getHandle());
-		++bp;
-	}
-	while (dp != de) {
-		if ((*dp).defined()) {
-			newobj->push_back(merge2(*dp).getHandle());
-		} else if (createDiff) {
-			newobj->push_back((*dp).getHandle());
-		}
-		++dp;
-	}
-
-	return newobj;
-}
 
 StringView<PValue> Object::getItems(const Value& v) {
 	const IValue *pv = v.getHandle();
@@ -392,10 +342,6 @@ std::size_t Object::size() const {
 	return base.size() + (ordered == nullptr?0:ordered->size())+(unordered == nullptr?0:unordered->size());
 }
 
-ObjectValue *Object::commitAsDiffObject() const {
-	optimize();
-	return ordered;
-}
 
 Object::Object(Object &&other)
 	:base(std::move(other.base))

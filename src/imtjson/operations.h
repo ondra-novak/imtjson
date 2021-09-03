@@ -335,19 +335,21 @@ Value Ordered<Cmp>::SortFn::group(const Value &container, const ReduceFn &reduce
 
 template<typename Fn>
 inline Value Value::map(Fn&& mapFn) const {
-	switch (type()) {
-		case object: return Object(*this).map(std::forward<Fn>(mapFn));
-		case array: return Array(*this).map(std::forward<Fn>(mapFn));
-		default: return Value();
-	}
+	return map(std::forward<Fn>(mapFn),type());
 }
 
 
 template<typename Fn>
 inline Value Value::map(Fn &&mapFn, ValueType target_type)  const {
 	switch (target_type) {
-		case object: return Object(*this).map(std::forward<Fn>(mapFn));
-		case array:return Array(*this).map(std::forward<Fn>(mapFn));
+		case object: return Value(type(),begin(),end(),[&](const Value &c){
+			Value r ( mapFn(c));
+			return r.setKey(c.getKey());
+		});
+		case array:return Value(type(),begin(),end(),[&](const Value &c){
+			Value r ( mapFn(c));
+			return r;
+		});
 		default: return map(std::forward<Fn>(mapFn));
 	}
 }
@@ -490,28 +492,6 @@ inline Array Array::group(const Cmp& cmp, const ReduceFn& reduceFn, T init) cons
 	return res;
 }
 
-template<typename Fn>
-inline Object Object::map(Fn &&mapFn) const {
-	Object out;
-	for (auto item:*this) {
-		Value v = mapFn(item);
-		if ((v.flags() & proxy) == 0)
-			v = Value(item.getKey(), v);
-		out.set(v);
-	}
-	return Object(std::move(out));
-}
-
-template<typename T, typename ReduceFn>
-inline T Object::reduce(const ReduceFn& reduceFn, T init) const {
-	return genReduce(reduceFn,*this,init);
-}
-
-template<typename Cmp>
-inline Array Object::sort(const Cmp& cmp) const {
-	optimize();
-	return genSort(cmp,*this, this->size());
-}
 
 template<typename Iter1, typename Iter2>
 UInt Value::unshift(const Iter1 &start, const Iter2 &end) {

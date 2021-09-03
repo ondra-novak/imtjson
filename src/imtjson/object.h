@@ -35,22 +35,7 @@ namespace json {
 		Object(Value value);
 		///Create instance of empty object
 		Object();
-		///Create instance of empty object and add first member
-		/**
-		This constructor makes syntax more eye-candy. You can chain multiple parentheses to
-		   add multiple members inline.
 
-		@param name name of first member
-		@param value value of first member
-
-		@code
-		Value v = Object("m1","v1")
-		                ("m2","v2")
-						...;
-		@endcode		
-		*/
-		Object(const StringView<char> &name, const Value &value);
-		///Destructor - performs cleanup, discards any changes.
 		~Object();
 
 		///Creates object from initializer list of Key, Value pairs.
@@ -73,9 +58,8 @@ namespace json {
 		/**
 		 @param name name of key
 		 @param value value of member
-		 @return reference to this object to allow to chain functions
 		*/
-		Object &set(const StringView<char> &name, const Value &value);
+		void set(const StringView<char> &name, const Value &value);
 		///Set new member
 		/**
 		This function can be used if you need to copy the whole pair key-value from 
@@ -86,7 +70,7 @@ namespace json {
 			function Value::getKey(). If the value is not key-value-pair, it is
 			stored under empty key (or replaces empty key)
 		*/
-		Object &set(const Value &value);
+		void set(const Value &value);
 		///Retrieves value under given key
 		/**
 		@param name name of key to retrieve
@@ -110,21 +94,13 @@ namespace json {
 		the original object. This is achieved to save "undefined" under specified key. The
 		undefined values are skipped during commit()
 		*/
-		Object &unset(const StringView<char> &name);
+		void unset(const StringView<char> &name);
 
 		///Set multiple keys in one request
-		Object &setItems(const std::initializer_list<std::pair<StrViewA, Value> > &keys) {
+		void setItems(const std::initializer_list<std::pair<StrViewA, Value> > &keys) {
 			for (const auto &x: keys) set(x.first, x.second);
-			return *this;
 		}
 
-		///Sets member to value
-		/**
-		@param name name of key
-		@param value value of member
-		@return reference to this object to allow to chain functions
-		*/
-		Object &operator()(const StringView<char> &name, const Value &value);
 
 		///Commints all changes and creates new Value
 		/** This function is used by Value constructor. It is better to
@@ -183,9 +159,7 @@ namespace json {
 		@return reference to this to create chains
 
 		*/
-		Object &merge(Value object);
-
-
+		void merge(Value object);
 
 		///Creates iterator to walk through all changes
 		/**@note Iterator walks through changed object. Note that processing changes for iteration
@@ -233,40 +207,6 @@ namespace json {
 		 */
 		typedef std::function<Value(Path, Value, Value)> ConflictResolver;
 
-		//@{
-		///Picks two diffs and merges them into single diff
-		/** Function can be used to perform three-way merge. First you have to create diff
-		 * between current revision and common (base) revision. Do this for both sides of the conflict.
-		 * Then call this function and supply some conflict resolver, which is called when
-		 * both values have the same key
-		 *
-		 * @param left diff for first value (will appear at left)
-		 * @param right diff for second value (will appear at right)
-		 * @param resolver function called to resolve conflict
-		 * @param path specifies base path for the resolver (you can adjust if you need to add prefix to the path)
-		 *
-		 * @note depend on type of values can happen
-		 *   - two values of different type -> resolver called
-		 *   - two non-object values -> resolver called
-		 *   - two objects -> resolver called
-		 *   - two diff-objects -> diffs are merged recursively
-		 *   - one non-diff-object an one diff-object -> diff is applied
-		 *   - diff-object and non-object -> resolver called, however you should only choose who wins
-		 */
-		void mergeDiffs(const Object &left, const Object &right, const ConflictResolver &resolver);
-		void mergeDiffs(const Object &left, const Object &right, const ConflictResolver &resolver,const Path &path);
-		//@}
-
-
-		template<typename Fn>
-		Object map(Fn &&mapFn) const;
-
-		template<typename T, typename ReduceFn>
-		T reduce(const ReduceFn &reduceFn, T init) const ;
-
-		template<typename Cmp>
-		Array sort(const Cmp &cmp) const;
-
 		///Direct access to the items
 		/** Function retrieves iterable view of items if the source value is Object
 		 *
@@ -288,32 +228,6 @@ namespace json {
 		 */
 		Value commitAsDiff() const;
 
-		///Applies the diff-object to some other object and returns object with the difference applied.
-		/**
-		 *
-		 * @param baseObject source object
-		 * @param diffObject diff-object create using commitAsDiff.
-		 * @return new object with applied changes
-		 *
-		 *
-		 */
-		static Value applyDiff(const Value &baseObject, const Value &diffObject);
-
-		static Value applyDiff(const Value &baseObject, const Value &diffObject,
-				const std::function<Value(const Value &base, const Value &diff)> &mergeFn);
-
-		///A mergeFn for applyDiff
-		/** Function simply returns value form the diffObject replacing value in baseObject
-		 * regadless on what type the value is
-		 */
-		static const Value &defaultMerge(const Value &baseObject, const Value &diffObject);
-
-		///A mergeFn for applyDiff
-		/** Function uses applyDiff for inner objects without need to declare, that
-		 * inner object is diff.
-		 */
-		static Value recursiveMerge(const Value &baseObject, const Value &diffObject);
-
 
 	protected:
 
@@ -334,8 +248,6 @@ namespace json {
 		 */
 		mutable RefCntPtr<ObjectValue> unordered;
 		
-
-		ObjectValue *commitAsDiffObject() const;
 
 
 private:

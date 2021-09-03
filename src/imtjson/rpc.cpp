@@ -77,10 +77,17 @@ static Value formatNotify(RpcVersion ver, const String name, Value data, Value c
 	Value obj;
 	switch (ver) {
 	case RpcVersion::ver1:
-		obj = Object("id", nullptr)("method", name)("params", data)("context",context);
+		obj = Object({{"id", nullptr},
+				{"method", name},
+				{"params", data},
+				{"context",context}});
+
 		break;
 	case RpcVersion::ver2:
-		obj = Object("method", name)("params", data)("jsonrpc", "2.0")("context",context);
+		obj = Object({{"method", name},
+			{"params", data},
+			{"jsonrpc", "2.0"},
+			{"context",context}});
 		break;
 	}
 	return obj;
@@ -115,17 +122,20 @@ void RpcRequest::RequestData::sendResult(const Value &result, const Value &conte
 		switch (getVersion()) {
 		case RpcVersion::ver1:
 				return postSendResponse(
-					response(Object("id",id)
-									 ("result",result)
-									 ("error",nullptr)
-									 ("context",ctxch)));
+					response(Object({
+					{"id",id},
+					{"result",result},
+					{"error",nullptr},
+					{"context",ctxch}
+				})));
 
 		case RpcVersion::ver2:
 			return postSendResponse(
-					response(Object("id",id)
-							 ("result",result)
-							 ("jsonrpc","2.0")
-							 ("context",ctxch)));
+					response(Object({
+				{"id",id},
+				{"result",result},
+				{"jsonrpc","2.0"},
+				{"context",ctxch}})));
 		}
 	}
 }
@@ -135,15 +145,17 @@ void RpcRequest::RequestData::sendError(const Value &error) {
 		errorSent = true;
 		switch (getVersion()) {
 		case RpcVersion::ver1:
-			return postSendResponse(
-					response(Object("id",id)
-								 ("error",error)
-								 ("result",nullptr)));
+			return postSendResponse(response(Object({
+				{"id",id},
+				{"error",error},
+				{"result",nullptr}
+			})));
 		case RpcVersion::ver2:
-			return postSendResponse(
-					response(Object("id",id)
-							 ("error",error)
-							 ("jsonrpc","2.0")));
+			return postSendResponse(response(Object({
+				{"id",id},
+				{"error",error},
+				{"jsonrpc","2.0"}
+			})));
 				return;
 		}
 	}
@@ -561,16 +573,16 @@ AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName
 	Value id = genRequestID();
 	switch (ver) {
 	case RpcVersion::ver1:
-		return PreparedCall(*this, id, Object("method", methodName)
-											 ("params",args)
-											 ("id",id)
-											 ("context",context));
+		return PreparedCall(*this, id, Object({{"method", methodName},
+												{"params",args},
+												{"id",id},
+												{"context",context}}));
 	case RpcVersion::ver2:
-		return PreparedCall(*this, id, Object("method", methodName)
-											 ("params",args)
-											 ("id",id)
-											 ("jsonrpc","2.0")
-											 ("context",context));
+		return PreparedCall(*this, id, Object({{"method", methodName},
+											  {"params",args},
+											  {"id",id},
+											  {"jsonrpc","2.0"},
+											  {"context",context}}));
 	};
 	throw std::runtime_error("Invalid JSONRPC version (client-call)");
 }
@@ -890,9 +902,9 @@ void RpcRequest::setParams(Value args) {
 
 RpcResult RpcResult::makeError(int error, const StrViewA &message, Value data) {
 	return RpcResult(Object
-		("code",error)
-		("message",message)
-		("data", data), true, json::undefined);
+		({{"code",error},
+		{"message",message},
+		{"data", data}}), true, json::undefined);
 }
 
 void AbstractRpcClient::sendRequest(const Value &, const Value &request) {

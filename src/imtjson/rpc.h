@@ -155,7 +155,7 @@ public:
 	 * @param value value
 	 * If the key already exists, its value is overriden. To remove key, specify undefined as value
 	 */
-	virtual void store(StrViewA key, Value value) {data(key,value);}
+	virtual void store(StrViewA key, Value value) {data.set(key,value);}
 	///Retrieves value soecified by the key
 	/**
 	 *

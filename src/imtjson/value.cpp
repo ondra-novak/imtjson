@@ -437,63 +437,82 @@ namespace json {
 		}
 	}
 
-	static Value setToPathRev(const Path &p, const Value &oldVal, const  Value &newVal) {
-		if (p.isRoot()) {
-			if (newVal.flags() & json::valueDiff) {
-				switch (newVal.type()) {
-					case json::object:
-						return Object::applyDiff(oldVal,newVal);
-					case array:
-						//currently unsupported
-						return newVal;
-					default:
-						//cannot merge noncontainer
-						return newVal;
-				}
-			} else {
-				return newVal;
-			}
-		}
-		if (p.isIndex()) {
-			Array a;
-			std::size_t i = p.getIndex();
-			if (oldVal.type() == array) a.setBaseObject(oldVal);
-			if (i >= a.size()) a.push_back(setToPathRev(p.getParent(),undefined,newVal));
-			else a.set(i, setToPathRev(p.getParent(),a[i],newVal));
-			return a;
-		}
-		if (p.isKey()) {
-			Object o;
-			if (oldVal.type() == object) o.setBaseObject(oldVal);
-			StrViewA k = p.getKey();
-			o.set(k,setToPathRev(p.getParent(),o[k], newVal));
-			return o;
-		}
-		throw std::runtime_error("Unreachable section reached (setToPathRev)");
-	}
+	///Replace item in JSON structure defined by path array and returns new instance of the structure
+	/**
+	 * @param path array of pointers to paths,
+	 * @param plen length of the array
+	 * @param src source structure
+	 * @param newVal new value
+	 */
+	static Value replace_by_path(Path const **p, std::size_t plen, const Value &src, const Value &newVal) {
 
-	static Value reversePath(const Path &p, const Path &newPath, const Value &oldval, const Value &newval) {
-		if (p.isRoot())
-			return setToPathRev(newPath, oldval, newval);
-		if (p.isIndex())
-			return reversePath(p.getParent(),Path(newPath,p.getIndex()), oldval, newval);
-		if (p.isKey())
-			return reversePath(p.getParent(),Path(newPath,p.getKey()), oldval, newval);
-		throw std::runtime_error("Unreachable section reached (reversePath)");
+		//pick current path element
+		const Path &curPath = **p;
+		//is the element an index - assume that src is array
+		if (curPath.isIndex()) {
+			//convert source to array
+			Array tmp(src);
+			//retrieve index
+			auto idx = curPath.getIndex();
+			//if length of path is 1, we set the value
+			if (plen == 1) tmp.set(idx, newVal);
+			//otherwise, recursive replace deep in structure
+			else tmp.set(idx, replace_by_path(p+1, plen-1, src[idx], newVal));
+			return tmp;
+		//is the element a key - asssume that src is object
+		} else if (curPath.isKey()) {
+			//convert source to object
+			Object tmp(src);
+			//retrieve a key
+			auto key = curPath.getKey();
+			//if length of the path is 1, set new value
+			if (plen == 1) tmp.set(key, newVal);
+			//othewise, recursive replace deep in structure
+			else tmp.set(key, replace_by_path(p+1, plen-1, src[key], newVal));
+			return tmp;
+		} else {
+			//this should never happen
+			throw std::runtime_error("Unreachable section reached (replace_by_path)");
+		}
+
 	}
 
 	Value Value::replace(const Path& path, const Value& val) const {
-		const Path &newpath = Path::root;
-		return reversePath(path, newpath, *this, val);
+		//if path is root, replace simply returns supplied value
+		if (path.isRoot()) return val;
+
+		//calculate length of the path
+		auto plen = path.length();
+		//allocate temporary array of pointers on stack (pointers don't need to be destroyed)
+		Path const **bf  = (Path const **)alloca(plen*sizeof(Path *));
+		//walk path backward (because path is written in order from leaf to root)
+		auto l = plen;
+		//start at leaf
+		const Path *x = &path;
+		//until we reach root
+		while (!x->isRoot()) {
+			//decrease index and store pointer to current path element
+			--l; bf[l] = x;
+			//move to parent element
+			x = &x->getParent();
+		}
+		//variable l now contains index if first element of the path;
+
+		//recursively find and replace item
+		return replace_by_path(bf+l, plen, *this, val);
 
 	}
 
 	Value Value::replace(const StrViewA &key, const Value& val) const {
-		return replace(Path::root/key,val);
+		Object obj(*this);
+		obj.set(key, val);
+		return obj;
 
 	}
 	Value Value::replace(const uintptr_t index, const Value& val) const {
-		return replace(Path::root/index,val);
+		Array arr(*this);
+		arr.set(index,val);
+		return arr;
 	}
 
 

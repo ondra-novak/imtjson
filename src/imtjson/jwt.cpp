@@ -66,9 +66,9 @@ std::string serializeJWT(Value payload, PJWTCrypto crypto, StrViewA kid) {
 }
 
 std::string serializeJWT(Value payload, PJWTCrypto crypto, const AbstractJWTCrypto::SignMethod &method) {
-	Value header = Object
-			("alg", method.alg)
-			("kid", method.kid.empty()?Value():Value(method.kid));
+	Value header = Object({
+		{"alg", method.alg},
+		{"kid", method.kid.empty()?Value():Value(method.kid)}});
 	return serializeJWT(header, payload, crypto, method);
 }
 

@@ -42,6 +42,8 @@ public:
 	};
 
 	Container(const AllocInfo &ainfo);
+	///create empty R/O container (on stack)
+	Container();
 	~Container();
 
 	static Container *create(std::size_t capacity);
@@ -190,6 +192,9 @@ Container<T> *Container<T>::create(std::size_t capacity) {
 	return new(cap) Container<T>(cap);
 }
 }
+
+template<typename T>
+inline json::Container<T>::Container() :capacity(0),curSize(0),items(nullptr) {}
 
 template<typename T>
 inline void json::Container<T>::shrink(std::size_t newSize) {
