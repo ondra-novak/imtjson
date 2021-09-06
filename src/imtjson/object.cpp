@@ -229,7 +229,7 @@ void Object::set_internal(const Value& v) {
 		if (ordered == nullptr) {
 			return base.v;
 		} else {
-			const ObjectValue *oval = dynamic_cast<const ObjectValue *>(static_cast<const IValue *>(base.getHandle()));
+			const ObjectValue *oval = dynamic_cast<const ObjectValue *>(static_cast<const IValue *>(base.getHandle()->unproxy()));
 			RefCntPtr<ObjectValue> res;
 			if (oval == nullptr) {
 				res = mergeObjects(ObjectValue(),*ordered);
