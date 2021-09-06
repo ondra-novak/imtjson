@@ -33,20 +33,22 @@ String::String(std::size_t sz, std::function<std::size_t(char *)> fillFn):impl(n
 }
 
 
-std::string_view String::substr(std::size_t pos, std::size_t length) const {
+StringView String::substr(std::size_t pos, std::size_t length) const {
+	if (pos>=this->length()) return std::string_view();
 	return impl->getString().substr(pos,length);
 }
 
 
-std::string_view String::substr(std::size_t pos) const {
+StringView String::substr(std::size_t pos) const {
+	if (pos>=this->length()) return std::string_view();
 	return impl->getString().substr(pos);
 }
 
-std::string_view String::left(std::size_t length) const {
+StringView String::left(std::size_t length) const {
 	return impl->getString().substr(0,length);
 }
 
-std::string_view String::right(std::size_t length) const {
+StringView String::right(std::size_t length) const {
 	std::size_t l = impl->getString().size();
 	if (length > l) length = l;
 	return impl->getString().substr(l - length, length);

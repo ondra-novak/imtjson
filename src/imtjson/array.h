@@ -102,7 +102,9 @@ namespace json {
 		void resize( size_type count, const value_type& value );
 		void swap( Array& other ) noexcept;
 
-		iterator append(const Value &arrayValue);
+		Array &append(const Value &arrayValue);
+
+		ValueRef makeRef(std::size_t index);
 
 	protected:
 		Value base;

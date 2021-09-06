@@ -95,7 +95,7 @@ public:
 	 * If arguments are out of the bounds, they are adjusted. This may
 	 * cause that empty string will be returned
 	 */
-	std::string_view substr(std::size_t pos, std::size_t length) const;
+	StringView substr(std::size_t pos, std::size_t length) const;
 	///Retrieve substring
 	/**
 	 * @param pos position where substring starts.
@@ -103,7 +103,7 @@ public:
 	 *
 	 * If argument is out of the bounds, the empty string is returned
 	 */
-	std::string_view substr(std::size_t pos) const;
+	StringView substr(std::size_t pos) const;
 	///Retrieves the left part of the string (prefix)
 	/**
 	 * @param length length of the string (length of the prefix)
@@ -111,7 +111,7 @@ public:
 	 *
 	 * @note if argument is out of the bounds, whole string is returned
 	 */
-	std::string_view left(std::size_t length) const;
+	StringView left(std::size_t length) const;
 	///Retrieves the right part of the string (suffix)
 	/**
 	 * @param length length of the string (length of the suffix) is counted from the end of the string
@@ -119,7 +119,7 @@ public:
 	 *
 	 * @note if argument is out of the bounds, whole string is returned
 	 */
-	std::string_view right(std::size_t length) const;
+	StringView right(std::size_t length) const;
 
 	///Retrieves length of the string
 	std::size_t length() const;
@@ -158,7 +158,7 @@ public:
 	///Finds substring
 	std::size_t indexOf(const std::string_view other, std::size_t start = 0) const;
 	///Finds substring
-	std::size_t lastIndexOf(const std::string_view other, std::size_t start = 0) const;
+	std::size_t lastIndexOf(const std::string_view other, std::size_t start = std::string_view::npos) const;
 
 	const char *begin() const {return c_str();}
 	const char *end() const {return c_str()+length();}

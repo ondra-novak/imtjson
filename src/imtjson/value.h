@@ -189,6 +189,9 @@ namespace json {
 		Value(ValueType type, InputIterator begin, InputIterator end, bool skipUndef = true);
 
 
+		template<typename T>
+		Value(ValueType type, const Range<T> &r, bool skipUndef = true):Value(type,r.first,r.second,skipUndef) {}
+
 		///Create binary value
 		/** Binary values are not supported by JSON. They are emulated through encoding
 		 *
@@ -1158,14 +1161,13 @@ protected:
 	public:
 		ValueBuilder(ValueType t, std::size_t count);
 		void push_back(Value v);
-		~ValueBuilder();
 		ValueBuilder(ValueBuilder &&other);
 		ValueBuilder(const ValueBuilder &&other) = delete;
 		ValueBuilder &operator=(const ValueBuilder &&other) = delete;
 		PValue commit();
 
 	protected:
-		IValue *handle;
+		RefCntPtr<IValue> handle;
 		void (*push_back_fn)(IValue *handle, Value v);
 		PValue (*commit_fn)(IValue *handle);
 	};
@@ -1297,6 +1299,10 @@ protected:
 
 	template<typename InputIterator>
 	inline Value::Value(ValueType type, InputIterator begin, InputIterator end, bool skipUndef) {
+		if (begin == end) {
+			(*this)=type;
+			return;
+		}
 		ValueBuilder bld(type, std::distance(begin, end));
 		if (skipUndef) {
 			while (begin != end) {

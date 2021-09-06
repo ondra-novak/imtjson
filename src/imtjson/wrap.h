@@ -31,14 +31,14 @@ namespace _details {
 		virtual LongInt getIntLong() const {return pv->getIntLong();}
 		virtual double getNumber() const {return pv->getNumber();}
 		virtual bool getBool() const {return pv->getBool();}
-		virtual StringView<char> getString() const {return pv->getString();}
+		virtual StringView getString() const {return pv->getString();}
 		virtual std::size_t size() const {return pv->size();}
 		virtual const IValue *itemAtIndex(std::size_t index) const {return pv->itemAtIndex(index);}
-		virtual const IValue *member(const StringView<char> &name) const {return pv->member(name);}
+		virtual const IValue *member(const std::string_view &name) const {return pv->member(name);}
 		virtual bool enumItems(const IEnumFn &e) const {return pv->enumItems(e);}
 
 		///some values are proxies with member name - this retrieves name
-		virtual StringView<char> getMemberName() const {return pv->getMemberName();}
+		virtual StringView getMemberName() const {return pv->getMemberName();}
 		///Returns pointer to first no-proxy object
 		virtual const IValue *unproxy() const {return this;}
 

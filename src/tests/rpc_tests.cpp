@@ -43,7 +43,7 @@ void runRpcTests(TestSimple &tst) {
 	tst.test("RpcServer.ping","{\"error\":null,\"id\":10,\"result\":[1,2,3,true,{\"aaa\":4}]}") >> [](std::ostream &out) {
 		RpcServer srv;
 		srv.add_ping();
-		RpcRequest req = RpcRequest::create(RpcRequest::ParseRequest("Server.ping",{1,2,3,true,Object("aaa",4),nullptr},10),[&](Value res) {
+		RpcRequest req = RpcRequest::create(RpcRequest::ParseRequest("Server.ping",{1,2,3,true,Object({{"aaa",4}}),nullptr},10),[&](Value res) {
 			res.toStream(out);
 			return true;
 		});

@@ -55,8 +55,11 @@ namespace json {
 		std::stable_sort(begin(),end(),[](const PValue &left, const PValue &right) {
 			return left->getMemberName().compare(right->getMemberName()) < 0;
 		});
-		auto iter = std::unique(begin(), end(), [](const PValue &left, const PValue &right) {
-			return left->getMemberName() == right->getMemberName();
+		std::size_t n=1,cnt = this->curSize;
+		auto iter = std::remove_if(begin(), end(),[&](const PValue &f){
+			bool b = n<cnt && f->getMemberName() == this->operator [](n)->getMemberName();
+			++n;
+			return b;
 		});
 		auto remain = std::distance(iter, end());
 		for (int i = 0; i < remain; i++) {

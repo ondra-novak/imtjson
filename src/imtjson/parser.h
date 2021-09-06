@@ -60,7 +60,7 @@ namespace json {
 		typedef std::pair<std::size_t, std::size_t> StrIdx;
 
 		std::string_view getString(StrIdx idx) {
-			return std::string_view(tmpstr.data()+idx.first, idx.second-idx.first);
+			return std::string_view(tmpstr.data()+idx.first, idx.second);
 		}
 
 		StrIdx readString();

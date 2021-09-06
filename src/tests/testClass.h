@@ -8,6 +8,7 @@
 #ifndef SRC_TESTS_TESTCLASS_H_
 #define SRC_TESTS_TESTCLASS_H_
 #include <sstream>
+#include <iostream>
 
 
 class TestSimple {
@@ -18,7 +19,7 @@ public:
 	class ChargedTest {
 	public:
 		ChargedTest(TestSimple &owner, const char *name, const char *expected_result)
-			:owner(owner),name(name),expected_result(expected_result) {}
+			:name(name),expected_result(expected_result),owner(owner) {}
 
 		const std::string name;
 		const std::string expected_result;
@@ -72,7 +73,7 @@ inline void TestSimple::runTest(const Fn& fn, const std::string &name, const std
 			std::cout<<"\tProduced:" << produced << std::endl;
 			failed = true;
 		}
-	} catch (TestNotImplemented) {
+	} catch (const TestNotImplemented &) {
 		std::cout<<"Not Impl."<< std::endl;
 	} catch (std::exception &e) {
 		std::cout<<"FAILED"<< std::endl;

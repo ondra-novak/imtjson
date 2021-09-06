@@ -107,8 +107,9 @@ void Array::swap(Array &other) noexcept {
 	return Super::swap(other);
 }
 
-Array::iterator Array::append(const Value &arrayValue) {
-	return insert(end(), arrayValue.begin(), arrayValue.end());
+Array& Array::append(const Value &arrayValue) {
+	insert(end(), arrayValue.begin(), arrayValue.end());
+	return *this;
 }
 
 bool Array::dirty() const {
@@ -123,6 +124,10 @@ void Array::clear() {
 void Array::revert() {
 	Super::clear();
 	insert(end(),base.begin(),base.end());
+}
+
+ValueRef Array::makeRef(std::size_t index) {
+	return ValueRef(*this, index);
 }
 }
 

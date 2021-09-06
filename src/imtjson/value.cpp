@@ -1,5 +1,8 @@
 #include <cstring>
 #include "value.h"
+
+#include <numeric>
+
 #include "basicValues.h"
 #include "arrayValue.h"
 #include "objectValue.h"
@@ -255,7 +258,7 @@ namespace json {
 	}
 
 
-	Value::Value(const std::initializer_list<Value>& data):Value(array, data.begin(), data.end(), false) {}
+	Value::Value(const std::initializer_list<Value>& data):Value(array, data.begin(), data.end(), true) {}
 
 	Value::Value(ValueType type, const std::initializer_list<Value> &data, bool skipUndef):Value(type, data.begin(), data.end(), skipUndef) {}
 
@@ -389,6 +392,8 @@ namespace json {
 			Array tmp(src);
 			//retrieve index
 			auto idx = curPath.getIndex();
+			//extend array if needed
+			if (idx >= tmp.size()) tmp.resize(idx+1, undefined);
 			//if length of path is 1, we set the value
 			if (plen == 1) tmp.set(idx, newVal);
 			//otherwise, recursive replace deep in structure
@@ -890,7 +895,7 @@ namespace json {
 				static_cast<ObjectValue *>(h)->ObjectValue::sort();
 				return PValue(h);
 			};
-			handle = ObjectValue::create(count);
+			handle = RefCntPtr<IValue>::staticCast(ObjectValue::create(count));
 		} break;
 		case array: {
 			push_back_fn = [](IValue *h, Value c) {
@@ -899,22 +904,43 @@ namespace json {
 			commit_fn = [](IValue *h) {
 				return PValue(h);
 			};
-			handle = ArrayValue::create(count);
+			handle = RefCntPtr<IValue>::staticCast(ArrayValue::create(count));
 		} break;
+		case string: {
+			push_back_fn = [](IValue *h, Value c) {
+				static_cast<ArrayValue *>(h)->ArrayValue::push_back(Value(c.toString()).getHandle());
+			};
+			commit_fn = [](IValue *h) {
+				auto a = static_cast<ArrayValue *>(h);
+				auto need_sz = std::accumulate(a->begin(), a->end(), 0, [](std::size_t cnt, const PValue &x){
+					return cnt+x->getString().size();
+				});
+				String s(need_sz, [a,need_sz](char *out){
+					for(const PValue &v: *a) {
+						auto ss = v->getString();
+						std::copy(ss.begin(), ss.end(), out);
+						out+=ss.size();
+					}
+					return need_sz;
+				});
+				return(Value(s).getHandle());
+			};
+			handle = RefCntPtr<IValue>::staticCast(ArrayValue::create(count));
+
+		}break;
 		default:
-			throw std::runtime_error("Can't build such type");
+			push_back_fn  = [](IValue *h, Value) {};
+			commit_fn = [](IValue  *h) {return PValue(h);};
+			handle = const_cast<IValue *>(createByType(t));
+			break;
 		}
 	}
 	void ValueBuilder::push_back(Value v){
 		push_back_fn(handle, v);
 	}
 	PValue ValueBuilder::commit(){
-		IValue *c = handle;
-		handle = nullptr;
+		auto c = std::move(handle);
 		return commit_fn(c);
-	}
-	ValueBuilder::~ValueBuilder() {
-		if (handle) delete handle;
 	}
 	ValueBuilder::ValueBuilder(ValueBuilder &&other)
 		:handle(other.handle)

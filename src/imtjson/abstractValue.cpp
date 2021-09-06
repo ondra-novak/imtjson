@@ -2,6 +2,11 @@
 
 namespace json {
 
+	template<typename T>
+	int sign(const T &x) {
+		return (x>T(0))-(x<T(0));
+	}
+
 	class UndefinedValue : public AbstractValue {
 	public:
 		UndefinedValue() {
@@ -44,7 +49,7 @@ namespace json {
 					}
 				}break;
 				case string:
-					return getString().compare(other->getString());
+					return sign(getString().compare(other->getString()));
 					break;
 				case array: {
 					std::size_t s1 = size();
@@ -63,7 +68,7 @@ namespace json {
 					for (std::size_t i = 0; i < sz; i++) {
 						const IValue *l = itemAtIndex(i);
 						const IValue *r = other->itemAtIndex(i);
-						int zk = l->getMemberName().compare(r->getMemberName());
+						int zk = sign(l->getMemberName().compare(r->getMemberName()));
 						if (zk != 0) return zk;
 						int zv = l->compare(r);
 						if (zv != 0) return zv;

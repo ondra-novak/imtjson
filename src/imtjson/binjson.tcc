@@ -4,13 +4,14 @@
  *  Created on: Jan 18, 2017
  *      Author: ondra
  */
-#include "binjson.h"
 #include <cstdint>
 #include <cstring>
 #include "objectValue.h"
 #include "arrayValue.h"
 #include "stringValue.h"
-#include "shared/vla.h"
+#include "binjson.h"
+#include "binary.h"
+
 
 #pragma once
 
@@ -132,10 +133,11 @@ void BinarySerializer<Fn>::serializeString(const std::string_view &str, unsigned
 				if (btable == nullptr) {
 					btable = std::unique_ptr<Base64Table>(new Base64Table(Base64Table::base64urlchars));
 				}
-				ondra_shared::VLA<unsigned char, 256> buffer(((str.size() -1) * 3 +3)/4);
+				buffer.clear();
+				buffer.resize(((str.size() -1) * 3 +3)/4);
 				unsigned char first = btable->table[(unsigned)str[0]] |0x80;
 				fn(first);
-				Base64Encoding::decoderCore(buffer.data, str.substr(1), str.size()-1, *btable);
+				Base64Encoding::decoderCore(reinterpret_cast<unsigned char *>(buffer.data()), str.substr(1), str.size()-1, *btable);
 				for (auto c: buffer) fn(c);
 			} else {
 				unsigned char first = str[0];
@@ -272,12 +274,12 @@ Value json::BinaryParser<Fn>::parseString(unsigned char tag, BinaryEncoding enco
 
 			s = new(sz) StringValue(encoding, sz, [&](char *buff) {
 				buff[0] = Base64Table::base64urlchars[x & 0x3F];
-				ondra_shared::VLA<unsigned char, 256> buffer(sz);
+				buffer.resize(sz);
 				for (std::size_t cnt = ((sz-1)*3+3)/4,i = 0; i < cnt; i++) {
 					buffer[i] = fn();
 				}
 				std::size_t wrpos = 1;
-				Base64Encoding::encodeCore(BinaryView(buffer),Base64Table::base64urlchars,
+				Base64Encoding::encodeCore(map_str2bin(buffer),Base64Table::base64urlchars,
 						[&](std::string_view s) {
 							for(char c:s) {
 								if (wrpos < sz) buff[wrpos++] = c;

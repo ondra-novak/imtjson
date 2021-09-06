@@ -60,6 +60,7 @@ protected:
 	std::vector<char> keybuffer;
 	std::vector<String> keyHistory;
 	unsigned int keyIndex = 0;
+	std::string buffer;
 
 private:
 	void storeKey(const String& s);
@@ -109,6 +110,7 @@ protected:
 	unsigned int nextKeyId = 256;
 	BinarySerializeFlags flags;
 	std::unique_ptr<Base64Table> btable;
+	std::string buffer;
 
 
 

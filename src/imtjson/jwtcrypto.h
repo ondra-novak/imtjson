@@ -142,14 +142,14 @@ inline Binary signES256(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA256_DIGEST_LENGTH];
 	SignBuffer sbuff;
 	SHA256(message.data(), message.size(),buffer);
-	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA256_DIGEST_LENGTH, eck)), sbuff, 256/8);
+	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA256_DIGEST_LENGTH, eck)), sbuff, 32);
 	return sbuff.getBinary();
 }
 inline Binary signES384(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA384_DIGEST_LENGTH];
 	SignBuffer sbuff;
 	SHA384(message.data(), message.size(),buffer);
-	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA384_DIGEST_LENGTH, eck)), sbuff, 384/8);
+	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA384_DIGEST_LENGTH, eck)), sbuff, 48);
 	return sbuff.getBinary();
 }
 
@@ -158,7 +158,7 @@ inline Binary signES512(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA512_DIGEST_LENGTH];
 	SHA512(message.data(), message.size(),buffer);
 	SignBuffer sbuff;
-	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA512_DIGEST_LENGTH, eck)), sbuff, 512/8);
+	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA512_DIGEST_LENGTH, eck)), sbuff, 66);
 	return sbuff.getBinary();
 }
 }

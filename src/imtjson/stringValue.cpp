@@ -223,7 +223,7 @@ ValueTypeFlags PreciseNumberValue<T>::flags() const {
 
 template<typename T>
 StringView PreciseNumberValue<T>::getString() const {
-	return StringView(charbuff,sizeof(charbuff));
+	return StringView(charbuff,std::strlen(charbuff));
 }
 
 template<typename T>

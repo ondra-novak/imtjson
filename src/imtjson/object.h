@@ -97,8 +97,9 @@ namespace json {
 		void unset(const std::string_view &name);
 
 		///Set multiple keys in one request
-		void setItems(const std::initializer_list<std::pair<std::string_view, Value> > &keys) {
+		Object& setItems(const std::initializer_list<std::pair<std::string_view, Value> > &keys) {
 			for (const auto &x: keys) set(x.first, x.second);
+			return *this;
 		}
 
 
