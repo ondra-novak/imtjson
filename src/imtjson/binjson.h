@@ -92,7 +92,7 @@ public:
 	 * @retval true stored
 	 * @retval false
 	 */
-	bool preloadKey(const StrViewA &str);
+	bool preloadKey(const std::string_view &str);
 	void clearKeys();
 
 protected:
@@ -103,8 +103,8 @@ protected:
 		ZeroID():value(0) {}
 	};
 
-	struct HashStr {std::size_t operator()(const StrViewA &str) const;};
-	typedef std::unordered_map<StrViewA, ZeroID, HashStr> KeyMap;
+	struct HashStr {std::size_t operator()(const std::string_view &str) const;};
+	typedef std::unordered_map<std::string_view, ZeroID, HashStr> KeyMap;
 	KeyMap keyMap;
 	unsigned int nextKeyId = 256;
 	BinarySerializeFlags flags;
@@ -120,7 +120,7 @@ protected:
 
 	void serialize(const IValue *v);
 	void serializeContainer(const IValue *v, unsigned char type);
-	void serializeString(const StrViewA &str, unsigned char type);
+	void serializeString(const std::string_view &str, unsigned char type);
 	void serializeNumber(const IValue *v);
 	void serializeInteger(std::size_t, unsigned char type);
 	void serializeBoolean(const IValue *v);
@@ -128,7 +128,7 @@ protected:
 	void serializeUndefined(const IValue *v);
 	void serialize64bit(std::uint64_t n, unsigned char type);
 
-	int tryCompressKey(const StrViewA &keyName);
+	int tryCompressKey(const std::string_view &keyName);
 
 
 };

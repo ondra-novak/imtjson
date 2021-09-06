@@ -1,7 +1,9 @@
 #pragma once
 
+#include <string_view>
+#include <string>
+
 #include "refcnt.h"
-#include "stringview.h"
 #include "allocator.h"
 namespace json {
 
@@ -175,6 +177,15 @@ namespace json {
 
 	const BinarySerializeFlags compressTokenStrings = 0x4;
 
+	using BinaryView = std::basic_string_view<unsigned char>;
+	class StringView: public std::string_view {
+	public:
+		using std::string_view::string_view;
+		StringView() {}
+		StringView(const std::string_view &other):std::string_view(other) {}
+		operator std::string() const {return std::string(data(),size());}
+	};
+
 	class IValue;
 	typedef RefCntPtr<const IValue> PValue;
 
@@ -194,14 +205,14 @@ namespace json {
 		virtual LongInt getIntLong() const = 0;
 		virtual double getNumber() const = 0;
 		virtual bool getBool() const = 0;
-		virtual StringView<char> getString() const = 0;
+		virtual StringView getString() const = 0;
 		virtual std::size_t size() const = 0;
 		virtual const IValue *itemAtIndex(std::size_t index) const = 0;
-		virtual const IValue *member(const StringView<char> &name) const = 0;
+		virtual const IValue *member(const std::string_view &name) const = 0;
 		virtual bool enumItems(const IEnumFn &) const = 0;
 		
 		///some values are proxies with member name - this retrieves name
-		virtual StringView<char> getMemberName() const = 0;
+		virtual StringView getMemberName() const = 0;
 		///Returns pointer to first no-proxy object
 		virtual const IValue *unproxy() const = 0;
 

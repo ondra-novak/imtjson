@@ -13,7 +13,7 @@ namespace json {
 
 
 UnknownEnumException::UnknownEnumException(std::string&& errorEnum,
-		std::vector<StrViewA>&& availableEnums)
+		std::vector<std::string_view>&& availableEnums)
 :listEnums(std::move(availableEnums))
 ,errorEnum(std::move(errorEnum))
 {

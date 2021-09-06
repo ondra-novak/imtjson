@@ -42,7 +42,7 @@ public:
 	 * It is possible to make reference to variable which doesn't exists yet. First assigment will
 	 * create it.
 	 */
-	ValueRef(Object &obj, const StrViewA &name);
+	ValueRef(Object &obj, const std::string_view &name);
 	///Constructs a reference to member variable of the array
 	/**
 	 * @param arr an array where the variable is located

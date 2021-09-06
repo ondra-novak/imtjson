@@ -27,9 +27,9 @@ namespace json {
 		Index index;
 	};
 
-	typedef AutoCommitT<Object, Object, StringView<char> > Object2Object;
+	typedef AutoCommitT<Object, Object, std::string_view > Object2Object;
 	typedef AutoCommitT<Object, Array, std::size_t > Object2Array;
-	typedef AutoCommitT<Array, Object, StringView<char> >  Array2Object ;
+	typedef AutoCommitT<Array, Object, std::string_view >  Array2Object ;
 	typedef AutoCommitT<Array, Array, std::size_t > Array2Array;
 
 }

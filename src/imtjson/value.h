@@ -14,10 +14,12 @@ namespace json {
 	class ValueIterator;
 	class String;
 	class Binary;
+	class ValueBuilder;
 	struct Allocator;
 	template<typename T> class ConvValueAs;
 	template<typename T> class ConvValueFrom;
 	template<typename Cmp> class Ordered;
+
 
 	///Stores one JSON value
 	/** The instance of the class Value can store one value of any JSON type:
@@ -69,19 +71,11 @@ namespace json {
 
 		///Initialize the variable to string type
 		/**
-		 * @param value reference to C++ string-view		*/
-
-#if __cplusplus >= 201703L
-		Value(const std::string_view &value):Value(StringView<char>(value)) {}
-#endif
-
-		///Initialize the variable to string type
-		/**
 		 * @param value Reference to string view (introduced in this library improve performance
 		 *   in string manipulation.
 		 *
 		 */
-		Value(const StringView<char> &value);
+		Value(const std::string_view &value);
 		///@{
 		///Initialize the variable to signed or unsigned number
 		/**
@@ -158,25 +152,7 @@ namespace json {
 		 */
 		Value(const String &value);
 
-
-		///Initialize the variable as array of values
-		/**
-		 * @param value refernce to a string view containing values
-		 */
-		Value(const StringView<Value> &value);
-
-
-		///Initailize the variable from a container
-		/**
-		 * @param type type of value to construct. Only supported values are array and object. Other
-		 * values will construct undefined value
-		 * @param values container of values. If type is object, the values must be
-		 * associated with keys and the keys must be unique. Duplicated keys are removed
-		 * (there is no rule, which key=value pair is removed during this process)
-		 * @param skipUndef if true (default), function skips undefined values. Set this to false to
-		 * also include undefined values
-		 */
-		Value(ValueType type, const StringView<Value> &values, bool skipUndef = true);
+		Value(ValueBuilder & value);
 
 		///Initialize the variable using initializer list {....}
 		/**
@@ -195,6 +171,8 @@ namespace json {
 		 */
 		Value(const std::initializer_list<Value> &data);
 
+		Value(ValueType type, const std::initializer_list<Value> &data, bool skipUndef = true);
+
 		///Serializes any container to JSON array or object through the map function
 		/**
 		 * @param type type of container, Only array or object are supported. If object
@@ -204,11 +182,11 @@ namespace json {
 		 * @param mapFn mapping function
 		 * @param skipUndef skip undefined results (on by default)
 		 */
-		template<typename InputIterator, typename Fn>
+		template<typename InputIterator, typename Fn, typename = decltype(std::declval<Fn>()(*std::declval<InputIterator>()))>
 		Value(ValueType type, InputIterator begin, InputIterator end, Fn &&mapFn, bool skipUndef = true);
 
-		template<typename  Iter>
-		Value(const Range<Iter> &data);
+		template<typename InputIterator>
+		Value(ValueType type, InputIterator begin, InputIterator end, bool skipUndef = true);
 
 
 		///Create binary value
@@ -219,7 +197,7 @@ namespace json {
 		Value(const BinaryView &binary, BinaryEncoding enc = defaultBinaryEncoding);
 
 
-		Value(const StrViewA key, const Value &value);
+		Value(const std::string_view key, const Value &value);
 
 		///Create binary value
 		/** Binary values are not supported by JSON. They are emulated through encoding
@@ -238,7 +216,7 @@ namespace json {
 		 * @return value which stores precise number
 		 * @exception InvalidNumericFormat thrown when input is not valid number
 		 */
-		static Value preciseNumber(const StrViewA number);
+		static Value preciseNumber(const std::string_view &number);
 
 		///Retrieves type of value
 		/**
@@ -316,7 +294,7 @@ namespace json {
 		 * automatic conversion from other type to string is performed. If you
 		 * need such automatic conversion, use toString()
 		 */
-		StringView<char> getString() const { return v->getString(); }
+		StringView getString() const { return v->getString(); }
 
 		///Retrieves binary content encoded by specified method
 		/**
@@ -362,7 +340,7 @@ namespace json {
 		 * @param key the key to retrieve.
 		 * @return If the object has such an item, it is returned. Otherwise, undefined is returned
 		 */
-		Value operator[](const StringView<char> &key) const { return v->member(key); }
+		Value operator[](const std::string_view &key) const { return v->member(key); }
 		///Access to an item in a container identified using the Path object
 		/**
 		 * @param path Instance o Path which should refer a desired item
@@ -384,7 +362,7 @@ namespace json {
 		 *
 		 * @see proxy, setKey
 		 */
-		StringView<char> getKey() const { return v->getMemberName(); }
+		StringView getKey() const { return v->getMemberName(); }
 
 		///Removes key from the value
 		/** Items in objects are stored with keys. This key is part of the value, and
@@ -408,7 +386,7 @@ namespace json {
 		 * @note function allocates a space for the key. It is faster than converting to the String and bind that object
 		 *
 		 */
-		Value setKey(const StringView<char> &key) const {return Value(key, *this);}
+		Value setKey(const std::string_view &key) const {return Value(key, *this);}
 
 		///Set items of an object
 		/**
@@ -422,7 +400,7 @@ namespace json {
 		 *
 		 * @see replace
 		 */
-		void setItems(const std::initializer_list<std::pair<StrViewA, Value> > &items);
+		void setItems(const std::initializer_list<std::pair<std::string_view, Value> > &items);
 
 
 		///Converts the value to string
@@ -492,7 +470,14 @@ namespace json {
 		 * @return parsed JSON as value
 		 * @exception ParseError parsing error
 		 */
-		static Value fromString(const StringView<char> &string);
+		static Value fromString(const std::string_view &string);
+		///Function parses JSON from binary string
+		/**
+		 * @param string any string which can be converted to StringView (see the class description)
+		 * @return parsed JSON as value
+		 * @exception ParseError parsing error
+		 */
+		static Value fromString(const BinaryView &string);
 		///Function parses JSON from standard istream
 		/**
 		 * @param input input stream
@@ -724,7 +709,7 @@ namespace json {
 		 * @param val new value
 		 * @return
 		 */
-		Value replace(const StrViewA &key, const Value &val) const;
+		Value replace(const std::string_view &key, const Value &val) const;
 
 		///Replace value at given path (generates new value)
 		/**
@@ -771,6 +756,8 @@ namespace json {
 		Value diff(const Value &other) const;
 
 
+		template<typename Cmp>
+		Array split(Cmp &&cmp) const;
 
 		///Splits container into two arrays
 		/**
@@ -796,7 +783,7 @@ namespace json {
 		 * @return array with result
 		 */
 		template<typename CompareFn, typename ReduceFn, typename InitVal>
-		Value group(const CompareFn &cmp, const ReduceFn &reduce, InitVal initVal);
+		Array group(CompareFn &&cmp, ReduceFn &&reduce, InitVal &&initVal) const;
 
 		///Convert Value to user defined type
 		/** Template function accepts a name of a type to convert value into.
@@ -1041,7 +1028,7 @@ namespace json {
 		UInt push(const Value &v);
 
 
-		String join(StrViewA separator=",") const;
+		String join(const std::string_view &separator=",") const;
 
 		Value slice(Int start) const;
 		Value slice(Int start, Int end) const;
@@ -1131,7 +1118,7 @@ namespace json {
 		///Returns string or default value, if the object is not string
 		std::string getValueOrDefault(const std::string &defval) const {return type() == json::string?std::string(getString()):defval;}
 		///Returns string or default value, if the object is not string
-		StrViewA getValueOrDefault(const StrViewA &defval) const {return type() == json::string?getString():defval;}
+		std::string_view getValueOrDefault(const std::string_view &defval) const {return type() == json::string?getString():defval;}
 		///Converts this to default value, if the type of the value is not expected
 		Value getValueOrDefault(const Value &defval) const {return type() == defval.type()?*this:defval;}
 		///Converts this to default value, if the type of the value is not expected
@@ -1161,9 +1148,26 @@ protected:
 		friend class Object;
 		friend class Array;
 
-		static Value numberFromStringRaw(StrViewA str, bool force_double);
+		static Value numberFromStringRaw(std::string_view str, bool force_double);
 
 		//std::vector<PValue> prepareValues(const std::initializer_list<Value>& data);
+	};
+
+
+	class ValueBuilder {
+	public:
+		ValueBuilder(ValueType t, std::size_t count);
+		void push_back(Value v);
+		~ValueBuilder();
+		ValueBuilder(ValueBuilder &&other);
+		ValueBuilder(const ValueBuilder &&other) = delete;
+		ValueBuilder &operator=(const ValueBuilder &&other) = delete;
+		PValue commit();
+
+	protected:
+		IValue *handle;
+		void (*push_back_fn)(IValue *handle, Value v);
+		PValue (*commit_fn)(IValue *handle);
 	};
 
 	inline static std::istream &operator >> (std::istream &stream, Value &v) {
@@ -1248,28 +1252,37 @@ protected:
 	 */
 	typedef Value var;
 
-	class KeyKeeper : public StrViewA {
+	class KeyKeeper : public std::string_view {
 	public:
-		explicit KeyKeeper(const StrViewA &k) :StrViewA(k) {}
+		explicit KeyKeeper(const std::string_view &k) :std::string_view(k) {}
 		Value operator=(const Value &v) const { return Value(*this, v); }
 	};
 
 	class KeyStart {
 	public:
-		KeyKeeper operator/(const StrViewA &a) const { return KeyKeeper(a); }
-		KeyKeeper operator()(const StrViewA &a) const {return KeyKeeper(a);}
+		KeyKeeper operator/(const std::string_view &a) const { return KeyKeeper(a); }
+		KeyKeeper operator()(const std::string_view &a) const {return KeyKeeper(a);}
 
 	};
 	extern KeyStart key;
 
-	template<typename InputIterator, typename Fn>
+	template<typename InputIterator, typename Fn, typename>
 	Value::Value(ValueType type, InputIterator begin, InputIterator end, Fn &&mapFn, bool skipUndef) {
-		std::vector<Value> buffer;
-		while (begin != end) {
-			buffer.push_back(mapFn(*begin));
-			++begin;
+		ValueBuilder bld(type, std::distance(begin, end));
+		if (skipUndef) {
+			while (begin != end) {
+				Value item = mapFn(*begin);
+				if (item.defined()) bld.push_back(item);
+				++begin;
+			}
+		} else {
+			while (begin != end) {
+				Value item = mapFn(*begin);
+				bld.push_back(item);
+				++begin;
+			}
 		}
-		(*this) = Value(type,StringView<Value>(buffer.data(), buffer.size()),skipUndef);
+		(*this) = bld.commit();
 	}
 
 	template<typename Fn>
@@ -1282,6 +1295,24 @@ protected:
 		}
 	}
 
+	template<typename InputIterator>
+	inline Value::Value(ValueType type, InputIterator begin, InputIterator end, bool skipUndef) {
+		ValueBuilder bld(type, std::distance(begin, end));
+		if (skipUndef) {
+			while (begin != end) {
+				Value item = *begin;
+				if (item.defined()) bld.push_back(item);
+				++begin;
+			}
+		} else {
+			while (begin != end) {
+				bld.push_back(*begin);
+				++begin;
+			}
+		}
+		(*this) = bld.commit();
+	}
+
 }
 
 
@@ -1291,14 +1322,6 @@ template<> struct hash<::json::Value> {
 	size_t operator()(const ::json::Value &v) const;
 };
 }
-
-
-
-#ifndef IMTJSON_NOKEYLITERAL
-static inline json::KeyKeeper operator"" _(const char *k, std::size_t len) {
-	return json::KeyKeeper(json::StrViewA(k, len));
-}
-#endif
 
 
 #include "conv.h"

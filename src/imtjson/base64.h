@@ -17,9 +17,9 @@ class Base64Encoding: public AbstractBinaryEncoder {
 public:
 
 	using AbstractBinaryEncoder::encodeBinaryValue;
-	virtual StrViewA getName() const override;
-	static void decoderCore(unsigned char *buff, const StrViewA &str, std::size_t len, const Base64Table &t);
-	virtual Value decodeBinaryValue(const StrViewA &str) const override;
+	virtual std::string_view getName() const override;
+	static void decoderCore(unsigned char *buff, const std::string_view &str, std::size_t len, const Base64Table &t);
+	virtual Value decodeBinaryValue(const std::string_view &str) const override;
 	virtual void encodeBinaryValue(const BinaryView &data, const WriteFn &fn) const override;
 	static void encodeCore(const BinaryView& data, char *chars, WriteFn fn, bool tail) ;
 };
@@ -27,8 +27,8 @@ public:
 
 class Base64EncodingUrl: public Base64Encoding {
 public:
-	virtual StrViewA getName() const override;
-	virtual Value decodeBinaryValue(const StrViewA &str) const override;
+	virtual std::string_view getName() const override;
+	virtual Value decodeBinaryValue(const std::string_view &str) const override;
 	virtual void encodeBinaryValue(const BinaryView &data, const WriteFn &fn) const override;
 };
 

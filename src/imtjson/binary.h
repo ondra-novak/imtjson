@@ -10,25 +10,32 @@
 
 #pragma once
 
+#include <string_view>
 #include "string.h"
 
 namespace json {
+
+using BinaryView = std::basic_string_view<unsigned char>;
+
+inline BinaryView map_str2bin(const std::string_view &str) {return BinaryView(reinterpret_cast<const unsigned char *>(str.data()), str.size());}
+inline StringView map_bin2str(const BinaryView &str) {return StringView(reinterpret_cast<const char *>(str.data()), str.size());}
+inline StringView map_bin2str(const std::vector<unsigned char> &str) {return StringView(reinterpret_cast<const char *>(str.data()), str.size());}
 
 class Binary;
 
 class IBinaryEncoder {
 public:
-	typedef std::function<void(StrViewA)> WriteFn;
+	typedef std::function<void(std::string_view)> WriteFn;
 
 	///Function decodes string and stores result as BinaryValue to the Value variable
-	virtual Value decodeBinaryValue(const StrViewA &string) const = 0;
+	virtual Value decodeBinaryValue(const std::string_view &string) const = 0;
 	///Function encodes a binary view and writes it through the given function
 	virtual void encodeBinaryValue(const BinaryView &binary, const WriteFn &fn) const = 0;
 	///Encode binary value and return it as string value
 	virtual Value encodeBinaryValue(const BinaryView &binary) const = 0;
 	///Retrieves name of the encoding type
 	/** This is handful if you need to put choosen encoding into the output*/
-	virtual StrViewA getName() const = 0;
+	virtual std::string_view getName() const = 0;
 	virtual ~IBinaryEncoder() {}
 
 };
@@ -50,7 +57,7 @@ public:
 	static BinaryEncoding getEncoding(const IValue *v);
 
 	static Binary decodeBinaryValue(const Value &s, BinaryEncoding encoding);
-	static void encodeBinaryValue(std::function<void(StrViewA)> writeFn);
+	static void encodeBinaryValue(std::function<void(std::string_view)> writeFn);
 
 	PValue getHandle() const {return s;}
 
@@ -62,8 +69,8 @@ protected:
 	PValue s;
 
 	static BinaryView createBinaryView(const Value &s) {
-		StrViewA str(s.getString());
-		return BinaryView(str);
+		std::string_view str(s.getString());
+		return BinaryView(reinterpret_cast<const unsigned char *>(str.data()), str.size());
 	}
 };
 

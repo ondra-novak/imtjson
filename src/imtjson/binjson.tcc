@@ -74,7 +74,7 @@ void BinarySerializer<Fn>::serialize(const Value &v) {
 
 template<typename Fn>
 void BinarySerializer<Fn>::serialize(const IValue *v) {
-	StrViewA key = v->getMemberName();
+	std::string_view key = v->getMemberName();
 	if (!key.empty()) {
 		if (flags & compressKeys) {
 			int code = tryCompressKey(key);
@@ -110,9 +110,9 @@ void BinarySerializer<Fn>::serializeContainer(const IValue *v, unsigned char typ
 	}
 }
 
-static inline bool canCompressString(const StrViewA &str) {
-	if (str.length<=4) return false;
-	for (std::size_t i = 0; i < str.length; ++i) {
+static inline bool canCompressString(const std::string_view &str) {
+	if (str.size()<=4) return false;
+	for (std::size_t i = 0; i < str.size(); ++i) {
 		char c = str[i];
 		if (!isalnum(c) && c != '_' && c != '-') return false;
 	}
@@ -120,8 +120,8 @@ static inline bool canCompressString(const StrViewA &str) {
 }
 
 template<typename Fn>
-void BinarySerializer<Fn>::serializeString(const StrViewA &str, unsigned char type) {
-	serializeInteger(str.length,type);
+void BinarySerializer<Fn>::serializeString(const std::string_view &str, unsigned char type) {
+	serializeInteger(str.size(),type);
 	if (str.empty()) {
 		return;
 	} else {
@@ -132,10 +132,10 @@ void BinarySerializer<Fn>::serializeString(const StrViewA &str, unsigned char ty
 				if (btable == nullptr) {
 					btable = std::unique_ptr<Base64Table>(new Base64Table(Base64Table::base64urlchars));
 				}
-				ondra_shared::VLA<unsigned char, 256> buffer(((str.length -1) * 3 +3)/4);
+				ondra_shared::VLA<unsigned char, 256> buffer(((str.size() -1) * 3 +3)/4);
 				unsigned char first = btable->table[(unsigned)str[0]] |0x80;
 				fn(first);
-				Base64Encoding::decoderCore(buffer.data, str.substr(1), str.length-1, *btable);
+				Base64Encoding::decoderCore(buffer.data, str.substr(1), str.size()-1, *btable);
 				for (auto c: buffer) fn(c);
 			} else {
 				unsigned char first = str[0];
@@ -234,7 +234,7 @@ Value json::BinaryParser<Fn>::parseKey(unsigned char tag) {
 	keybuffer.resize(sz);
 	for (std::size_t i = 0; i < sz; i++) keybuffer[i] = (unsigned char)fn();
 	Value v = parseItem();
-	return Value(StrViewA(keybuffer.data(),sz),v);
+	return Value(std::string_view(keybuffer.data(),sz),v);
 }
 
 template<typename Fn>
@@ -278,7 +278,7 @@ Value json::BinaryParser<Fn>::parseString(unsigned char tag, BinaryEncoding enco
 				}
 				std::size_t wrpos = 1;
 				Base64Encoding::encodeCore(BinaryView(buffer),Base64Table::base64urlchars,
-						[&](StrViewA s) {
+						[&](std::string_view s) {
 							for(char c:s) {
 								if (wrpos < sz) buff[wrpos++] = c;
 							}
@@ -448,7 +448,7 @@ inline Value BinaryParser<Fn>::parseDiff() {
 }
 
 template<typename Fn>
-inline int BinarySerializer<Fn>::tryCompressKey(const StrViewA &key){
+inline int BinarySerializer<Fn>::tryCompressKey(const std::string_view &key){
 	ZeroID &id = keyMap[key];
 	unsigned int dist = (nextKeyId - id.value) - 1;
 	if (dist < 128) {
@@ -462,7 +462,7 @@ inline int BinarySerializer<Fn>::tryCompressKey(const StrViewA &key){
 }
 
 template<typename Fn>
-std::size_t  BinarySerializer<Fn>::HashStr::operator()(const StrViewA &str) const {
+std::size_t  BinarySerializer<Fn>::HashStr::operator()(const std::string_view &str) const {
 	std::size_t acc = 2166136261;
 	for(auto c : str) {
 		unsigned char b = (unsigned char)c;
@@ -492,7 +492,7 @@ inline void BinaryParser<Fn>::preloadKey(const String& str) {
 }
 
 template<typename Fn>
-inline bool BinarySerializer<Fn>::preloadKey(const StrViewA& str) {
+inline bool BinarySerializer<Fn>::preloadKey(const std::string_view& str) {
 	return tryCompressKey(str) == -1;
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string_view>
 #include <cstdlib>
 #include <cmath>
 #include <vector>
@@ -44,7 +45,7 @@ namespace json {
 		Fn target;
 		bool utf8output;
 
-		void write(const StringView<char> &text);
+		void write(const std::string_view &text);
 		void writeUnsigned(UInt value);
 		void writeUnsignedRec(UInt value);
 		void writeUnsignedLong(ULongInt value);
@@ -54,9 +55,9 @@ namespace json {
 		void writeSignedLong(LongInt value);
 		void writeDouble(double value);
 		void writeUnicode(unsigned int uchar);
-		void writeString(const StringView<char> &text);
-		void writeStringBody(const StringView<char> &text);
-		void writePreciseNumber(const StringView<char> &text);
+		void writeString(const std::string_view &text);
+		void writeStringBody(const std::string_view &text);
+		void writePreciseNumber(const std::string_view &text);
 
 	};
 
@@ -104,7 +105,7 @@ namespace json {
 
 	template<typename Fn>
 	inline void Serializer<Fn>::serializeKeyValue(const IValue * ptr) {
-		StringView<char> name = ptr->getMemberName();
+		std::string_view name = ptr->getMemberName();
 		writeString(name);
 		target(':');
 		serialize(ptr);
@@ -164,11 +165,11 @@ namespace json {
 	template<typename Fn>
 	inline void Serializer<Fn>::serializeString(const IValue * ptr)
 	{
-		StringView<char> str = ptr->getString();
+		std::string_view str = ptr->getString();
 		if (ptr->flags()  & binaryString) {
 			BinaryEncoding enc = Binary::getEncoding(ptr->unproxy());
 			target('"');
-			enc->encodeBinaryValue(BinaryView(str), [&](const StrViewA &str) {writeStringBody(str);});
+			enc->encodeBinaryValue(map_str2bin(str), [&](const std::string_view &str) {writeStringBody(str);});
 			target('"');
 		} else {
 			writeString(str);
@@ -188,7 +189,7 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::write(const StringView<char>& text)
+	inline void Serializer<Fn>::write(const std::string_view& text)
 	{
 		for (auto &&x : text) target(x);
 	}
@@ -387,7 +388,7 @@ namespace json {
 
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writeString(const StringView<char>& text)
+	inline void Serializer<Fn>::writeString(const std::string_view& text)
 	{
 		target('"');
 		writeStringBody(text);
@@ -395,12 +396,12 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writePreciseNumber(const StringView<char>& text) {
+	inline void Serializer<Fn>::writePreciseNumber(const std::string_view& text) {
 		for (auto c: text) target(c);
 	}
 
 	template<typename Fn>
-	inline void Serializer<Fn>::writeStringBody(const StringView<char>& text)
+	inline void Serializer<Fn>::writeStringBody(const std::string_view& text)
 	{
 		Utf8ToWide conv;
 		auto strrd = fromString(text);

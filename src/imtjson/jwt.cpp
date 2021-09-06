@@ -5,26 +5,26 @@
  *      Author: ondra
  */
 
+#include <string_view>
 #include "jwt.h"
 
-#include "../../../shared/stringview.h"
 #include "base64.h"
 #include "binary.h"
 #include "object.h"
 
-using ondra_shared::StrViewA;
+
 namespace json {
 
 
-Value parseJWT(const StrViewA token, PJWTCrypto crypto,
+Value parseJWT(const std::string_view token, PJWTCrypto crypto,
 							const AbstractJWTCrypto::SignMethod *forceMethod) {
 
 	try {
-		auto splt = token.split(".");
-		StrViewA sheader = splt();
-		StrViewA sbody = splt();
-		StrViewA ssign = splt();
-		StrViewA header_body(sheader.data, (sbody.data - sheader.data)+sbody.length);
+		Split splt(token,".");
+		std::string_view sheader = splt();
+		std::string_view sbody = splt();
+		std::string_view ssign = splt();
+		std::string_view header_body(sheader.data(), (sbody.data() - sheader.data())+sbody.length());
 
 		if (crypto != nullptr && forceMethod!=nullptr) {
 			Binary sign = base64url->decodeBinaryValue(ssign).getBinary(base64url);
@@ -35,8 +35,8 @@ Value parseJWT(const StrViewA token, PJWTCrypto crypto,
 		if (crypto != nullptr) {
 			Binary sign = base64url->decodeBinaryValue(ssign).getBinary(base64url);
 			Value hdr = Value::fromString(base64url->decodeBinaryValue(sheader).getString());
-			StrViewA alg = hdr["alg"].getString();
-			StrViewA kid = hdr["kid"].getString();
+			std::string_view alg = hdr["alg"].getString();
+			std::string_view kid = hdr["kid"].getString();
 			if (!crypto->verify(header_body, {alg, kid}, sign)) return undefined;
 		}
 		return body;
@@ -45,10 +45,10 @@ Value parseJWT(const StrViewA token, PJWTCrypto crypto,
 	}
 }
 
-Value parseJWTHdr(const StrViewA token) {
+Value parseJWTHdr(const std::string_view token) {
 	try {
-		auto splt = token.split(".");
-		StrViewA sheader = splt();
+		Split splt ( token,".");
+		std::string_view sheader = splt();
 		return Value::fromString(base64url->decodeBinaryValue(sheader).getString());
 	} catch (...) {
 		return undefined;
@@ -60,7 +60,7 @@ std::string serializeJWT(Value payload, PJWTCrypto crypto) {
 	return serializeJWT(payload, crypto, m);
 }
 
-std::string serializeJWT(Value payload, PJWTCrypto crypto, StrViewA kid) {
+std::string serializeJWT(Value payload, PJWTCrypto crypto, std::string_view kid) {
 	auto m = crypto->getPreferredMethod(kid);
 	return serializeJWT(payload, crypto, m);
 }
@@ -95,10 +95,10 @@ std::string serializeJWT(Value header, Value payload, PJWTCrypto crypto,
 	String b = payload.stringify();
 	std::string buffer;
 	buffer.reserve(h.length()*4/3+b.length()*4/3+256);
-	auto bufferFill = [&](StrViewA b) {buffer.append(b.data,b.length);};
-	base64url->encodeBinaryValue(BinaryView(h.str()),bufferFill);
+	auto bufferFill = [&](std::string_view b) {buffer.append(b.data(),b.length());};
+	base64url->encodeBinaryValue(map_str2bin(h.str()),bufferFill);
 	buffer.push_back('.');
-	base64url->encodeBinaryValue(BinaryView(b.str()),bufferFill);
+	base64url->encodeBinaryValue(map_str2bin(b.str()),bufferFill);
 	Binary sign = crypto->sign(buffer, method);
 	buffer.push_back('.');
 	base64url->encodeBinaryValue(sign, bufferFill);
@@ -120,28 +120,28 @@ JWTCryptoContainer::JWTCryptoContainer(const Map &map, const SignMethod &preferr
 }
 
 
-JWTCryptoContainer::SignMethod JWTCryptoContainer::getPreferredMethod(StrViewA kid) const {
+JWTCryptoContainer::SignMethod JWTCryptoContainer::getPreferredMethod(std::string_view kid) const {
 	if (kid.empty()) return preferred;
 	auto end = cmap.end();
 	auto iter = std::lower_bound(cmap.begin(),cmap.end(),Item{kid,nullptr}, isLess);
-	if (iter == end || StrViewA((*iter).first) != kid) return preferred;
+	if (iter == end || std::string_view((*iter).first) != kid) return preferred;
 	return SignMethod {
 		(*iter).second->getPreferredMethod().alg, kid
 	};
 }
 
-Binary JWTCryptoContainer::sign(StrViewA message, SignMethod method) const {
+Binary JWTCryptoContainer::sign(std::string_view message, SignMethod method) const {
 	auto iter = std::lower_bound(cmap.begin(),cmap.end(),Item{method.kid,nullptr}, isLess);
 	auto end = cmap.end();
-	if (iter == end || StrViewA((*iter).first) != method.kid) return Binary();
+	if (iter == end || std::string_view((*iter).first) != method.kid) return Binary();
 	return (*iter).second->sign(message,method);
 
 }
 
-bool JWTCryptoContainer::verify(StrViewA message, SignMethod method, BinaryView signature) const {
+bool JWTCryptoContainer::verify(std::string_view message, SignMethod method, BinaryView signature) const {
 	auto iter = std::lower_bound(cmap.begin(),cmap.end(),Item{method.kid,nullptr}, isLess);
 	auto end = cmap.end();
-	if (iter == end || StrViewA((*iter).first) != method.kid) return false;
+	if (iter == end || std::string_view((*iter).first) != method.kid) return false;
 	return (*iter).second->verify(message,method,signature);
 }
 
@@ -169,7 +169,7 @@ json::JWTTokenCache::JWTTokenCache(unsigned int limit):limit(limit) {
 	cache2.reserve(limit);
 }
 
-json::Value json::JWTTokenCache::get(const StrViewA &token) const {
+json::Value json::JWTTokenCache::get(const std::string_view &token) const {
 	auto iter = cache1.find(token);
 	if (iter == cache1.end()) {
 		iter = cache2.find(token);
@@ -180,7 +180,7 @@ json::Value json::JWTTokenCache::get(const StrViewA &token) const {
 	return iter->second;
 }
 
-void json::JWTTokenCache::store(const StrViewA &token, json::Value content) {
+void json::JWTTokenCache::store(const std::string_view &token, json::Value content) {
 	Value kt (token,content);
 	cache1.emplace(kt.getKey(), kt);
 	if (cache1.size() >= limit) {
@@ -194,11 +194,11 @@ void json::JWTTokenCache::clear() {
 	cache2.clear();
 }
 
-std::size_t json::JWTTokenCache::Hash::operator ()(const StrViewA &token) const {
+std::size_t json::JWTTokenCache::Hash::operator ()(const std::string_view &token) const {
 	static Base64Table t(Base64Table::base64urlchars);
 	constexpr unsigned int hlen = (sizeof(std::size_t) * 4 / 3);
-	StrViewA tail = token.substr(token.length- hlen);
+	std::string_view tail = token.substr(token.size()- hlen);
 	unsigned char buff[hlen+2];
-	Base64Encoding::decoderCore(buff, tail, tail.length, t);
+	Base64Encoding::decoderCore(buff, tail, tail.size(), t);
 	return *reinterpret_cast<std::size_t *>(buff);
 }

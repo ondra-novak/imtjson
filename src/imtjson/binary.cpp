@@ -20,7 +20,7 @@ BinaryEncoding Binary::getEncoding(const IValue *v)  {
 }
 
 Binary Binary::decodeBinaryValue(const Value &s, BinaryEncoding encoding) {
-	StrViewA str = s.getString();
+	std::string_view str = s.getString();
 	if (str.empty()) {
 		return Binary(json::string);
 	} else if ((s.flags() & binaryString) == 0) {
@@ -34,13 +34,13 @@ class DirectEncoding: public AbstractBinaryEncoder {
 public:
 	using AbstractBinaryEncoder::encodeBinaryValue;
 
-	virtual Value decodeBinaryValue(const StrViewA &string) const override {
+	virtual Value decodeBinaryValue(const std::string_view &string) const override {
 		return string;
 	}
 	virtual void encodeBinaryValue(const BinaryView &binary, const WriteFn &fn) const override{
-		fn(StrViewA(binary));
+		fn(map_bin2str(binary));
 	}
-	virtual StrViewA getName() const override {
+	virtual std::string_view getName() const override {
 		return "direct";
 	}
 };
@@ -63,8 +63,8 @@ public:
 class UrlEncoding: public AbstractBinaryEncoder {
 public:
 	using AbstractBinaryEncoder::encodeBinaryValue;
-	virtual Value decodeBinaryValue(const StrViewA &string) const override {
-		std::size_t srclen = string.length;
+	virtual Value decodeBinaryValue(const std::string_view &string) const override {
+		std::size_t srclen = string.size();
 		std::size_t trglen = 0;
 		for (std::size_t i = 0; i < srclen; i++, trglen++)
 			if (string[i] == '%') i+=2;
@@ -92,24 +92,24 @@ public:
 	}
 	virtual void encodeBinaryValue(const BinaryView &binary, const WriteFn &fn) const override{
 		for (unsigned char c : binary) {
-			if (c && (isalnum(c) || strchr("-_.!~*'()", c) != 0)) fn(StrViewA(reinterpret_cast<char *>(&c),1));
+			if (c && (isalnum(c) || strchr("-_.!~*'()", c) != 0)) fn(std::string_view(reinterpret_cast<char *>(&c),1));
 			else {
 				char buff[3];
 				buff[0]='%';
 				buff[1]=hexchar[(c >> 4)];
 				buff[2]=hexchar[(c & 0xF)];
-				fn(StrViewA(buff,3));
+				fn(std::string_view(buff,3));
 			}
 		}
 	}
-	virtual StrViewA getName() const override {
+	virtual std::string_view getName() const override {
 		return "urlencoding";
 	}
 };
 
 Value AbstractBinaryEncoder::encodeBinaryValue(const BinaryView &binary) const  {
 	std::ostringstream buffer;
-	encodeBinaryValue(binary,[&](StrViewA str){buffer << str;});
+	encodeBinaryValue(binary,[&](std::string_view str){buffer << str;});
 	return Value(buffer.str());
 }
 
@@ -117,7 +117,7 @@ Value AbstractBinaryEncoder::encodeBinaryValue(const BinaryView &binary) const  
 class UTF8Encoding: public AbstractBinaryEncoder {
 protected:
 
-	virtual Value decodeBinaryValue(const StrViewA &string) const override {
+	virtual Value decodeBinaryValue(const std::string_view &string) const override {
 		Utf8ToWide conv;
 		std::size_t needsz;
 		conv(fromString(string), WriteCounter<std::size_t>(needsz));
@@ -135,11 +135,11 @@ protected:
 		conv(fromBinary(binary),[&](char c) {
 			buff[pos++] = c;
 			if (pos == sizeof(buff)) {
-				fn(StrViewA(buff,pos));
+				fn(std::string_view(buff,pos));
 				pos=0;
 			}
 		});
-		if (pos) fn(StrViewA(buff,pos));
+		if (pos) fn(std::string_view(buff,pos));
 	}
 	Value encodeBinaryValue(const BinaryView &binary) const  override {
 		WideToUtf8 conv;
@@ -153,7 +153,7 @@ protected:
 	}
 
 
-	virtual StrViewA getName() const override {
+	virtual std::string_view getName() const override {
 		return "utf8encoding";
 	}
 

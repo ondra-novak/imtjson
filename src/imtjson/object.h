@@ -45,7 +45,7 @@ namespace json {
 		 * Using intializer list is also effective for memory allocation because count of items is already
 		 * known
 		 */
-		Object(const std::initializer_list<std::pair<StrViewA, Value> >&fields);
+		Object(const std::initializer_list<std::pair<std::string_view, Value> >&fields);
 
 		Object(const Object &other);
 
@@ -59,7 +59,7 @@ namespace json {
 		 @param name name of key
 		 @param value value of member
 		*/
-		void set(const StringView<char> &name, const Value &value);
+		void set(const std::string_view &name, const Value &value);
 		///Set new member
 		/**
 		This function can be used if you need to copy the whole pair key-value from 
@@ -78,7 +78,7 @@ namespace json {
 		the modified version. Modified version has priority. If the key doesn't exists or
 		has been deleter, the function returns undefined
 		*/
-		const Value operator[](const StringView<char> &name) const;
+		const Value operator[](const std::string_view &name) const;
 
 		///Retrieves value under given key
 		/**
@@ -87,17 +87,17 @@ namespace json {
 		the modified version. Modified version has priority. If the key doesn't exists or
 		has been deleter, the function returns undefined
 		*/
-		ValueRef makeRef(const StringView<char> &name);
+		ValueRef makeRef(const std::string_view &name);
 
 		///Removes key
 		/** Function removes already inserted key as well as the key that was defined on
 		the original object. This is achieved to save "undefined" under specified key. The
 		undefined values are skipped during commit()
 		*/
-		void unset(const StringView<char> &name);
+		void unset(const std::string_view &name);
 
 		///Set multiple keys in one request
-		void setItems(const std::initializer_list<std::pair<StrViewA, Value> > &keys) {
+		void setItems(const std::initializer_list<std::pair<std::string_view, Value> > &keys) {
 			for (const auto &x: keys) set(x.first, x.second);
 		}
 
@@ -114,8 +114,8 @@ namespace json {
 		*/
 		PValue commit() const;
 
-		Object2Object object(const StringView<char> &name);
-		Array2Object array(const StringView<char> &name);
+		Object2Object object(const std::string_view &name);
+		Array2Object array(const std::string_view &name);
 
 		///Optimize current object
 		/** By default, items added to the object are not ordered. It is
@@ -207,18 +207,6 @@ namespace json {
 		 */
 		typedef std::function<Value(Path, Value, Value)> ConflictResolver;
 
-		///Direct access to the items
-		/** Function retrieves iterable view of items if the source value is Object
-		 *
-		 * @note Function only supports build-in object type.
-		 *
-		 * @return View to items. Items are stored as PValues, so you still need
-		 * to convert them to Values.
-		 *
-		 * @p tip - Items in object are ordered by its key
-		 *
-		 * */
-		static StringView<PValue> getItems(const Value &v);
 
 
 		///Creates diff object

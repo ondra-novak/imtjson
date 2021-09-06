@@ -9,7 +9,6 @@
 #define IMMUJSON_VALIDATOR_H_
 #include <vector>
 #include "path.h"
-#include "stringview.h"
 #include "string.h"
 #include "value.h"
 
@@ -23,56 +22,56 @@ public:
 	virtual ~Validator() {}
 
 
-	static StrViewA strString;
-	static StrViewA strNumber;
-	static StrViewA strBoolean;
-	static StrViewA strAny;
-	static StrViewA strBase64;
-	static StrViewA strBase64url;
-	static StrViewA strHex;
-	static StrViewA strUppercase;
-	static StrViewA strLowercase;
-	static StrViewA strIdentifier;
-	static StrViewA strCamelCase;
-	static StrViewA strAlpha;
-	static StrViewA strAlnum;
-	static StrViewA strDigits;
-	static StrViewA strInteger;
-	static StrViewA strUnsigned;
-	static StrViewA strNative;
-	static StrViewA strNull;
-	static StrViewA strOptional;
-	static StrViewA strUndefined;
-	static StrViewA strDateTimeZ;
-	static StrViewA strDate;
-	static StrViewA strTimeZ;
-	static StrViewA strTime;
-	static StrViewA strEmpty;
-	static StrViewA strNonEmpty;
-	static StrViewA strObject;
-	static StrViewA strArray;
+	static std::string_view strString;
+	static std::string_view strNumber;
+	static std::string_view strBoolean;
+	static std::string_view strAny;
+	static std::string_view strBase64;
+	static std::string_view strBase64url;
+	static std::string_view strHex;
+	static std::string_view strUppercase;
+	static std::string_view strLowercase;
+	static std::string_view strIdentifier;
+	static std::string_view strCamelCase;
+	static std::string_view strAlpha;
+	static std::string_view strAlnum;
+	static std::string_view strDigits;
+	static std::string_view strInteger;
+	static std::string_view strUnsigned;
+	static std::string_view strNative;
+	static std::string_view strNull;
+	static std::string_view strOptional;
+	static std::string_view strUndefined;
+	static std::string_view strDateTimeZ;
+	static std::string_view strDate;
+	static std::string_view strTimeZ;
+	static std::string_view strTime;
+	static std::string_view strEmpty;
+	static std::string_view strNonEmpty;
+	static std::string_view strObject;
+	static std::string_view strArray;
 
-	static StrViewA strGreater;
-	static StrViewA strGreaterEqual;
-	static StrViewA strLess;
-	static StrViewA strLessEqual;
-	static StrViewA strMinSize;
-	static StrViewA strMaxSize;
-	static StrViewA strKey;
-	static StrViewA strToString;
-	static StrViewA strToNumber;
-	static StrViewA strPrefix;
-	static StrViewA strSuffix;
-	static StrViewA strSplit;
-	static StrViewA strExplode;
-	static StrViewA strAll;
-	static StrViewA strAndSymb;
-	static StrViewA strNot;
-	static StrViewA strNotSymb;
-	static StrViewA strDateTime;
-	static StrViewA strSetVar;
-	static StrViewA strUseVar;
-	static StrViewA strEmit;
+	static std::string_view strGreater;
+	static std::string_view strGreaterEqual;
+	static std::string_view strLess;
+	static std::string_view strLessEqual;
+	static std::string_view strMinSize;
+	static std::string_view strMaxSize;
+	static std::string_view strKey;
+	static std::string_view strToString;
+	static std::string_view strToNumber;
+	static std::string_view strPrefix;
+	static std::string_view strSuffix;
+	static std::string_view strSplit;
+	static std::string_view strExplode;
+	static std::string_view strAll;
+	static std::string_view strAndSymb;
+	static std::string_view strNot;
+	static std::string_view strNotSymb;
+	static std::string_view strDateTime;
+	static std::string_view strSetVar;
+	static std::string_view strUseVar;
+	static std::string_view strEmit;
 
 	static char valueEscape;
 	static char commentEscape;
@@ -89,7 +88,7 @@ public:
 	 * @param args arguments if the rule. Array is always here
 	 * @param subject the item it is subject of validation
 	 */
-	virtual bool onNativeRule(const Value &, const StrViewA &  ) { return false; }
+	virtual bool onNativeRule(const Value &, const std::string_view &  ) { return false; }
 
 
 
@@ -103,7 +102,7 @@ public:
 	 * @retval true validated
 	 * @retval false not valid
 	 */
-	bool validate(const Value &subject,const StrViewA &rule = StrViewA("_root"), const Path &path = Path::root);
+	bool validate(const Value &subject,const std::string_view &rule = std::string_view("_root"), const Path &path = Path::root);
 
 
 	///Constructs validator above validator-definition (described above)
@@ -141,9 +140,9 @@ public:
 protected:
 
 
-	bool validateInternal(const Value &subject,const StrViewA &rule);
+	bool validateInternal(const Value &subject,const std::string_view &rule);
 
-	bool evalRuleSubObj(const Value & subject, const Value & rule, const StrViewA & key);
+	bool evalRuleSubObj(const Value & subject, const Value & rule, const std::string_view & key);
 
 	bool evalRuleSubObj(const Value & subject, const Value & rule, unsigned int index);
 
@@ -182,7 +181,7 @@ protected:
 
 	bool evalRuleObject(const Value & subject, const Value & templateObj);
 
-	bool checkClass(const Value& subject, StrViewA name);
+	bool checkClass(const Value& subject, std::string_view name);
 
 
 	bool opPrefix(const Value &subject, const Value &args);
@@ -195,7 +194,7 @@ protected:
 	
 	void pushVar(String name, Value value);
 	void popVar();
-	Value findVar(const StrViewA &name, const Value &thisVar);
+	Value findVar(const std::string_view &name, const Value &thisVar);
 	Value getVar(const Value &path, const Value &thisVar);
 
 
@@ -204,7 +203,7 @@ protected:
 	bool opCompareVar(const Value &subject, const Value &rule);
 	bool opEmit(const Value &subject, const Value &args);
 	Value walkObject(const Value &subject,  const Value &v);
-	bool opExplode(const Value& subject, StrViewA str, const Value& rule, const Value& limit);
+	bool opExplode(const Value& subject, std::string_view str, const Value& rule, const Value& limit);
 
 
 };

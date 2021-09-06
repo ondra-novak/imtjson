@@ -58,7 +58,7 @@ PPath Path::copy() const {
 			len += sizeof(Path);
 		}
 		//if it is key, then reserve space for name
-		if (p->isKey()) reqSize+=p->keyName.length+1;
+		if (p->isKey()) reqSize+=p->keyName.size()+1;
 	}
 
 	void *buff = Value::allocator->alloc(reqSize+sizeof(UInt));
@@ -86,18 +86,18 @@ T *Path::copyRecurse(T * trg, char  *strBuff) const {
 		//pick first unused byte in string buffer
 		char *c = strBuff;
 		//copy name to buffer
-		std::copy(keyName.data,keyName.data+keyName.length, strBuff);
+		std::copy(keyName.data(),keyName.data()+keyName.size(), strBuff);
 /*		//copy name to buffer
 		memcpy(strBuff, keyName.data,keyName.length);*/
 		//advance pointer in buffer
-		strBuff+=keyName.length;
+		strBuff+=keyName.size();
 		//write terminating zero for compatibility issues
 		*strBuff++=0;
 		//copy rest of path to retrieve new pointer
 		Path *out = parent.copyRecurse(p,strBuff);
 		//construct path item at give position, use returned pointer as parent
 		//and use text from string buffer as name
-		return new((void *)trg) T(*out, StringView<char>(c, keyName.length));
+		return new((void *)trg) T(*out, std::string_view(c, keyName.size()));
 	} else {
 		//if it is index, just construct rest of path
 		Path *out = parent.copyRecurse(p,strBuff);
@@ -131,9 +131,9 @@ void Path::toArray(Array& array) const {
 	if (isRoot()) return;
 	parent.toArray(array);
 	if (isKey()) {
-		array.add(getKey());
+		array.push_back(getKey());
 	} else {
-		array.add(getIndex());
+		array.push_back(getIndex());
 	}
 }
 

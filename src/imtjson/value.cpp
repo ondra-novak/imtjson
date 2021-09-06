@@ -48,15 +48,10 @@ namespace json {
 	{
 	}
 
-	Value::Value(const StringView<char>& value):v(StringValue::create(value))
+	Value::Value(const std::string_view& value):v(StringValue::create(value))
 	{
 	}
-	Value::Value(const StringView<Value>& value)
-	{
-		RefCntPtr<ArrayValue> res = ArrayValue::create(value.length);
-		for (Value z: value) res->push_back(z.getHandle());
-		v = PValue::staticCast(res);
-	}
+
 
 	String Value::toString() const
 	{
@@ -82,15 +77,19 @@ namespace json {
 		}
 	}
 
-	Value Value::fromString(const StringView<char>& string)
+	Value Value::fromString(const std::string_view& string)
 	{
 		std::size_t pos = 0;
 		return parse([&pos,&string]() -> char {
-			if (pos == string.length)
+			if (pos == string.size())
 				return -1;
 			else
-				return string.data[pos++];
+				return string[pos++];
 		});
+	}
+	Value Value::fromString(const BinaryView& string)
+	{
+		return fromString(map_bin2str(string));
 	}
 
 	Value Value::fromStream(std::istream & input)
@@ -255,17 +254,10 @@ namespace json {
 		}
 	}
 
-	PValue prepareValues(const std::initializer_list<Value>& data) {
-			return Value(array, data).getHandle();
-	}
 
-	Value::Value(const std::initializer_list<Value>& data)
-		:v(data.size() == 0?
-			PValue(AbstractArrayValue::getEmptyArray())
-			:prepareValues(data))
-	{
+	Value::Value(const std::initializer_list<Value>& data):Value(array, data.begin(), data.end(), false) {}
 
-	}
+	Value::Value(ValueType type, const std::initializer_list<Value> &data, bool skipUndef):Value(type, data.begin(), data.end(), skipUndef) {}
 
 /*	Value::Value(UInt value):v(new UnsignedIntegerValue(value))
 	{
@@ -309,6 +301,10 @@ namespace json {
 	{
 
 	}
+	Value::Value(ValueBuilder & value):v(value.commit())
+	{
+
+	}
 
 	Value::Value(const Object & value) : v(value.commit())
 	{
@@ -340,7 +336,7 @@ namespace json {
 	Value Value::reverse() const {
 		Array out;
 		for (UInt i = size(); i > 0; i--) {
-			out.add(this->operator [](i-1));
+			out.push_back(this->operator [](i-1));
 		}
 		return out;
 	}
@@ -375,67 +371,6 @@ namespace json {
 		return Value::allocator;
 	}
 
-	Value::Value(ValueType type, const StringView<Value>& values, bool skipUndef) {
-		std::vector<PValue> vp;
-		switch (type) {
-		case array: {
-			RefCntPtr<ArrayValue> vp = ArrayValue::create(values.length);
-			for (const Value &v: values) {
-				if (!skipUndef || v.defined())
-					vp->push_back(v.getHandle());
-			}
-			v = PValue::staticCast(vp);
-			break;
-		}
-		case object: {
-			RefCntPtr<ObjectValue> vp = ObjectValue::create(values.length);
-			StrViewA lastKey;
-			bool ordered = true;
-			for (const Value &v: values) {
-				if (!skipUndef || v.defined()) {
-					StrViewA k = v.getKey();
-					int c = lastKey.compare(k);
-					if (c > 0) {
-						ordered = false;
-					}
-					else if (c == 0) {
-						if (!vp->empty()) vp->pop_back();
-					}
-					vp->push_back(v.getHandle());
-					lastKey = k;
-				}
-			}
-			if (!ordered) {
-				vp->sort();
-			}
-			v = PValue::staticCast(vp);
-			break;
-		}
-		case string: {
-			std::vector<String> tmpStr;
-			tmpStr.reserve(values.length);
-			std::size_t needsz = 0;
-			for (auto &&x : values) {
-				String s = x.toString();
-				tmpStr.push_back(s);
-				needsz += s.length();
-			}
-			v = PValue(new (needsz) StringValue(nullptr, needsz, [&](char *c) {
-				for (auto &&x : tmpStr) {
-					std::memcpy(c, x.c_str(), x.length());
-					c += x.length();
-				}
-				return needsz;
-			}));
-			break;
-			
-
-		}
-		default:
-			 throw std::runtime_error("json::Value(type,...) - Invalid type requested");
-
-		}
-	}
 
 	///Replace item in JSON structure defined by path array and returns new instance of the structure
 	/**
@@ -503,7 +438,7 @@ namespace json {
 
 	}
 
-	Value Value::replace(const StrViewA &key, const Value& val) const {
+	Value Value::replace(const std::string_view &key, const Value& val) const {
 		Object obj(*this);
 		obj.set(key, val);
 		return obj;
@@ -593,11 +528,11 @@ namespace json {
 							std::size_t pos;
 							if (findInArray(p, find, lastPos, pos)) {
 								if (insert.defined()) {
-									p.insert(pos, insert);
+									p.insert(p.begin()+pos, insert);
 									lastPos = pos+1;
 								}
 								else {
-									p.erase(pos);
+									p.erase(p.begin()+pos);
 								}
 							} else {
 								if (insert.defined()) p.push_back(insert);
@@ -653,9 +588,9 @@ namespace json {
 		case string: {
 			auto str1 = getString();
 			auto str2 = other.getString();
-			if (str1.length < str2.length) return *this;
-			if (str1.substr(str1.length - str2.length) == str2) {
-				return str1.substr(0,str1.length - str2.length);
+			if (str1.size() < str2.size()) return *this;
+			if (str1.substr(str1.size() - str2.size()) == str2) {
+				return str1.substr(0,str1.size() - str2.size());
 			}
 			else {
 				return *this;
@@ -705,7 +640,7 @@ namespace json {
 					append.push_back(v);
 				}
 			}
-			return Value(StringView<Value>(append));
+			return Value(array, append.begin(), append.end());
 		}
 		case object: {
 			auto i1 = begin(), e1 = end();
@@ -743,10 +678,10 @@ namespace json {
 	}
 
 
-	Value Value::preciseNumber(const StrViewA number) {
+	Value Value::preciseNumber(const std::string_view &number) {
 		UInt pos = 0;
 		auto reader = [&]() -> int {
-			if (pos > number.length) {
+			if (pos > number.size()) {
 				pos++;
 				return -1;
 			}
@@ -758,10 +693,10 @@ namespace json {
 		P parser(std::move(reader), P::allowPreciseNumbers);
 		try {
 			Value v = parser.parseNumber();
-			if (pos <= number.length) throw InvalidNumericFormat(number);
+			if (pos <= number.size()) throw InvalidNumericFormat(std::string(number));
 			return v;
 		} catch (const ParseError &) {
-			throw InvalidNumericFormat(number);
+			throw InvalidNumericFormat(std::string(number));
 		}
 	}
 
@@ -814,13 +749,13 @@ namespace json {
 		if (!sz) return undefined;
 		Array nw(*this);
 
-		Value ret = nw[sz-1];
-		nw.erase(sz-1);
+		Value ret = nw.back();
+		nw.pop_back();
 		*this = nw;
 		return ret;
 	}
 
-	String Value::join(StrViewA separator) const {
+	String Value::join(const std::string_view & separator) const {
 		Array tmp;
 		tmp.reserve(size());
 		std::size_t needsz = 0;
@@ -829,13 +764,13 @@ namespace json {
 			tmp.push_back(s);
 			needsz+=s.length();
 		}
-		needsz+=(tmp.size()-1)*separator.length;
+		needsz+=(tmp.size()-1)*separator.size();
 		return String(needsz, [&](char *c){
 			char *anchor = c;
 			for (std::size_t i =0, cnt = tmp.size(); i < cnt; i++) {
 				if (i) {
 					std::copy(separator.begin(), separator.end(), c);
-					c+=separator.length;
+					c+=separator.size();
 				}
 				String v(tmp[i]);
 				std::copy(v.begin(), v.end(), c);
@@ -868,9 +803,9 @@ namespace json {
 			out.push_back((*this)[x]);
 
 		if (type() == object) {
-			return Value(json::object, StringView<Value>(out.data(), out.size()));
+			return Value(object, out.begin(), out.end());
 		} else {
-			return Value(json::array, StringView<Value>(out.data(), out.size()));
+			return Value(array, out.begin(), out.end());
 		}
 
 	}
@@ -898,8 +833,8 @@ namespace json {
 	}
 
 
-	void Value::setItems(const std::initializer_list<std::pair<StrViewA, Value> > &fields) {
-		auto **buffer = static_cast<std::pair<StrViewA, Value> const **>(alloca(fields.size()*sizeof(std::pair<StrViewA, Value> *)));
+	void Value::setItems(const std::initializer_list<std::pair<std::string_view, Value> > &fields) {
+		auto **buffer = static_cast<std::pair<std::string_view, Value> const **>(alloca(fields.size()*sizeof(std::pair<std::string_view, Value> *)));
 		int i = 0; for (const auto &x: fields) buffer[i++] = &x;
 		std::sort(buffer, buffer+fields.size(), [](const auto *a, const auto *b){return a->first < b->first;});
 		auto res = ObjectValue::create(fields.size()+size());
@@ -945,6 +880,50 @@ namespace json {
 		v = PValue(res);
 	}
 
+	ValueBuilder::ValueBuilder(ValueType t, std::size_t count) {
+		switch (t) {
+		case object: {
+			push_back_fn = [](IValue *h, Value c) {
+				static_cast<ObjectValue *>(h)->ObjectValue::push_back(c.getHandle());
+			};
+			commit_fn = [](IValue  *h) {
+				static_cast<ObjectValue *>(h)->ObjectValue::sort();
+				return PValue(h);
+			};
+			handle = ObjectValue::create(count);
+		} break;
+		case array: {
+			push_back_fn = [](IValue *h, Value c) {
+				static_cast<ArrayValue *>(h)->ArrayValue::push_back(c.getHandle());
+			};
+			commit_fn = [](IValue *h) {
+				return PValue(h);
+			};
+			handle = ArrayValue::create(count);
+		} break;
+		default:
+			throw std::runtime_error("Can't build such type");
+		}
+	}
+	void ValueBuilder::push_back(Value v){
+		push_back_fn(handle, v);
+	}
+	PValue ValueBuilder::commit(){
+		IValue *c = handle;
+		handle = nullptr;
+		return commit_fn(c);
+	}
+	ValueBuilder::~ValueBuilder() {
+		if (handle) delete handle;
+	}
+	ValueBuilder::ValueBuilder(ValueBuilder &&other)
+		:handle(other.handle)
+		,push_back_fn(other.push_back_fn)
+		,commit_fn(other.commit_fn) {
+		other.handle = nullptr;
+	}
+
+
 }
 
 namespace std {
@@ -954,6 +933,7 @@ size_t hash<::json::Value>::operator()(const ::json::Value &v)const {
 	v.stripKey().serializeBinary(fnvcalc,0);
 	return ret;
 }
+
 
 
 

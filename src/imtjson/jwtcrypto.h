@@ -12,10 +12,7 @@
 
 #include "binary.h"
 #include "jwt.h"
-#include "shared/stringview.h"
 
-using ondra_shared::BinaryView;
-using ondra_shared::StrViewA;
 
 
 namespace json {
@@ -34,68 +31,68 @@ public:
 
 inline bool verifyRS256(BinaryView message, BinaryView signature, RSA *rsa) {
 	unsigned char buffer[SHA256_DIGEST_LENGTH];
-	SHA256(message.data, message.length,buffer);
-	return RSA_verify(NID_sha256, buffer, SHA256_DIGEST_LENGTH, signature.data, signature.length, rsa) == 1;
+	SHA256(message.data(), message.size(),buffer);
+	return RSA_verify(NID_sha256, buffer, SHA256_DIGEST_LENGTH, signature.data(), signature.size(), rsa) == 1;
 }
 inline bool verifyRS384(BinaryView message, BinaryView signature, RSA *rsa) {
 	unsigned char buffer[SHA384_DIGEST_LENGTH];
-	SHA384(message.data, message.length,buffer);
-	return RSA_verify(NID_sha384, buffer, SHA384_DIGEST_LENGTH, signature.data, signature.length, rsa) == 1;
+	SHA384(message.data(), message.size(),buffer);
+	return RSA_verify(NID_sha384, buffer, SHA384_DIGEST_LENGTH, signature.data(), signature.size(), rsa) == 1;
 }
 inline bool verifyRS512(BinaryView message, BinaryView signature, RSA *rsa) {
 	unsigned char buffer[SHA512_DIGEST_LENGTH];
-	SHA512(message.data, message.length,buffer);
-	return RSA_verify(NID_sha512, buffer, SHA512_DIGEST_LENGTH, signature.data, signature.length, rsa) == 1;
+	SHA512(message.data(), message.size(),buffer);
+	return RSA_verify(NID_sha512, buffer, SHA512_DIGEST_LENGTH, signature.data(), signature.size(), rsa) == 1;
 }
 inline Binary signRS256(BinaryView message, RSA *rsa) {
 	unsigned char buffer[SHA256_DIGEST_LENGTH];
 	SignBuffer sbuff;
-	SHA256(message.data, message.length,buffer);
+	SHA256(message.data(), message.size(),buffer);
 	RSA_sign(NID_sha256, buffer, SHA256_DIGEST_LENGTH, sbuff.buff, &sbuff.len, rsa);
 	return sbuff.getBinary();
 }
 inline Binary signRS384(BinaryView message, RSA *rsa) {
 	unsigned char buffer[SHA384_DIGEST_LENGTH];
 	SignBuffer sbuff;
-	SHA384(message.data, message.length,buffer);
+	SHA384(message.data(), message.size(),buffer);
 	RSA_sign(NID_sha384, buffer, SHA384_DIGEST_LENGTH, sbuff.buff, &sbuff.len,rsa);
 	return sbuff.getBinary();
 }
 inline Binary signRS512(BinaryView message, RSA *rsa) {
 	unsigned char buffer[SHA512_DIGEST_LENGTH];
-	SHA512(message.data, message.length,buffer);
+	SHA512(message.data(), message.size(),buffer);
 	SignBuffer sbuff;
 	RSA_sign(NID_sha512, buffer, SHA512_DIGEST_LENGTH, sbuff.buff, &sbuff.len, rsa);
 	return sbuff.getBinary();
 }
 inline Binary signHS256(BinaryView message, BinaryView key) {
 	SignBuffer sbuff;
-	HMAC(EVP_sha256(),key.data, key.length, message.data, message.length,sbuff.buff, &sbuff.len);
+	HMAC(EVP_sha256(),key.data(), key.size(), message.data(), message.size(),sbuff.buff, &sbuff.len);
 	return sbuff.getBinary();
 }
 inline Binary signHS384(BinaryView message, BinaryView key) {
 	SignBuffer sbuff;
-	HMAC(EVP_sha384(),key.data, key.length, message.data, message.length,sbuff.buff, &sbuff.len);
+	HMAC(EVP_sha384(),key.data(), key.size(), message.data(), message.size(),sbuff.buff, &sbuff.len);
 	return sbuff.getBinary();
 }
 inline Binary signHS512(BinaryView message, BinaryView key) {
 	SignBuffer sbuff;
-	HMAC(EVP_sha512(),key.data, key.length, message.data, message.length,sbuff.buff, &sbuff.len);
+	HMAC(EVP_sha512(),key.data(), key.size(), message.data(), message.size(),sbuff.buff, &sbuff.len);
 	return sbuff.getBinary();
 }
 inline bool verifyHS256(BinaryView message, BinaryView sign, BinaryView key) {
 	SignBuffer sbuff;
-	HMAC(EVP_sha256(),key.data, key.length, message.data, message.length,sbuff.buff, &sbuff.len);
+	HMAC(EVP_sha256(),key.data(), key.size(), message.data(), message.size(),sbuff.buff, &sbuff.len);
 	return sbuff.check(sign);
 }
 inline bool verifyHS384(BinaryView message, BinaryView sign, BinaryView key) {
 	SignBuffer sbuff;
-	HMAC(EVP_sha384(),key.data, key.length, message.data, message.length,sbuff.buff, &sbuff.len);
+	HMAC(EVP_sha384(),key.data(), key.size(), message.data(), message.size(),sbuff.buff, &sbuff.len);
 	return sbuff.check(sign);
 }
 inline bool verifyHS512(BinaryView message, BinaryView sign, BinaryView key) {
 	SignBuffer sbuff;
-	HMAC(EVP_sha512(),key.data, key.length, message.data, message.length,sbuff.buff, &sbuff.len);
+	HMAC(EVP_sha512(),key.data(), key.size(), message.data(), message.size(),sbuff.buff, &sbuff.len);
 	return sbuff.check(sign);
 }
 
@@ -113,11 +110,11 @@ inline void storeESSign(PECDSA_SIG &&sig, SignBuffer &sbuff, int len) {
 }
 
 inline auto parseESSign(BinaryView signature) {
-	BinaryView br(signature.substr(0, signature.length/2));
-	BinaryView bs(signature.substr(signature.length/2));
+	BinaryView br(signature.substr(0, signature.size()/2));
+	BinaryView bs(signature.substr(signature.size()/2));
 	BIGNUM *r = BN_new(), *s = BN_new();
-	BN_bin2bn(br.data, br.length, r);
-	BN_bin2bn(bs.data, bs.length, s);
+	BN_bin2bn(br.data(), br.size(), r);
+	BN_bin2bn(bs.data(), bs.size(), s);
 	PECDSA_SIG sig (ECDSA_SIG_new());
 	ECDSA_SIG_set0(sig.get(),r,s);
 	return sig;
@@ -126,32 +123,32 @@ inline auto parseESSign(BinaryView signature) {
 inline bool verifyES256(BinaryView message, BinaryView signature, EC_KEY *eck) {
 	unsigned char buffer[SHA256_DIGEST_LENGTH];
 	auto sig = parseESSign(signature);
-	SHA256(message.data, message.length,buffer);
+	SHA256(message.data(), message.size(),buffer);
 	return ECDSA_do_verify(buffer, SHA256_DIGEST_LENGTH, sig.get(), eck) == 1;
 }
 inline bool verifyES384(BinaryView message, BinaryView signature, EC_KEY *eck) {
 	unsigned char buffer[SHA384_DIGEST_LENGTH];
 	auto sig = parseESSign(signature);
-	SHA384(message.data, message.length,buffer);
+	SHA384(message.data(), message.size(),buffer);
 	return ECDSA_do_verify(buffer, SHA384_DIGEST_LENGTH, sig.get(), eck) == 1;
 }
 inline bool verifyES512(BinaryView message, BinaryView signature, EC_KEY *eck) {
 	unsigned char buffer[SHA512_DIGEST_LENGTH];
 	auto sig = parseESSign(signature);
-	SHA512(message.data, message.length,buffer);
+	SHA512(message.data(), message.size(),buffer);
 	return ECDSA_do_verify(buffer, SHA512_DIGEST_LENGTH, sig.get(),  eck) == 1;
 }
 inline Binary signES256(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA256_DIGEST_LENGTH];
 	SignBuffer sbuff;
-	SHA256(message.data, message.length,buffer);
+	SHA256(message.data(), message.size(),buffer);
 	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA256_DIGEST_LENGTH, eck)), sbuff, 256/8);
 	return sbuff.getBinary();
 }
 inline Binary signES384(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA384_DIGEST_LENGTH];
 	SignBuffer sbuff;
-	SHA384(message.data, message.length,buffer);
+	SHA384(message.data(), message.size(),buffer);
 	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA384_DIGEST_LENGTH, eck)), sbuff, 384/8);
 	return sbuff.getBinary();
 }
@@ -159,7 +156,7 @@ inline Binary signES384(BinaryView message, EC_KEY *eck) {
 
 inline Binary signES512(BinaryView message, EC_KEY *eck) {
 	unsigned char buffer[SHA512_DIGEST_LENGTH];
-	SHA512(message.data, message.length,buffer);
+	SHA512(message.data(), message.size(),buffer);
 	SignBuffer sbuff;
 	storeESSign(PECDSA_SIG(ECDSA_do_sign(buffer, SHA512_DIGEST_LENGTH, eck)), sbuff, 512/8);
 	return sbuff.getBinary();
@@ -171,7 +168,7 @@ class JWTCrypto_RS: public AbstractJWTCrypto {
 public:
 	JWTCrypto_RS(RSA *rsa, int pref_size=256):rsa(rsa),size(pref_size) {}
 
-	virtual SignMethod getPreferredMethod(StrViewA kid = StrViewA()) const {
+	virtual SignMethod getPreferredMethod(std::string_view kid = std::string_view()) const {
 		switch (size) {
 		default:
 		case 256: return {"RS256",kid};
@@ -181,17 +178,17 @@ public:
 	}
 
 
-	virtual Binary sign(StrViewA message, SignMethod method) const {
-		if (method.alg == "RS256") return alg::signRS256(BinaryView(message), rsa);
-		if (method.alg == "RS384") return alg::signRS384(BinaryView(message), rsa);
-		if (method.alg == "RS512") return alg::signRS512(BinaryView(message), rsa);
+	virtual Binary sign(std::string_view message, SignMethod method) const {
+		if (method.alg == "RS256") return alg::signRS256(map_str2bin(message), rsa);
+		if (method.alg == "RS384") return alg::signRS384(map_str2bin(message), rsa);
+		if (method.alg == "RS512") return alg::signRS512(map_str2bin(message), rsa);
 		return Binary();
 	}
 
-	virtual bool verify(StrViewA message, SignMethod method, BinaryView signature) const {
-		if (method.alg == "RS256") return alg::verifyRS256(BinaryView(message), signature, rsa);
-		if (method.alg == "RS384") return alg::verifyRS384(BinaryView(message), signature, rsa);
-		if (method.alg == "RS512") return alg::verifyRS512(BinaryView(message), signature, rsa);
+	virtual bool verify(std::string_view message, SignMethod method, BinaryView signature) const {
+		if (method.alg == "RS256") return alg::verifyRS256(map_str2bin(message), signature, rsa);
+		if (method.alg == "RS384") return alg::verifyRS384(map_str2bin(message), signature, rsa);
+		if (method.alg == "RS512") return alg::verifyRS512(map_str2bin(message), signature, rsa);
 		return false;
 	}
 
@@ -207,7 +204,7 @@ class JWTCrypto_HS: public AbstractJWTCrypto {
 public:
 	JWTCrypto_HS(std::string key, int pref_size=256):key(std::move(key)),size(pref_size) {}
 
-	virtual SignMethod getPreferredMethod(StrViewA kid = StrViewA()) const {
+	virtual SignMethod getPreferredMethod(std::string_view kid = std::string_view()) const {
 		switch (size) {
 		default:
 		case 256: return {"HS256",kid};
@@ -216,19 +213,19 @@ public:
 		}
 	}
 
-	virtual Binary sign(StrViewA message, SignMethod method) const {
-		BinaryView b((StrViewA(key)));
-		if (method.alg == "HS256") return alg::signHS256(BinaryView(message), b);
-		if (method.alg == "HS384") return alg::signHS384(BinaryView(message), b);
-		if (method.alg == "HS512") return alg::signHS512(BinaryView(message), b);
+	virtual Binary sign(std::string_view message, SignMethod method) const {
+		BinaryView b(map_str2bin(key));
+		if (method.alg == "HS256") return alg::signHS256(map_str2bin(message), b);
+		if (method.alg == "HS384") return alg::signHS384(map_str2bin(message), b);
+		if (method.alg == "HS512") return alg::signHS512(map_str2bin(message), b);
 		return Binary();
 	}
 
-	virtual bool verify(StrViewA message, SignMethod method, BinaryView signature) const {
-		BinaryView b((StrViewA(key)));
-		if (method.alg == "HS256") return alg::verifyHS256(BinaryView(message), signature, b);
-		if (method.alg == "HS384") return alg::verifyHS384(BinaryView(message), signature, b);
-		if (method.alg == "HS512") return alg::verifyHS512(BinaryView(message), signature, b);
+	virtual bool verify(std::string_view message, SignMethod method, BinaryView signature) const {
+		BinaryView b(map_str2bin(key));
+		if (method.alg == "HS256") return alg::verifyHS256(map_str2bin(message), signature, b);
+		if (method.alg == "HS384") return alg::verifyHS384(map_str2bin(message), signature, b);
+		if (method.alg == "HS512") return alg::verifyHS512(map_str2bin(message), signature, b);
 		return false;
 	}
 
@@ -248,7 +245,7 @@ public:
 	 */
 	JWTCrypto_ES(EC_KEY *key, int size):key(key),size(size) {}
 
-	virtual SignMethod getPreferredMethod(StrViewA kid = StrViewA()) const {
+	virtual SignMethod getPreferredMethod(std::string_view kid = std::string_view()) const {
 		switch (size) {
 		default:
 		case 256: return {"ES256",kid};
@@ -270,17 +267,17 @@ public:
 
 	}
 
-	virtual Binary sign(StrViewA message, SignMethod method) const {
-		if (method.alg == "ES256" && size == 256) return signAndCheck(alg::signES256, alg::verifyES256, BinaryView(message));
-		if (method.alg == "ES384" && size == 384) return signAndCheck(alg::signES384, alg::verifyES384, BinaryView(message));
-		if (method.alg == "ES512" && size == 512) return signAndCheck(alg::signES512, alg::verifyES512, BinaryView(message));
+	virtual Binary sign(std::string_view message, SignMethod method) const {
+		if (method.alg == "ES256" && size == 256) return signAndCheck(alg::signES256, alg::verifyES256, map_str2bin(message));
+		if (method.alg == "ES384" && size == 384) return signAndCheck(alg::signES384, alg::verifyES384, map_str2bin(message));
+		if (method.alg == "ES512" && size == 512) return signAndCheck(alg::signES512, alg::verifyES512, map_str2bin(message));
 		return Binary();
 	}
 
-	virtual bool verify(StrViewA message, SignMethod method, BinaryView signature) const {
-		if (method.alg == "ES256" && size == 256) return alg::verifyES256(BinaryView(message), signature, key);
-		if (method.alg == "ES384" && size == 384) return alg::verifyES384(BinaryView(message), signature, key);
-		if (method.alg == "ES512" && size == 512) return alg::verifyES512(BinaryView(message), signature, key);
+	virtual bool verify(std::string_view message, SignMethod method, BinaryView signature) const {
+		if (method.alg == "ES256" && size == 256) return alg::verifyES256(map_str2bin(message), signature, key);
+		if (method.alg == "ES384" && size == 384) return alg::verifyES384(map_str2bin(message), signature, key);
+		if (method.alg == "ES512" && size == 512) return alg::verifyES512(map_str2bin(message), signature, key);
 		return false;
 	}
 
@@ -309,7 +306,7 @@ public:
 	 * @param keyBase64 base64
 	 * @return
 	 */
-	static EC_KEY *importPublicKey(int size, const StrViewA &keyBase64) {
+	static EC_KEY *importPublicKey(int size, const std::string_view &keyBase64) {
 
 
 		Value k = base64url->decodeBinaryValue(keyBase64);
@@ -317,8 +314,8 @@ public:
 
 		EC_KEY *key = initKey(size);
 
-		const unsigned char *data = b.data;
-		EC_KEY *nwkey = o2i_ECPublicKey(&key,&data, b.length);
+		const unsigned char *data = b.data();
+		EC_KEY *nwkey = o2i_ECPublicKey(&key,&data, b.size());
 		if (nwkey == nullptr) {
 			EC_KEY_free(key);
 			return nullptr;
@@ -332,7 +329,7 @@ public:
 
 
 	static EC_KEY *importPrivateKey(int size, const BinaryView &b) {
-		std::unique_ptr<BIGNUM,decltype(&BN_free)> priv_key (BN_bin2bn(b.data, b.length, BN_new()), &BN_free);
+		std::unique_ptr<BIGNUM,decltype(&BN_free)> priv_key (BN_bin2bn(b.data(), b.size(), BN_new()), &BN_free);
 		std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> key(initKey(size), &EC_KEY_free);
 	    std::unique_ptr<BN_CTX, decltype(&BN_CTX_free)> ctx (BN_CTX_new(), &BN_CTX_free);
 	    if (ctx == nullptr) return nullptr;
@@ -350,7 +347,7 @@ public:
 	    return key.release();
 	}
 
-	static EC_KEY *importPrivateKey(int size, const StrViewA &keyBase64)
+	static EC_KEY *importPrivateKey(int size, const std::string_view &keyBase64)
 	{
 		Value k = base64url->decodeBinaryValue(keyBase64);
 		Binary b = k.getBinary(base64url);
@@ -369,7 +366,7 @@ public:
 		std::string ret;
 		ret.reserve(nSize * 4/3+10);
 		base64url->encodeBinaryValue(BinaryView(binpubkey.data(), binpubkey.size()),
-				[&](StrViewA data) {ret.append(data.data, data.length);});
+				[&](std::string_view data) {ret.append(data);});
 		return ret;
 	}
 	static std::string exportPublicKeyPEM(EC_KEY *key) {

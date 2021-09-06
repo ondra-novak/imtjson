@@ -11,7 +11,7 @@
 namespace json {
 
 
-	PValue bindKeyToPValue(const StrViewA &key, const PValue &value) {
+	PValue bindKeyToPValue(const std::string_view &key, const PValue &value) {
 		if (key.empty()) {
 			return value->unproxy();
 		}else if (key == value->getMemberName()) {
@@ -74,7 +74,7 @@ namespace json {
 
 
 void Object::set_internal(const Value& v) {
-//	StringView<char> curName = v.getKey();
+//	std::string_view curName = v.getKey();
 	lastIterSnapshot = Value();
 
 	if (unordered == nullptr) {
@@ -90,11 +90,11 @@ void Object::set_internal(const Value& v) {
 	}
 }
 
-	void Object::set(const StringView<char>& name, const Value & value)
+	void Object::set(const std::string_view& name, const Value & value)
 	{
 		PValue v = value.getHandle();
 		if (v->flags() & proxy ) {
-			StringView<char> curName = v->getMemberName();
+			std::string_view curName = v->getMemberName();
 			if (curName == name) {
 				set_internal(v);
 			} else {
@@ -112,12 +112,12 @@ void Object::set_internal(const Value& v) {
 		set_internal(value.getHandle());
 	}
 
-	void Object::unset(const StringView<char>& name)
+	void Object::unset(const std::string_view& name)
 	{
 		set(name, AbstractValue::getUndefined());
 	}
 
-	const Value Object::operator[](const StringView<char> &name) const {
+	const Value Object::operator[](const std::string_view &name) const {
 
 		if (unordered != nullptr) {
 			std::size_t usz = unordered->size();
@@ -138,7 +138,7 @@ void Object::set_internal(const Value& v) {
 		return base[name];
 	}
 
-	ValueRef Object::makeRef(const StringView<char> &name) {
+	ValueRef Object::makeRef(const std::string_view &name) {
 		return ValueRef(*this, name);
 	}
 
@@ -240,11 +240,11 @@ void Object::set_internal(const Value& v) {
 		}
 	}
 
-	Object2Object Object::object(const StringView<char>& name)
+	Object2Object Object::object(const std::string_view& name)
 	{
 		return Object2Object((*this)[name],*this,name);
 	}
-	Array2Object Object::array(const StringView<char>& name)
+	Array2Object Object::array(const std::string_view& name)
 	{
 		return Array2Object((*this)[name], *this, name);
 	}
@@ -332,12 +332,6 @@ Value Object::commitAsDiff() const {
 
 
 
-StringView<PValue> Object::getItems(const Value& v) {
-	const IValue *pv = v.getHandle();
-	const ObjectValue *ov = dynamic_cast<const ObjectValue *>(pv->unproxy());
-	if (ov) return ov->getItems(); else return StringView<PValue>();
-}
-
 std::size_t Object::size() const {
 	return base.size() + (ordered == nullptr?0:ordered->size())+(unordered == nullptr?0:unordered->size());
 }
@@ -352,9 +346,9 @@ Object::Object(Object &&other)
 
 
 
-Value::Value(const StrViewA key, const Value &value) :v(bindKeyToPValue(key, value.getHandle())) {}
+Value::Value(const std::string_view key, const Value &value) :v(bindKeyToPValue(key, value.getHandle())) {}
 
-Object::Object(const std::initializer_list<std::pair<StrViewA, Value> > &fields) {
+Object::Object(const std::initializer_list<std::pair<std::string_view, Value> > &fields) {
 	auto obj = ObjectValue::create(fields.size());
 	for (const auto &x: fields) {
 		if (x.second.defined()) {

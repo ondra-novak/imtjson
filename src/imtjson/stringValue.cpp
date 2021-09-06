@@ -15,23 +15,23 @@
 
 namespace json {
 
-static const StringView<char> magic("imtjson");
+static const std::string_view magic("imtjson");
 
 void *StringValue::putMagic(void *obj) {
 	StringValue *s = reinterpret_cast<StringValue *>(obj);
-	std::memcpy(s->charbuff, magic.data, magic.length);
+	std::memcpy(s->charbuff, magic.data(), magic.size());
 	return obj;
 }
 
-StringValue::StringValue(BinaryEncoding enc, const StringView<char>& str):sz(str.length),encoding(enc) {
+StringValue::StringValue(BinaryEncoding enc, const std::string_view& str):sz(str.size()),encoding(enc) {
 	char *trg = charbuff;
-	if (StringView<char>(trg,magic.length) != magic) throw std::runtime_error("StringView must be allocated by special new operator");
-	std::memcpy(trg, str.data, str.length);
-	trg[str.length] = 0;
+	if (std::string_view(trg,magic.size()) != magic) throw std::runtime_error("StringView must be allocated by special new operator");
+	std::memcpy(trg, str.data(), str.size());
+	trg[str.size()] = 0;
 }
 
-StringView<char> StringValue::getString() const {
-	return StringView<char>(charbuff, sz);
+StringView StringValue::getString() const {
+	return StringView(charbuff, sz);
 }
 
 Int AbstractStringValue::getInt() const {
@@ -73,7 +73,7 @@ ULongInt AbstractStringValue::getUIntLong() const {
 
 void* StringValue::operator new(std::size_t sz, const std::size_t &strsz) {
 	std::size_t objsz = sz - sizeof(StringValue::charbuff);
-	std::size_t needsz = objsz + std::max(strsz+1, magic.length);
+	std::size_t needsz = objsz + std::max(strsz+1, magic.size());
 	return putMagic(Value::allocator->alloc(needsz));
 }
 
@@ -93,9 +93,9 @@ double AbstractStringValue::getNumber() const {
 	}
 }
 
-PValue StringValue::create(const StringView<char>& str) {
+PValue StringValue::create(const std::string_view& str) {
 	if (str.empty()) return AbstractStringValue::getEmptyString();
-	else return new(str.length) StringValue(nullptr,str);
+	else return new(str.size()) StringValue(nullptr,str);
 }
 
 void StringValue::stringOverflow() {
@@ -105,7 +105,7 @@ void StringValue::stringOverflow() {
 
 
 PValue StringValue::create(const BinaryView& str, BinaryEncoding enc) {
-	StringValue *v = new(str.length) StringValue(enc,StrViewA(str));
+	StringValue *v = new(str.size()) StringValue(enc,map_bin2str(str));
 	IValue *iv = v;
 	return iv;
 }
@@ -222,19 +222,19 @@ ValueTypeFlags PreciseNumberValue<T>::flags() const {
 }
 
 template<typename T>
-StringView<char> PreciseNumberValue<T>::getString() const {
-	return charbuff;
+StringView PreciseNumberValue<T>::getString() const {
+	return StringView(charbuff,sizeof(charbuff));
 }
 
 template<typename T>
-PValue PreciseNumberValue<T>::create(const StringView<char>& str) {
-	return new(str.length) PreciseNumberValue<T>(str);
+PValue PreciseNumberValue<T>::create(const std::string_view& str) {
+	return new(str.size()) PreciseNumberValue<T>(str);
 
 }
 
 template<typename T>
-PValue PreciseNumberValue<T>::create(const T& value, const StringView<char>& str) {
-	return new(str.length) PreciseNumberValue<T>(value,str);
+PValue PreciseNumberValue<T>::create(const T& value, const std::string_view& str) {
+	return new(str.size()) PreciseNumberValue<T>(value,str);
 }
 
 template<typename T>
@@ -247,14 +247,14 @@ void PreciseNumberValue<T>::operator delete(void* ptr,	std::size_t ) {
 }
 
 template<typename T>
-PreciseNumberValue<T>::PreciseNumberValue(const StrViewA& strNum):cached(false) {
+PreciseNumberValue<T>::PreciseNumberValue(const std::string_view& strNum):cached(false) {
 	char *c = charbuff;
 	for (char a: strNum) *c++ = a;
 	*c = 0;
 }
 
 template<typename T>
-PreciseNumberValue<T>::PreciseNumberValue(const T &v, const StrViewA &strNum):PreciseNumberValue(strNum) {
+PreciseNumberValue<T>::PreciseNumberValue(const T &v, const std::string_view &strNum):PreciseNumberValue(strNum) {
 	n = v;
 	cached = true;
 }
@@ -279,7 +279,7 @@ template class PreciseNumberValue<ULongInt>;
 template class PreciseNumberValue<LongInt>;
 
 
-Value ParserHelper::numberFromStringRaw(StrViewA str, bool force_double) {
+Value ParserHelper::numberFromStringRaw(std::string_view str, bool force_double) {
 	if (force_double) return PreciseNumberValue<double>::create(str);
 	ULongInt acclm = 0;
 	bool neg = false;
@@ -288,7 +288,7 @@ Value ParserHelper::numberFromStringRaw(StrViewA str, bool force_double) {
 		neg = str[0] == '-';
 		pos++;
 	}
-	while (pos < str.length) {
+	while (pos < str.size()) {
 		char c = str[pos++];
 		if  (!isdigit(c))  {
 			return PreciseNumberValue<double>::create(str);

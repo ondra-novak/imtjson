@@ -357,7 +357,7 @@ inline Value Value::map(Fn &&mapFn, ValueType target_type)  const {
 
 template<typename Fn, typename Total>
 inline Total Value::reduce(Fn&& reduceFn, Total &&curVal) const {
-	return Array(*this).reduce(std::forward<Fn>(reduceFn),std::forward<Total>(curVal));
+	return genReduce(std::forward<Fn>(reduceFn),*this,std::forward<Total>(curVal));
 }
 
 
@@ -409,20 +409,7 @@ void merge(Iter1 liter, Iter1 lend, Iter2 riter, Iter2 rend, Fn fn, Undefined un
 
 }
 
-template<typename CompareFn, typename ReduceFn, typename InitVal>
-inline Value Value::group(const CompareFn& cmp, const ReduceFn& reduceFn, InitVal initVal) {
-	return Array(*this).group(cmp,reduceFn,initVal);
-}
 
-
-template<typename Fn>
-inline Array Array::map(Fn &&mapFn) const {
-	Array out;
-	for (auto item:*this) {
-		out.add(mapFn(item));
-	}
-	return Array(std::move(out));
-}
 
 template<typename Cmp, typename Src, typename T>
 inline T genReduce(Cmp &&reduceFn, Src &&src, T &&init) {
@@ -435,19 +422,12 @@ inline T genReduce(Cmp &&reduceFn, Src &&src, T &&init) {
 
 
 
-template<typename T, typename ReduceFn>
-inline T Array::reduce(ReduceFn&& reduceFn, T &&init) const {
-	return genReduce(std::forward<ReduceFn>(reduceFn),*this,std::forward<T>(init));
-}
-
 template<typename Src, typename Cmp>
 inline Array genSort(const Cmp &cmp, const Src &src, std::size_t expectedSize) {
 	Array out;
 	out.reserve(expectedSize);
-	for (auto &&item:src) {
-		out.push_back(item);
-	}
-	std::sort(out.changes.begin(), out.changes.end(),
+	out.append(src);
+	std::sort(out.begin(), out.end(),
 			[cmp](const PValue &v1, const PValue &v2) {
 		return cmp(v1,v2) < 0;
 	});
@@ -455,39 +435,34 @@ inline Array genSort(const Cmp &cmp, const Src &src, std::size_t expectedSize) {
 }
 
 template<typename Cmp>
-inline Array Array::sort(const Cmp& cmp) const {
-	return genSort(cmp,*this, this->size());
-}
-
-template<typename Cmp>
-inline Array Array::split(const Cmp& cmp) const {
+inline Array Value::split(Cmp&& cmp) const {
 	Array out;
 	Array curSet;
 	Value prevValue;
 	for (Value v:*this) {
 		if (!prevValue.defined() ) {
-			curSet.add(v);
+			curSet.push_back(v);
 			prevValue = v;
 		} else if (cmp(prevValue,v) != 0) {
-			out.add(curSet);
+			out.push_back(curSet);
 			curSet.clear();
-			curSet.add(v);
+			curSet.push_back(v);
 			prevValue = v;
 		} else {
-			curSet.add(v);
+			curSet.push_back(v);
 		}
 	};
-	out.add(curSet);
+	out.push_back(curSet);
 	return Array(std::move(out));
 }
 
-template<typename Cmp, typename T, typename ReduceFn>
-inline Array Array::group(const Cmp& cmp, const ReduceFn& reduceFn, T init) const {
+template<typename CompareFn, typename ReduceFn, typename InitVal>
+inline Array Value::group(CompareFn &&cmp, ReduceFn &&reduce, InitVal &&initVal) const {
 	Array splitted = split(cmp);
 	Array res;
 	for(auto &&item : splitted) {
-		T x = init;
-		res.add(Value(item.reduce<ReduceFn, T>(reduceFn,x)));
+		auto x = initVal;
+		res.push_back(Value(item.reduce(std::forward<ReduceFn>(reduce),std::forward<InitVal>(x))));
 	}
 	return res;
 }
@@ -556,8 +531,7 @@ Value Value::filter(Fn &&fn) const {
 
 	ValueType vt;
 	switch (type()) {default:case array: vt = array;break;case object: vt = object;break;}
-
-	return Value(vt, StringView<Value>(buffer.data(),buffer.size()));
+	return Value(vt, buffer.begin(), buffer.end());
 }
 
 

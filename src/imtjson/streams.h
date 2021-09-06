@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-#include "stringview.h"
+
 #pragma once
 
 namespace json {
@@ -48,7 +48,7 @@ class StreamFromStringT {
 public:
 	StreamFromStringT(const Src &string):string(string),pos(0) {}
 	int operator()() const {
-		if (pos < string.length) return (unsigned char)string[pos++];
+		if (pos < string.size()) return (unsigned char)string[pos++];
 		else return eof;
 	}
 private:
@@ -56,19 +56,19 @@ private:
 	mutable std::size_t pos;
 };
 
-using StreamFromString = StreamFromStringT<StrViewA>;
+using StreamFromString = StreamFromStringT<std::string_view>;
 
 ///Creates stream for the parser which reads bytes from the string
 /**
  * @param string string or string view to read
  * @return Function which returns next byte for each call. It returns -1 when eof
  */
-inline StreamFromString fromString(const StrViewA &string) {
+inline StreamFromString fromString(const std::string_view &string) {
 	return StreamFromString(string);
 }
 
-inline StreamFromStringT<BinaryView> fromBinary(const BinaryView &string) {
-	return StreamFromStringT<BinaryView>(string);
+inline StreamFromStringT<std::basic_string_view<unsigned char> > fromBinary(const std::basic_string_view<unsigned char> &string) {
+	return StreamFromStringT<std::basic_string_view<unsigned char> >(string);
 }
 
 ///A helper class which provides writing to a stream

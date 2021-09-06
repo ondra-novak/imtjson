@@ -53,10 +53,10 @@ public:
 	bool operator!() const {return error;}
 
 	int getErrorCode() const {return this->operator []("code").getInt();}
-	StrViewA getErrorMessage() const {return this->operator []("message").getString();}
+	std::string_view getErrorMessage() const {return this->operator []("message").getString();}
 	Value getErrorData() const {return this->operator []("data");}
 
-	static RpcResult makeError(int code, const StrViewA &message, Value data = json::undefined);
+	static RpcResult makeError(int code, const std::string_view &message, Value data = json::undefined);
 
 protected:
 	Value context;
@@ -155,14 +155,14 @@ public:
 	 * @param value value
 	 * If the key already exists, its value is overriden. To remove key, specify undefined as value
 	 */
-	virtual void store(StrViewA key, Value value) {data.set(key,value);}
+	virtual void store(std::string_view key, Value value) {data.set(key,value);}
 	///Retrieves value soecified by the key
 	/**
 	 *
 	 * @param key key
 	 * @return if key exists, its value is returned, otherwise the undefined is returned
 	 */
-	virtual Value retrieve(StrViewA key) const {return data[key];}
+	virtual Value retrieve(std::string_view key) const {return data[key];}
 	virtual ~RpcConnContext() {}
 protected:
 	///Implements queryInterface
@@ -475,7 +475,7 @@ public:
 	///access to arguments
 	Value operator[](unsigned int index) const;
 	///acfcess to context
-	Value operator[](const StrViewA name) const;
+	Value operator[](const std::string_view name) const;
 
 	///Gets version of the request
 	/**The server tracks version of the request to generate response in requested version
@@ -716,12 +716,12 @@ public:
 	void add(const String &name, const ObjPtr &objPtr, void (Fn::*fn)(RpcRequest));
 
 	///Remove method
-	void remove(const StrViewA &name);
+	void remove(const std::string_view &name);
 
 	void removeAll();
 
 	///Find method
-	AbstractMethodReg *find(const StrViewA &name) const;
+	AbstractMethodReg *find(const std::string_view &name) const;
 
 
 	///Called to format error object
@@ -809,9 +809,9 @@ public:
 
 protected:
 	struct HashStr {
-		std::size_t operator()(StrViewA str) const;
+		std::size_t operator()(std::string_view str) const;
 	};
-	typedef std::unordered_map<StrViewA, RefCntPtr<AbstractMethodReg>, HashStr> MapReg;
+	typedef std::unordered_map<std::string_view, RefCntPtr<AbstractMethodReg>, HashStr> MapReg;
 	typedef MapReg::value_type MapValue;
 
 	MapReg mapReg;

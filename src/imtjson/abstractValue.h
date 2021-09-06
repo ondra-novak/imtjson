@@ -17,14 +17,14 @@ namespace json {
 		virtual LongInt getIntLong() const override { return 0; }
 		virtual double getNumber() const override { return 0.0; }
 		virtual bool getBool() const override { return false; }
-		virtual StringView<char> getString() const override { return StringView<char>(); }
+		virtual StringView getString() const override { return StringView(); }
 		virtual std::size_t size() const override { return 0; }
 		virtual const IValue *itemAtIndex(std::size_t ) const override { return getUndefined(); }
-		virtual const IValue *member(const StringView<char> &) const override { return getUndefined(); }
+		virtual const IValue *member(const std::string_view &) const override { return getUndefined(); }
 		virtual bool enumItems(const IEnumFn &) const override { return true; }
 
 		///some values are proxies with member name - this retrieves name
-		virtual StringView<char> getMemberName() const override { return StringView<char>(); }
+		virtual StringView getMemberName() const override { return StringView(); }
 		///some values are proxies with member name - this retrieve directly the internal value
 		virtual const IValue *unproxy() const override { return this; }
 

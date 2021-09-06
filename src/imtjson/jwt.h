@@ -10,10 +10,8 @@
 #include <chrono>
 #include <unordered_map>
 
-#include "../../../shared/stringview.h"
 #include "value.h"
 
-using ondra_shared::StrViewA;
 
 namespace json {
 
@@ -25,9 +23,9 @@ public:
 
 	struct SignMethod {
 		///algoritm
-		StrViewA alg;
+		std::string_view alg;
 		///Key ID (optional, can be empty)
-		StrViewA kid;
+		std::string_view kid;
 	};
 
 	///Returns preferred signature method
@@ -36,7 +34,7 @@ public:
 	 * @param kid required KeyID (optional)
 	 * @return preferred method. If there is no preferred method, returns empty string
 	 */
-	virtual SignMethod getPreferredMethod(StrViewA kid = StrViewA()) const = 0;
+	virtual SignMethod getPreferredMethod(std::string_view kid = std::string_view()) const = 0;
 	///Creates signature
 	/**
 	 * @param message message to sign
@@ -44,7 +42,7 @@ public:
 	 * supported method
 	 * @return binary object contains signature. If method is not supported, returns empty object
 	 */
-	virtual Binary sign(StrViewA message, SignMethod method) const = 0;
+	virtual Binary sign(std::string_view message, SignMethod method) const = 0;
 	///Verifies signature
 	/**
 	 * @param message message which signature to verify
@@ -53,7 +51,7 @@ public:
 	 * @retval true signature is valid
 	 * @retval false signature is not valid or method is not supported
 	 */
-	virtual bool verify(StrViewA message, SignMethod method, BinaryView signature) const = 0;
+	virtual bool verify(std::string_view message, SignMethod method, BinaryView signature) const = 0;
 
 	AbstractJWTCrypto(const AbstractJWTCrypto &) = delete;
 	AbstractJWTCrypto &operator=(const AbstractJWTCrypto &) = delete;
@@ -78,9 +76,9 @@ public:
 	JWTCryptoContainer(Map &&map, const SignMethod &preferred);
 	JWTCryptoContainer(const Map &map, const SignMethod &preferred);
 
-	virtual SignMethod getPreferredMethod(StrViewA kid = StrViewA()) const override;;
-	virtual Binary sign(StrViewA message, SignMethod method) const override;
-	virtual bool verify(StrViewA message, SignMethod method, BinaryView signature) const override;
+	virtual SignMethod getPreferredMethod(std::string_view kid = std::string_view()) const override;;
+	virtual Binary sign(std::string_view message, SignMethod method) const override;
+	virtual bool verify(std::string_view message, SignMethod method, BinaryView signature) const override;
 
 	const Map &getMap() const;
 
@@ -107,10 +105,10 @@ protected:
  * cryptographic method is "none", it is still passed through the PJWTCrypto object
  * to check, whether this kind of token is accepted
  */
-Value parseJWT(const StrViewA token, PJWTCrypto crypto = nullptr, const AbstractJWTCrypto::SignMethod *forceMethod = nullptr);
+Value parseJWT(const std::string_view token, PJWTCrypto crypto = nullptr, const AbstractJWTCrypto::SignMethod *forceMethod = nullptr);
 
 ///Parses JWT header for more info if needed (otherwise, header is not returned by parseJWT)
-Value parseJWTHdr(const StrViewA token);
+Value parseJWTHdr(const std::string_view token);
 
 ///Checks whether the token's body is valid for current  time
 /**
@@ -139,7 +137,7 @@ std::string serializeJWT(Value payload, PJWTCrypto crypto);
  * @param kid keyID
  * @return signed token
  */
-std::string serializeJWT(Value payload, PJWTCrypto crypto, StrViewA kid);
+std::string serializeJWT(Value payload, PJWTCrypto crypto, std::string_view kid);
 
 ///Serializes and signs token using selected method
 /**
@@ -190,22 +188,22 @@ public:
 	 * @param token token
 	 * @return returns parsed token, or undefined when token is new
 	 */
-	json::Value get(const StrViewA &token) const;
+	json::Value get(const std::string_view &token) const;
 	///stores token to the cache
 	/**
 	 * @param token token string
 	 * @param content parsed content
 	 */
-	void store(const StrViewA &token, json::Value content);
+	void store(const std::string_view &token, json::Value content);
 	///Clear the cache (whole)
 	void clear();
 
 
 protected:
 	struct Hash {
-		std::size_t operator()(const StrViewA &token) const;
+		std::size_t operator()(const std::string_view &token) const;
 	};
-	using CacheMap=std::unordered_map<StrViewA, json::Value, Hash>;
+	using CacheMap=std::unordered_map<std::string_view, json::Value, Hash>;
 
 	CacheMap cache1, cache2;
 	unsigned int limit;

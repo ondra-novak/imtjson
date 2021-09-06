@@ -14,17 +14,17 @@
 
 namespace json {
 
-ObjectProxy::ObjectProxy(const StringView<char> &name, const PValue &value):AbstractProxy(value),keysize(name.length) {
-	std::memcpy(key,name.data,name.length);
-	key[name.length] = 0;
+ObjectProxy::ObjectProxy(const std::string_view &name, const PValue &value):AbstractProxy(value),keysize(name.size()) {
+	std::memcpy(key,name.data(),name.size());
+	key[name.size()] = 0;
 }
 
 
-void *ObjectProxy::operator new(std::size_t sz, const StringView<char> &str ) {
-	std::size_t needsz = sz - sizeof(ObjectProxy::key) + str.length+1;
+void *ObjectProxy::operator new(std::size_t sz, const std::string_view &str ) {
+	std::size_t needsz = sz - sizeof(ObjectProxy::key) + str.size()+1;
 	return Value::allocator->alloc(needsz);
 }
-void ObjectProxy::operator delete(void *ptr, const StringView<char> &) {
+void ObjectProxy::operator delete(void *ptr, const std::string_view &) {
 	Value::allocator->dealloc(ptr);
 }
 void ObjectProxy::operator delete(void *ptr, std::size_t ) {

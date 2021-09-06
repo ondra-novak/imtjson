@@ -4,16 +4,16 @@ namespace json {
 template<typename T> class ConvValueAs;
 template<typename T> class ConvValueFrom;
 
-template<> class ConvValueAs<StringView<char> > {
+template<> class ConvValueAs<std::string_view > {
 public:
-	static StringView<char> convert(const Value &v) {
+	static std::string_view convert(const Value &v) {
 		return v.getString();
 	}
 };
 
-template<> class ConvValueFrom<StringView<char> > {
+template<> class ConvValueFrom<std::string_view > {
 public:
-	static Value convert(const StringView<char> &v) {
+	static Value convert(const std::string_view &v) {
 		return Value(v);
 	}
 };
@@ -106,7 +106,7 @@ public:
 template<> class ConvValueAs<std::string> {
 public:
 	static std::string convert(const Value &v) {
-		return v.getString();
+		return std::string(v.getString());
 	}
 };
 template<> class ConvValueFrom<std::string> {

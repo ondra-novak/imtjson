@@ -28,12 +28,12 @@ public:
 	virtual LongInt getIntLong() const override { return value->getIntLong(); }
 	virtual double getNumber() const override { return value->getNumber(); }
 	virtual bool getBool() const override { return value->getBool(); }
-	virtual StringView<char> getString() const override { return value->getString(); }
+	virtual StringView getString() const override { return value->getString(); }
 	virtual std::size_t size() const override { return value->size(); }
 	virtual const IValue *itemAtIndex(std::size_t index) const override { return value->itemAtIndex(index); }
-	virtual const IValue *member(const StringView<char> &name) const override { return value->member(name); }
+	virtual const IValue *member(const std::string_view &name) const override { return value->member(name); }
 	virtual bool enumItems(const IEnumFn &fn) const override { return value->enumItems(fn); }
-	virtual StringView<char> getMemberName() const override { return value->getMemberName(); }
+	virtual StringView getMemberName() const override { return value->getMemberName(); }
 	virtual const IValue *unproxy() const override { return value->unproxy(); }
 	virtual bool equal(const IValue *other) const override {return value->equal(other->unproxy());}
 
@@ -46,11 +46,11 @@ protected:
 class ObjectProxy : public AbstractProxy {
 public:
 
-	ObjectProxy(const StringView<char> &name, const PValue &value);
-	virtual StringView<char> getMemberName() const override { return StringView<char>(key,keysize); }
+	ObjectProxy(const std::string_view &name, const PValue &value);
+	virtual StringView getMemberName() const override { return StringView(key,keysize); }
 
-	void *operator new(std::size_t sz, const StringView<char> &str );
-	void operator delete(void *ptr, const StringView<char> &str);
+	void *operator new(std::size_t sz, const std::string_view &str );
+	void operator delete(void *ptr, const std::string_view &str);
 	void operator delete(void *ptr, std::size_t sz);
 
 protected:
@@ -63,7 +63,7 @@ class ObjectProxyString: public AbstractProxy {
 public:
 	ObjectProxyString(const String &s, const PValue &value):AbstractProxy(value),key(s) {}
 
-	virtual StringView<char> getMemberName() const override { return key; }
+	virtual StringView getMemberName() const override { return StringView(key.str()); }
 	const String getKey() const {return key;}
 protected:
 	String key;

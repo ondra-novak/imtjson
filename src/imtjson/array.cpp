@@ -5,310 +5,124 @@
 
 namespace json {
 
-	Array::Array(Value value): base(value),changes(value)
-	{
-	}
-	Array::Array() :  base(AbstractArrayValue::getEmptyArray())
-	{
-	}
-	Array::Array(const std::initializer_list<Value> &v) {
-		reserve(v.size());
-		for (auto &&x : v) push_back(x);
-	}
-
-	Array & Array::push_back(const Value & v)
-	{
-		changes.push_back(v.v);
-		return *this;
-	}
-	Array & Array::add(const Value & v)
-	{
-		changes.push_back(v.v);
-		return *this;
-	}
-	Array & Array::addSet(const StringView<Value>& v)
-	{
-		changes.reserve(changes.size() + v.length);
-		for (std::size_t i = 0; i < v.length; i++)
-			changes.push_back(v.data[i].v);
-		return *this;
-	}
-	Array& json::Array::addSet(const Value& v) {
-		changes.reserve(changes.size() + v.size());
-		for (std::size_t i = 0, cnt = v.size(); i < cnt; i++)
-			changes.push_back(v[i].getHandle());
-		return *this;
-	}
-
-	Array & Array::insert(std::size_t pos, const Value & v)
-	{
-		extendChanges(pos);
-		changes.insert(changes.begin()+(pos - changes.offset), v.v);
-		return *this;
-	}
-	Array & Array::insertSet(std::size_t pos, const StringView<Value>& v)
-	{
-		extendChanges(pos);
-		changes.insert(changes.begin() + (pos - changes.offset), v.length, PValue());
-		for (std::size_t i = 0; i < v.length; i++) {
-			changes[pos + changes.offset + i] = v.data[i].v;
-		}
-		return *this;
-	}
-	Array& json::Array::insertSet(std::size_t pos, const Value& v) {
-		extendChanges(pos);
-		changes.insert(changes.begin() + (pos - changes.offset), v.size(), PValue());
-		for (std::size_t i = 0, cnt = v.size(); i < cnt; i++) {
-			changes[pos + changes.offset + i] = v[i].v;
-		}
-		return *this;
-	}
-
-	Array& json::Array::addSet(const std::initializer_list<Value>& v) {
-		return addSet(StringView<Value>(v));
-	}
-
-	Array& json::Array::insertSet(std::size_t pos,
-			const std::initializer_list<Value>& v) {
-		return insertSet(pos,StringView<Value>(v));
-	}
-
-	Array & Array::erase(std::size_t pos)
-	{
-		extendChanges(pos);
-		changes.erase(changes.begin() + (pos - changes.offset));
-		return *this;
-	}
-	Array & Array::eraseSet(std::size_t pos, std::size_t length)
-	{
-		extendChanges(pos);
-		auto b = changes.begin() + (pos - changes.offset);
-		auto e = b + length ;
-		changes.erase(b,e);
-		return *this;
-	}
-	Array & Array::trunc(std::size_t pos)
-	{
-		if (pos < changes.offset) {
-			changes.offset = pos;
-			changes.clear();
-		}
-		else {
-			changes.erase(changes.begin() + (pos - changes.offset), changes.end());
-		}
-		return *this;
-	}
-
-	Array &Array::clear() {
-		changes.offset = 0;
-		changes.clear();
-		return *this;
-	}
-
-	Array &Array::revert() {
-		changes.offset = base.size();
-		changes.clear();
-		return *this;
-	}
-
-	Array & Array::set(std::size_t pos, const Value & v)
-	{
-		extendChanges(pos);
-		changes[pos - changes.offset] = v.getHandle();
-		return *this;
-	}
-
-	Value Array::operator[](std::size_t pos) const
-	{
-		if (pos < changes.offset) return base[pos];
-		else {
-			pos -= changes.offset;
-			return changes.at(pos);
-		}
-	}
-
-	ValueRef Array::makeRef(std::size_t pos) {
-		return ValueRef(*this, pos);
-	}
-
-	std::size_t Array::size() const
-	{
-		return changes.offset + changes.size();
-		
-	}
-
-	bool Array::empty() const
-	{
-		return size() == 0;
-	}
-
-
-	PValue Array::commit() const
-	{
-		if (empty()) return AbstractArrayValue::getEmptyArray();
-		if (!dirty()) return base.getHandle();
-
-		std::size_t needSz = changes.offset + changes.size();
-		RefCntPtr<ArrayValue> result = ArrayValue::create(needSz);
-
-		for (std::size_t x = 0; x < changes.offset; ++x) {
-			result->push_back(base[x].getHandle());
-		}
-		for (auto &&x : changes) {
-			if (x->type() != undefined) result->push_back(x);
-		}
-		return PValue::staticCast(result);
-
-
-	}
-	Object2Array Array::object(std::size_t pos)
-	{
-		return Object2Array((*this)[pos],*this,pos);
-	}
-	Array2Array Array::array(std::size_t pos)
-	{
-		return Array2Array((*this)[pos], *this, pos);
-	}
-	bool Array::dirty() const
-	{
-
-		return changes.offset != base.size() || !changes.empty();
-	}
-	void Array::extendChanges(size_t pos)
-	{
-		if (pos < changes.offset) {
-			changes.insert(changes.begin(), changes.offset - pos, PValue());
-			for (std::size_t x = pos; x < changes.offset; ++x) {
-				changes[x - pos] = base[x].v;
-			}
-			changes.offset = pos;
-		}
-	}
-
-	Array::~Array()
-	{
-		
-	}
-
-
-	ArrayIterator Array::begin() const {
-		return ArrayIterator(this,0);
-	}
-
-	ArrayIterator Array::end() const {
-		return ArrayIterator(this,size());
-	}
-
-
-	Array &Array::reserve(std::size_t items) {
-		changes.reserve(items);
-		return *this;
-	}
-
-	Object2Array Array::addObject() {
-		std::size_t pos = size();
-		add(AbstractObjectValue::getEmptyObject());
-		return object(pos);
-	}
-
-	Array2Array Array::addArray() {
-		std::size_t pos = size();
-		add(AbstractArrayValue::getEmptyArray());
-		return array(pos);
-	}
-
-	StringView<PValue> Array::getItems(const Value& v) {
-		const IValue *pv = v.getHandle();
-		const ArrayValue *av = dynamic_cast<const ArrayValue *>(pv->unproxy());
-		if (av) return av->getItems(); else return StringView<PValue>();
-	}
-
-Array::Array(const Array& other):base(other.base),changes(other.changes) {
+Array::Array(Value base):std::vector<Value>(base.begin(), base.end()),base(base) {
 
 }
 
-Array::Array(Array&& other):base(std::move(other.base)),changes(std::move(other.changes)) {
+
+
+PValue Array::commit() const {
+	return fromVector(*this).getHandle();
+
 }
 
-Array& Array::operator =(const Array& other) {
-	if (this == &other) return *this;
-	base = other.base;
-	changes = other.changes;
-	return *this;
+Object2Array Array::object(std::size_t pos) {
+	return Object2Array(at(pos), *this, pos);
 }
 
-Array& Array::operator =(Array&& other) {
-	if (this == &other) return *this;
-	base = std::move(other.base);
-	changes = std::move(other.changes);
-	return *this;
+Array2Array Array::array(std::size_t pos) {
+	return Array2Array(at(pos), *this, pos);
 }
 
-
-Array::Changes::Changes(const Changes& base)
-	:std::vector<PValue>(base),offset(base.offset)
-{
+Object2Array Array::appendObject() {
+	auto idx = size();
+	push_back(Value());
+	return object(idx);
 }
 
-Array::Changes::Changes(Changes&& base)
-	:std::vector<PValue>(std::move(base)),offset(base.offset) {
+Array2Array Array::appendArray() {
+	auto idx = size();
+	push_back(Value());
+	return array(idx);
 }
 
-Array::Changes& Array::Changes::operator =(const Changes& base) {
-	std::vector<PValue>::operator =(base);
-	offset = base.offset;
-	return *this;
+Value Array::fromVector(const std::vector<Value> &v) {
+	RefCntPtr<ArrayValue> val = ArrayValue::create(v.size());
+	for (Value x: v) val->push_back(x.getHandle());
+	return Value(PValue::staticCast(val));
 }
 
-Array::Changes& Array::Changes::operator =(Changes&& base) {
-	std::vector<PValue>::operator =(std::move(base));
-	offset = base.offset;
-	return *this;
+void Array::set(std::size_t idx, Value item) {
+	(*this)[idx] = item;
+	dirty_flag = true;
 }
 
-Array& Array::reverse() {
-	Array out;
-	for (std::size_t x = size(); x > 0; x--)
-		out.add((*this)[x-1]);
-	*this = std::move(out);
-	return *this;
+Array::iterator Array::insert(const_iterator pos, const Value &value) {
+	dirty_flag = true;
+	return Super::insert(pos, value);
 }
 
-
-Array& Array::slice(Int start) {
-	if (start < 0) {
-		if (-start < (Int)size()) {
-			return slice(size()+start);
-		}
-	} else if (start >= (Int)size()) {
-		clear();
-	} else {
-		eraseSet(0,start);
-	}
-	return *this;
+Array::iterator Array::insert(const_iterator pos, Value &&value) {
+	dirty_flag = true;
+	return Super::insert(pos, std::move(value));
 }
 
-
-Array& Array::slice(Int start, Int end) {
-	if (end < 0) {
-		if (-end < (Int)size()) {
-			slice(start, (Int)size()+end);
-		} else {
-			clear();
-		}
-	} else if (end < (Int)size()) {
-		trunc(end);
-	}
-	return slice(start);
+Array::iterator Array::insert(const_iterator pos, size_type count, const Value &value) {
+	dirty_flag = count>0;
+	return Super::insert(pos, count, value);
 }
 
-Array& json::Array::setSize(std::size_t length, Value fillVal) {
-	reserve(length);
-	if (size() > length) return trunc(length);
-	while (size() < length) add(fillVal);
-	return *this;
+Array::iterator Array::insert(const_iterator pos, std::initializer_list<Value> ilist) {
+	dirty_flag = ilist.size()>0;
+	return Super::insert(pos, ilist);
 }
 
+Array::iterator Array::erase(const_iterator pos) {
+	dirty_flag = true;
+	return Super::erase(pos);
+}
 
+Array::iterator Array::erase(const_iterator first, const_iterator last) {
+	dirty_flag = true;
+	return Super::erase(first, last);
+}
+
+void Array::push_back(const Value &value) {
+	dirty_flag = true;
+	return Super::push_back(value);
+}
+
+void Array::push_back(Value &&value) {
+	dirty_flag = true;
+	return Super::push_back(std::move(value));
+}
+
+void Array::pop_back() {
+	dirty_flag = true;
+	return Super::pop_back();
+}
+
+void Array::resize(size_type count) {
+	dirty_flag = count != size();
+	return Super::resize(count);
+}
+
+void Array::resize(size_type count, const value_type &value) {
+	dirty_flag = count != size();
+	return Super::resize(count, value);
+}
+
+void Array::swap(Array &other) noexcept {
+	dirty_flag = &other != this;
+	return Super::swap(other);
+}
+
+Array::iterator Array::append(const Value &arrayValue) {
+	return insert(end(), arrayValue.begin(), arrayValue.end());
+}
+
+bool Array::dirty() const {
+	return dirty_flag;
+}
+
+void Array::clear() {
+	base = json::array;
+	Super::clear();
+}
+
+void Array::revert() {
+	Super::clear();
+	insert(end(),base.begin(),base.end());
+}
 }
 

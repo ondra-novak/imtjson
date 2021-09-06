@@ -12,13 +12,13 @@
 
 namespace json {
 
-static Value getValueOrName(const Object &source, StrViewA name) {
+static Value getValueOrName(const Object &source, std::string_view name) {
 	Value v = source[name];
 	if (v.getKey() != name) return Value(name, v);
 	else return v;
 }
 
-ValueRef::ValueRef(Object& obj, const StrViewA& name)
+ValueRef::ValueRef(Object& obj, const std::string_view& name)
 	:Value(getValueOrName(obj,name)),typeOrIndex(objectRef),objptr(&obj)
 {
 }

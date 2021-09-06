@@ -20,12 +20,12 @@ char Base64Table::base64urlchars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	              "-_";
 
 
-StrViewA Base64Encoding::getName() const {
+std::string_view Base64Encoding::getName() const {
 	return "base64";
 }
 
 
-void Base64Encoding::decoderCore(unsigned char *buff, const StrViewA &str, std::size_t len, const Base64Table &t) {
+void Base64Encoding::decoderCore(unsigned char *buff, const std::string_view &str, std::size_t len, const Base64Table &t) {
 	unsigned char *bbuf = reinterpret_cast<unsigned char *>(buff);
 
 	std::size_t rdpos = 0;
@@ -49,9 +49,9 @@ void Base64Encoding::decoderCore(unsigned char *buff, const StrViewA &str, std::
 	}
 }
 
-Value Base64Encoding::decodeBinaryValue(const StrViewA &str) const {
+Value Base64Encoding::decodeBinaryValue(const std::string_view &str) const {
 	static Base64Table t(Base64Table::base64chars);
-	std::size_t len = str.length;
+	std::size_t len = str.size();
 	if ((len & 0x3) || len == 0) return String();
 	std::size_t finlen = len * 3 / 4;
 	if (str[len-1] == '=') {
@@ -76,7 +76,7 @@ void Base64Encoding::encodeBinaryValue(const BinaryView &data, const WriteFn &fn
 }
 
 void Base64Encoding::encodeCore(const BinaryView& data, char *chars, WriteFn fn, bool tail)  {
-	std::size_t len = data.length;
+	std::size_t len = data.size();
 	if (len != 0) {
 		std::size_t nlen = (len + 2) / 3;
 		std::size_t padd = (nlen * 3) - len;
@@ -102,7 +102,7 @@ void Base64Encoding::encodeCore(const BinaryView& data, char *chars, WriteFn fn,
 			}
 			rdpos++;
 			if (wrpos > 250) {
-				fn(StrViewA(buff, wrpos));
+				fn(std::string_view(buff, wrpos));
 				wrpos = 0;
 			}
 		}
@@ -114,16 +114,16 @@ void Base64Encoding::encodeCore(const BinaryView& data, char *chars, WriteFn fn,
 				buff[wrpos++] = '=';
 			}
 		}
-		fn(StrViewA(buff, wrpos));
+		fn(std::string_view(buff, wrpos));
 	}
 }
 
-StrViewA Base64EncodingUrl::getName() const  {
+std::string_view Base64EncodingUrl::getName() const  {
 	return "base64url";
 }
-Value Base64EncodingUrl::decodeBinaryValue(const StrViewA &str) const  {
+Value Base64EncodingUrl::decodeBinaryValue(const std::string_view &str) const  {
 		static Base64Table t(Base64Table::base64urlchars);
-		std::size_t len = str.length;
+		std::size_t len = str.size();
 		std::size_t finlen = (len*3)/4;
 		RefCntPtr<StringValue> strVal = new(len) StringValue(base64,len,[&] (char *buff) {
 			decoderCore(reinterpret_cast<unsigned char *>(buff),str, len,t);

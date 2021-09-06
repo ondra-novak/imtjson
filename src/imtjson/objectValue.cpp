@@ -1,5 +1,6 @@
 #include "objectValue.h"
 
+#include <algorithm>
 namespace json {
 
 
@@ -24,12 +25,12 @@ namespace json {
 		return true;
 	}
 
-	const IValue * ObjectValue::member(const StringView<char>& name) const {
+	const IValue * ObjectValue::member(const std::string_view& name) const {
 		const IValue *r = findSorted(name);
 		if (r == nullptr) return getUndefined();
 		else return r;
 	}
-	const IValue *ObjectValue::findSorted(const StringView<char> &name) const
+	const IValue *ObjectValue::findSorted(const std::string_view &name) const
 	{
 		std::size_t l = 0;
 		std::size_t r = size();
@@ -54,20 +55,13 @@ namespace json {
 		std::stable_sort(begin(),end(),[](const PValue &left, const PValue &right) {
 			return left->getMemberName().compare(right->getMemberName()) < 0;
 		});
-		StrViewA lastKey;
-		std::size_t wrpos = 0;
-		for (const PValue &v: *this) {
-			StrViewA k = v->getMemberName();
-			if (k == lastKey && wrpos) {
-				wrpos--;
-			}
-			operator[](wrpos) = v;
-			wrpos++;
-			lastKey = k;
-		}
-		while (curSize > wrpos)
+		auto iter = std::unique(begin(), end(), [](const PValue &left, const PValue &right) {
+			return left->getMemberName() == right->getMemberName();
+		});
+		auto remain = std::distance(iter, end());
+		for (int i = 0; i < remain; i++) {
 			pop_back();
-
+		}
 	}
 
 	RefCntPtr<ObjectValue> ObjectValue::create(std::size_t capacity) {

@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
-
-#include "stringview.h"
+#include <string_view>
+#include <algorithm>
 
 
 namespace json {
@@ -19,7 +19,7 @@ public:
 
 	struct Def {
 		EnumType val;
-		StrViewA name;
+		std::string_view name;
 	};
 
 
@@ -37,17 +37,17 @@ public:
 
 	}
 
-	EnumType operator[](const StrViewA &name) const;
-	StrViewA operator[](EnumType val) const;
+	EnumType operator[](const std::string_view &name) const;
+	std::string_view operator[](EnumType val) const;
 
-	const EnumType *find(const StrViewA &name) const;
+	const EnumType *find(const std::string_view &name) const;
 
 
 
 	typename std::vector<Def>::const_iterator begin() const {return byName.begin();}
 	typename std::vector<Def>::const_iterator end() const {return byName.end();}
 	std::size_t size() const {return byName.size();}
-	std::string allEnums(StrViewA separator=", ") const;
+	std::string allEnums(std::string_view separator=", ") const;
 
 protected:
 	std::vector<Def> byVal;
@@ -68,7 +68,7 @@ protected:
 class UnknownEnumException: public std::exception {
 public:
 
-	UnknownEnumException(std::string &&errorEnum, std::vector<StrViewA> &&availableEnums);
+	UnknownEnumException(std::string &&errorEnum, std::vector<std::string_view> &&availableEnums);
 
 	virtual const char *what() const throw();
 
@@ -76,13 +76,13 @@ public:
 		return errorEnum;
 	}
 
-	const std::vector<StrViewA>& getListEnums() const {
+	const std::vector<std::string_view>& getListEnums() const {
 		return listEnums;
 	}
 
 protected:
 	mutable std::string whatMsg;
-	std::vector<StrViewA> listEnums;
+	std::vector<std::string_view> listEnums;
 	std::string errorEnum;
 
 };
@@ -90,15 +90,15 @@ protected:
 
 
 template<typename EnumType>
-inline EnumType NamedEnum<EnumType>::operator [](const StrViewA &name) const {
+inline EnumType NamedEnum<EnumType>::operator [](const std::string_view &name) const {
 	Def d;
 	d.name = name;
 	auto f = std::lower_bound(byName.begin(), byName.end(), d, &cmpByName);
 	if (f == byName.end() || f->name != name) {
-		std::vector<StrViewA> lst;
+		std::vector<std::string_view> lst;
 		lst.reserve(byName.size());
 		for (auto &x:byName) lst.push_back(x.name);
-		throw UnknownEnumException(std::string(name.data,name.length),std::move(lst));
+		throw UnknownEnumException(std::string(name.data(),name.size()),std::move(lst));
 	}
 	else {
 		return f->val;
@@ -107,7 +107,7 @@ inline EnumType NamedEnum<EnumType>::operator [](const StrViewA &name) const {
 }
 
 template<typename EnumType>
-inline const EnumType *NamedEnum<EnumType>::find(const StrViewA &name) const {
+inline const EnumType *NamedEnum<EnumType>::find(const std::string_view &name) const {
 	Def d;
 	d.name = name;
 	auto f = std::lower_bound(byName.begin(), byName.end(), d, &cmpByName);
@@ -121,28 +121,28 @@ inline const EnumType *NamedEnum<EnumType>::find(const StrViewA &name) const {
 }
 
 template<typename EnumType>
-inline StrViewA NamedEnum<EnumType>::operator [](EnumType val) const {
+inline std::string_view NamedEnum<EnumType>::operator [](EnumType val) const {
 	Def d;
 	d.val=val;
 	auto f = std::lower_bound(byVal.begin(), byVal.end(), d, &cmpByVal);
-	if (f == byVal.end() || f->val != val) return StrViewA();
+	if (f == byVal.end() || f->val != val) return std::string_view();
 	else return f->name;
 }
 
 }
 
 template<typename EnumType>
-inline std::string json::NamedEnum<EnumType>::allEnums(StrViewA separator) const {
+inline std::string json::NamedEnum<EnumType>::allEnums(std::string_view separator) const {
 	std::size_t needsz=0;
 	for (auto &x : byName) needsz+=x.name.length;
 	needsz += separator.length*byName.size();
 	std::string res;
 	res.reserve(needsz);
-	StrViewA cursep;
+	std::string_view cursep;
 	for (auto &x : byName) {
-		res.append(cursep.data,cursep.length);
-		res.append(x.name.data, x.name.length);
+		res.append(cursep.data(),cursep.size());
+		res.append(x.name.data(), x.name.size());
 		cursep = separator;
 	}
-	return cursep;
+	return res;
 }

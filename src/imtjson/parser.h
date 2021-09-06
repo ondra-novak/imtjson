@@ -51,7 +51,7 @@ namespace json {
 		Value parseNumber();
 		Value parseString();
 
-		void checkString(const StringView<char> &str);
+		void checkString(const std::string_view &str);
 
 	
 
@@ -59,8 +59,8 @@ namespace json {
 
 		typedef std::pair<std::size_t, std::size_t> StrIdx;
 
-		StrViewA getString(StrIdx idx) {
-			return StrViewA(tmpstr).substr(idx.first, idx.second);
+		std::string_view getString(StrIdx idx) {
+			return std::string_view(tmpstr.data()+idx.first, idx.second-idx.first);
 		}
 
 		StrIdx readString();
@@ -203,7 +203,7 @@ namespace json {
 	class ParserHelper {
 		template<typename Fn>
 		friend class Parser;
-		static Value numberFromStringRaw(StrViewA str, bool force_double);
+		static Value numberFromStringRaw(std::string_view str, bool force_double);
 	};
 
 	class ParseError:public std::exception {
@@ -238,9 +238,9 @@ namespace json {
 			return whatmsg.c_str();
 		}
 
-		void addContext(const std::string &context) {
+		void addContext(const std::string_view &context) {
 			whatmsg.clear();
-			callstack.push_back(context);
+			callstack.push_back(std::string(context));
 		}
 
 
@@ -330,10 +330,9 @@ namespace json {
 				throw ParseError("Expected ',' or '}'", c);
 			}
 		} while (cont);		
-		StringView<Value> data = tmpArr;
-		auto mydata=data.substr(tmpArrPos);
-		Value res(object, mydata);
-		if (((flags & allowDupKeys) == 0) && (res.size() != mydata.length)) {
+		auto len = tmpArr.size() - tmpArrPos;
+		Value res(object, tmpArr.begin()+tmpArrPos, tmpArr.end(), true);
+		if (((flags & allowDupKeys) == 0) && (res.size() != len)) {
 			throw ParseError("Duplicated keys",c);
 		}
 		tmpArr.resize(tmpArrPos);
@@ -380,8 +379,7 @@ namespace json {
 				throw;
 			}
 		} while (cont);
-		StringView<Value> arrView(tmpArr);
-		Value res(arrView.substr(tmpArrPos));
+		Value res(array, tmpArr.begin()+tmpArrPos, tmpArr.end(), true);
 		tmpArr.resize(tmpArrPos);
 		return res;
 		
@@ -504,7 +502,7 @@ namespace json {
 	template<typename Fn>
 	inline Value Parser<Fn>::parseString()
 	{
-		static auto createValue = [](StrViewA val) {
+		static auto createValue = [](std::string_view val) {
 			if (val == "∞") return Value(std::numeric_limits<double>::infinity());
 			else if (val == "-∞") return Value(-std::numeric_limits<double>::infinity());
 			else return Value(val);
@@ -572,14 +570,14 @@ namespace json {
 	}
 
 	template<typename Fn>
-	inline void Parser<Fn>::checkString(const StringView<char>& str)
+	inline void Parser<Fn>::checkString(const std::string_view& str)
 	{
 		int c = rd.next();
 		rd.commit();
 		if (c != str[0]) throw ParseError("Unknown keyword", c);
-		for (std::size_t i = 1; i < str.length; ++i) {
+		for (std::size_t i = 1; i < str.size(); ++i) {
 			int c = rd.readFast();
-			if (c != str.data[i]) throw ParseError("Unknown keyword", c);
+			if (c != str[i]) throw ParseError("Unknown keyword", c);
 		}
 	}
 

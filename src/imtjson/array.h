@@ -1,168 +1,22 @@
 #pragma once
 
+#include <vector>
 #include "valueref.h"
 #include "edit.h"
 
 namespace json {
 
-	class ArrayIterator;
 
-
-	class Array {
+	class Array: public std::vector<Value> {
 	public:
-		Array(Value value);
-		Array(const Array &other);
-		Array(Array &&other);
-		Array(const std::initializer_list<Value> &v);
-		Array();
-		~Array();
+		using std::vector<Value>::vector;
+		using Super = std::vector<Value>;
 
-		void setBaseObject(Value object) {
-			base = object;
-			if (changes.empty()) changes.offset = base.size();
-			else changes.offset = std::min(changes.offset, base.size());
-		}
+		Array() {}
+		Array(Value base);
 
-
-		Array &operator=(const Array &other);
-		Array &operator=(Array &&other);
-
-		///Preallocates memory to hold up to specified items
-		/** Function reservers extra space to allow add new items up to specified count
-		 *
-		 * @param items Expected final count of items. If more items are added, extra allocation
-		 * may happen. If less items are added, extra space may be wasted. However, the function
-		 * commit() always reallocates the space for the final value
-		 */
-		Array &reserve(std::size_t items);
-
-		///Push back one item (alias to add())
-		/**
-		 * @param v item to add to the array
-		 * @return reference to this
-		 */
-		Array &push_back(const Value &v);
-		///Add (append) one item
-		/**
-		 * @param v item to add to the array
-		 * @return reference to this
-		 */
-		Array &add(const Value &v);
-		///Add (append) set of items
-		/**
-		 * @param v set of items to add (append)
-		 * @return reference to this
-		 */
-		Array &addSet(const StringView<Value> &v);
-
-		///Add (append) set of items
-		/**
-		 * @param v set of items to add (append)
-		 * @return reference to this
-		 */
-		Array &addSet(const std::initializer_list<Value> &v);
-
-		///Add (appned) set of items
-		/**
-		 * @param v conteiner (object or array) which's items are added
-		 * @return reference to this
-		 */
-		Array &addSet(const Value &v);
-
-		///Inserts an item at the position
-		/**
-		 * @param pos position. Must be in the range 0 - size()
-		 * @param v new item
-		 * @return reference to this
-		 */
-		Array &insert(std::size_t pos, const Value &v);
-		///Inserts a set of items at the position
-		/**
-		 * @param pos position. Must be in the range 0 - size()
-		 * @param v set of items
-		 * @return reference to this
-		 */
-		Array &insertSet(std::size_t pos, const StringView<Value> &v);
-		///Inserts a set of items at the position
-		/**
-		 * @param pos position. Must be in the range 0 - size()
-		 * @param v set of items
-		 * @return reference to this
-		 */
-		Array &insertSet(std::size_t pos, const std::initializer_list<Value> &v);
-		///Inserts a set of items at the position
-		/**
-		 * @param pos position. Must be in the range 0 - size()
-		 * @param v set of items
-		 * @return reference to this
-		 */
-		Array &insertSet(std::size_t pos, const Value &v);
-
-		///Erases one item at the position
-		/**
-		 * @param pos position of the item
-		 * @return reference to this
-		 */
-		Array &erase(std::size_t pos);
-		///Erases set of items
-		/**
-		 * @param pos position of the first item
-		 * @param length count of items
-		 * @return reference to this
-		 */
-		Array &eraseSet(std::size_t pos, std::size_t length);
-		
-		///Truncates array up to specified length removing all items beyond
-		/**
-		 * @param length new length
-		 * @return reference to this
-		 *
-		 * @note function is the fastest if applied to existing array without changes made yet, because
-		 * it only modifies a single integer variable
-		 */
-		Array &trunc(std::size_t length);
-
-		Array &setSize(std::size_t length, Value fillVal);
-
-		///Removes all items from the array
-		/**
-		 * @return reference to this
-		 */
-		Array &clear();
-		///Removes all changes in the array (revert back to base value)
-		Array &revert();
-		///replace item at position
-		/***
-		 * @param pos position
-		 * @param v new item
-		 * @return reference to this
-		 */
-		Array &set(std::size_t pos, const Value &v);
-
-		///Retrieves value at position
-		/**
-		 * @param pos position to retrieve
-		 * @return value at given postion.
-		 */
-		Value operator[](std::size_t pos) const;
-
-		///Retrieves value at position
-		/**
-		 * @param pos position to retrieve
-		 * @return value at given postion.
-		 */
-		ValueRef makeRef(std::size_t pos);
-
-		///Retrieves count of items in the array
-		std::size_t size() const;
-		///Returns true, when array is empty
-		bool empty() const;
-		///Copies all changes to new Value
-		/** You don't need to call this function directly, because the constructor of the class Value
-		 * is perform this anytime the Array is converted to a Value
-		 * @return PValue is smart pointer to IValue which can be stored in the class Value.
-		 */
 		PValue commit() const;
+
 
 		///Allows to edit an object at given position
 		/** Function returns Object2Array which can be used to edit object at given position. The destructor
@@ -202,7 +56,7 @@ namespace json {
 		 *
 		 * @see object()
 		 */
-		Object2Array addObject();
+		Object2Array appendObject();
 		///Allows to add array into the array
 		/** The function insert new item into the Array and allows to create array there.
 		 * The function then call the function array()
@@ -211,124 +65,68 @@ namespace json {
 		 *
 		 * @see array()
 		 */
-		Array2Array addArray();
+		Array2Array appendArray();
 
 		///Returns true, when there are changes to commit
 		/**
 		 * @retval true array has been changed
 		 * @return false array has not been changed
 		 */
+
+		static Value fromVector(const std::vector<Value> &v);
+
+		void set(std::size_t idx, Value item);
+
+
 		bool dirty() const;
+		void revert();
 
-		///Creates iterator which points at first item
-		/**
-		 * @note you should not change the content of the object during iteration.
-		 */
-		ArrayIterator begin() const;
-		///Creates iterator which points at the end
-		/**
-		 * @note you should not change the content of the object during iteration.
-		 */
-		ArrayIterator end() const;
+		void clear();
 
+		iterator insert( const_iterator pos, const Value& value );
+		iterator insert( const_iterator pos, Value&& value );
+		iterator insert( const_iterator pos, size_type count, const Value& value );
+		template< class InputIt >
+		iterator insert( const_iterator pos, InputIt first, InputIt last );
+		iterator insert( const_iterator pos, std::initializer_list<Value> ilist );
+		template< class... Args >
+		iterator emplace( const_iterator pos, Args&&... args );
+		iterator erase( const_iterator pos );
+		iterator erase( const_iterator first, const_iterator last );
+		void push_back( const Value& value );
+		void push_back( Value&& value );
+		template< class... Args >
+		reference emplace_back( Args&&... args );
+		void pop_back();
+		void resize( size_type count );
+		void resize( size_type count, const value_type& value );
+		void swap( Array& other ) noexcept;
 
-
-		///Direct access to the items
-		/** Function retrieves iterable view of items if the source value is Object
-		 *
-		 * @note Function only supports build-in array type.
-		 *
-		 * @return View to items. Items are stored as PValue-s, so you still need
-		 * to convert them to Value-s.
-		 *
-		 * */
-		static StringView<PValue> getItems(const Value &v);
-
-		Array &reverse();
-
-
-		Array &slice(Int start);
-		Array &slice(Int start, Int end);
-
-		template<typename Fn>
-		Array map(Fn &&mapFn) const;
-
-		template<typename T, typename ReduceFn>
-		T reduce(ReduceFn &&reduceFn, T &&init) const ;
-
-		template<typename Cmp>
-		Array sort(const Cmp &cmp) const;
-
-		template<typename Cmp>
-		Array split(const Cmp &cmp) const;
-
-		template<typename Cmp,typename T, typename ReduceFn>
-		Array group(const Cmp &cmp,const ReduceFn &reduceFn, T init) const;
-
+		iterator append(const Value &arrayValue);
 
 	protected:
 		Value base;
-
-		struct Changes: public std::vector<PValue>  {			
-			size_t offset;
-
-			Changes(const Value &base) :offset(base.size()) {}
-			Changes() :offset(0) {}
-			Changes(const Changes &base);
-			Changes(Changes &&base);
-			Changes &operator=(const Changes &base);
-			Changes &operator=(Changes &&base);
-		};
-
-		Changes changes;
-
-		void extendChanges(size_t pos);
-
-		template<typename Src, typename Cmp>
-		friend Array genSort(const Cmp &cmp, const Src &src, std::size_t expectedSize) ;
-
+		bool dirty_flag = false;
 	};
 
 
-	class ArrayIterator {
-	public:
-		const Array *v;
-		UInt index;
+}
 
-		ArrayIterator(const Array *v,UInt index):v(v),index(index) {}
-		Value operator *() const {return (*v)[index];}
-		ArrayIterator &operator++() {++index;return *this;}
-		ArrayIterator operator++(int) {++index;return ArrayIterator(v,index-1);}
-		bool operator==(const ArrayIterator &other) const {
-			return index == other.index && v == other.v;
-		}
-		bool operator!=(const ArrayIterator &other) const {
-			return !operator==(other);
-		}
+template<class InputIt>
+inline json::Array::iterator json::Array::insert(const_iterator pos, InputIt first, InputIt last) {
+	dirty_flag = true;
+	return Super::insert(pos, first, last);
+}
 
+template<class ... Args>
+inline json::Array::iterator json::Array::emplace(const_iterator pos, Args &&... args) {
+	dirty_flag = true;
+	return Super::emplace(pos, std::forward<Args>(args)...);
+}
 
-		typedef std::random_access_iterator_tag iterator_category;
-	    typedef Value        value_type;
-	    typedef void        pointer;
-	    typedef void  reference;
-	    typedef Int  difference_type;
-
-	    ArrayIterator &operator+=(int p) {index+=p;return *this;}
-	    ArrayIterator &operator-=(int p) {index-=p;return *this;}
-	    ArrayIterator operator+(int p) const {return ArrayIterator(v,index+p);}
-	    ArrayIterator operator-(int p) const {return ArrayIterator(v,index-p);}
-		Int operator-(ArrayIterator &other) const {return index - other.index;}
-
-	};
-
-
-	///Create value from the range - it is declared here, because we need Array
-	template<typename  Iter>
-	Value::Value(const Range<Iter> &data) {
-		Array a;
-		a.reserve(data.size());
-		for (Value v : data) a.push_back(v);
-		*this = a;
-	}
+template<class ... Args>
+inline json::Array::reference json::Array::emplace_back(Args &&... args) {
+	dirty_flag = true;
+	return Super::emplace_back(std::forward<Args>(args)...);
 
 }

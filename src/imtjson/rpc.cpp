@@ -237,7 +237,7 @@ Value RpcRequest::operator [](unsigned int index) const {
 	return data->params[index];
 }
 
-Value RpcRequest::operator [](const StrViewA name) const {
+Value RpcRequest::operator [](const std::string_view name) const {
 	return data->context[name];
 }
 
@@ -329,7 +329,7 @@ void RpcServer::exec( RpcRequest req) const noexcept {
 	}
 }
 
-void RpcServer::remove(const StrViewA& name) {
+void RpcServer::remove(const std::string_view& name) {
 	mapReg.erase(name);
 }
 
@@ -338,7 +338,7 @@ void RpcServer::removeAll() {
 }
 
 
-RpcServer::AbstractMethodReg* RpcServer::find(const StrViewA& name) const {
+RpcServer::AbstractMethodReg* RpcServer::find(const std::string_view& name) const {
 	auto f = mapReg.find(name);
 	if (f == mapReg.end()) return nullptr;
 	return &(*(f->second));
@@ -363,7 +363,7 @@ void RpcServer::add_listMethods(const String& name) {
 					[=](Value resp) mutable {
 
 					Array res2(r);
-					res2.addSet(resp["result"]);
+					res2.append(resp["result"]);
 					req.setResult(res2);
 
 					return true;
@@ -437,7 +437,7 @@ public:
 
 				server.exec(req);
 			} else {
-				req.setResult(Value(object,{key/"results"=results, key/"errors"= errors}));
+				req.setResult(Value(object,{Value("results",results), Value("errors",errors)}));
 				delete this;
 				return ;
 			}
@@ -834,7 +834,7 @@ Value AbstractRpcClient::genRequestID () {
 
 }
 
-std::size_t RpcServer::HashStr::operator()(StrViewA str) const {
+std::size_t RpcServer::HashStr::operator()(std::string_view str) const {
 	std::size_t h = 0;
 	FNV1a<sizeof(std::size_t)> c(h);
 	for(char x:str) c(x);
@@ -900,7 +900,7 @@ void RpcRequest::setParams(Value args) {
 	data->params = args;
 }
 
-RpcResult RpcResult::makeError(int error, const StrViewA &message, Value data) {
+RpcResult RpcResult::makeError(int error, const std::string_view &message, Value data) {
 	return RpcResult(Object
 		({{"code",error},
 		{"message",message},

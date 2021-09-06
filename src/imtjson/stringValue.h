@@ -11,14 +11,15 @@
 #pragma once
 
 #include "basicValues.h"
+#include "binary.h"
 
 namespace json {
 class StringValue: public AbstractStringValue {
 public:
-	StringValue(BinaryEncoding encoding, const StringView<char> &str);
+	StringValue(BinaryEncoding encoding, const std::string_view &str);
 	template<typename Fn> StringValue(BinaryEncoding encoding,std::size_t strSz, const Fn &fn);
 
-	virtual StringView<char> getString() const override;
+	virtual StringView getString() const override;
 	virtual bool getBool() const override {return true;}
 	virtual ValueTypeFlags flags() const override {return encoding != 0?binaryString:0;}
 
@@ -27,7 +28,7 @@ public:
 	void operator delete(void *ptr, std::size_t sz);
 
 
-	static PValue create(const StringView<char> &str);
+	static PValue create(const std::string_view &str);
 	static PValue create(const BinaryView &str, BinaryEncoding enc);
 
 	static BinaryEncoding getEncoding(const IValue *v);
@@ -68,20 +69,20 @@ public:
 	virtual ULongInt getUIntLong() const override;
 	virtual bool getBool() const override;
 	virtual ValueTypeFlags flags() const override;
-	virtual StringView<char> getString() const override;
+	virtual StringView getString() const override;
 
 	///Constructs PValue
 	/** @note constructor doesn't check content - you need to handle it before */
-	static PValue create(const StringView<char> &str);
+	static PValue create(const std::string_view &str);
 
-	static PValue create(const T &value, const StringView<char> &str);
+	static PValue create(const T &value, const std::string_view &str);
 
 	virtual ~PreciseNumberValue();
 	void operator delete(void *ptr, std::size_t sz);
 
 protected:
-	PreciseNumberValue(const StrViewA &strNum);
-	PreciseNumberValue(const T &v, const StrViewA &strNum);
+	PreciseNumberValue(const std::string_view &strNum);
+	PreciseNumberValue(const T &v, const std::string_view &strNum);
 
 
 	void *operator new(std::size_t sz, const std::size_t &strsz );

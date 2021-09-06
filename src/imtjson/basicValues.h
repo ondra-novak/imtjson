@@ -53,7 +53,7 @@ namespace json {
 	class AbstractStringValue : public AbstractValue {
 	public:
 		virtual ValueType type() const override { return string; }
-		virtual StringView<char> getString() const override = 0;
+		virtual StringView getString() const override = 0;
 
 		virtual Int getInt() const override;
 		virtual UInt getUInt() const override;
@@ -83,7 +83,7 @@ namespace json {
 		virtual ValueType type() const override { return object; }
 		virtual std::size_t size() const override = 0;
 		virtual const IValue *itemAtIndex(std::size_t index) const override = 0;
-		virtual const IValue *member(const StringView<char> &name) const override = 0;
+		virtual const IValue *member(const std::string_view &name) const override = 0;
 		virtual bool enumItems(const IEnumFn &) const override = 0;
 		virtual bool equal(const IValue *other) const override;
 
@@ -122,26 +122,7 @@ namespace json {
 	using UnsignedLongValue = NumberValueT<ULongInt, numberUnsignedInteger|longInt>;
 	using LongValue = NumberValueT<LongInt, numberInteger|longInt>;
 	using NumberValue = NumberValueT<double,0>;
-/*
-	class StringValue : public AbstractStringValue {
-	public:
-		StringValue(const StringView<char> &str) :v(str) {}
-		StringValue(std::string &&str) :v(std::move(str)) {}
 
-		virtual StringView<char> getString() const override {
-			return v;
-		}
-		virtual bool getBool() const override {return true;}
-
-		virtual Int getInt() const override;
-		virtual UInt getUInt() const override;
-		virtual double getNumber() const override;
-
-	protected:
-		std::string v;
-
-	};
-	*/
 }
 
 

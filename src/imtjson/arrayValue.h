@@ -19,7 +19,6 @@ namespace json {
 		virtual const IValue *itemAtIndex(std::size_t index) const override;
 		virtual bool enumItems(const IEnumFn &) const override;
 
-		StringView<PValue> getItems() const {return StringView<PValue>(items,curSize);}
 		virtual bool getBool() const override {return true;}
 
 

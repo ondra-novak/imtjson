@@ -42,7 +42,7 @@ public:
 	 * @param str a string's view. The StringView object can be constructed from
 	 * c-string and std::string.
 	 */
-	String(const StringView<char> &str);
+	String(const std::string_view &str);
 
 	///Creates new string from a wide-char string view
 	/**
@@ -50,7 +50,7 @@ public:
 	 *
 	 * @note this constructor is explicit.
 	 */
-	explicit String(const StringView<wchar_t> &str);
+	explicit String(const std::wstring_view &str);
 
 	///Creates new string from C-string
 	/**
@@ -64,7 +64,7 @@ public:
 	/**
 	 * @param strlist list of strings. All strings are concatenated into big-one
 	 */
-	String(const std::initializer_list<StringView<char> > &strlist);
+	String(const std::initializer_list<std::string_view > &strlist);
 
 	///Construct the string using the function.
 	/**Allows to construct the string by some specific way
@@ -95,7 +95,7 @@ public:
 	 * If arguments are out of the bounds, they are adjusted. This may
 	 * cause that empty string will be returned
 	 */
-	StringView<char> substr(std::size_t pos, std::size_t length) const;
+	std::string_view substr(std::size_t pos, std::size_t length) const;
 	///Retrieve substring
 	/**
 	 * @param pos position where substring starts.
@@ -103,7 +103,7 @@ public:
 	 *
 	 * If argument is out of the bounds, the empty string is returned
 	 */
-	StringView<char> substr(std::size_t pos) const;
+	std::string_view substr(std::size_t pos) const;
 	///Retrieves the left part of the string (prefix)
 	/**
 	 * @param length length of the string (length of the prefix)
@@ -111,7 +111,7 @@ public:
 	 *
 	 * @note if argument is out of the bounds, whole string is returned
 	 */
-	StringView<char> left(std::size_t length) const;
+	std::string_view left(std::size_t length) const;
 	///Retrieves the right part of the string (suffix)
 	/**
 	 * @param length length of the string (length of the suffix) is counted from the end of the string
@@ -119,7 +119,7 @@ public:
 	 *
 	 * @note if argument is out of the bounds, whole string is returned
 	 */
-	StringView<char> right(std::size_t length) const;
+	std::string_view right(std::size_t length) const;
 
 	///Retrieves length of the string
 	std::size_t length() const;
@@ -134,44 +134,44 @@ public:
 	 * @param other right-hand of the operator
 	 * @return concatenation of the strings
 	 */
-//	String operator+(const StringView<char> &other) const;
+//	String operator+(const std::string_view &other) const;
 //	String operator+(const String &other) const;
 
 	///Converts String to StringView
-	operator StringView<char>() const;
+	operator std::string_view() const;
 	///Converts String to StringView
-	StringView<char> str() const;
+	StringView str() const;
 	///Converts String to c-string (with terminating zero character)
 	const char *c_str() const;
 	///Converts string stored internally encoded to utf-8 to wide-char string.
 	std::wstring wstr() const;
 	///Insert substring to the string
-	String insert(std::size_t pos, const StringView<char> &what);
+	String insert(std::size_t pos, const std::string_view &what);
 	///Replaces substring
-	String replace(std::size_t pos, std::size_t size, const StringView<char> &what);
+	String replace(std::size_t pos, std::size_t size, const std::string_view &what);
 	///Splits string to array
-	Value split(const StringView<char> separator, std::size_t maxCount = -1) const;
+	Value split(const std::string_view separator, std::size_t maxCount = -1) const;
 	///split at given position
 	Value::TwoValues splitAt(Int pos) const;
 	///Appends sting
-	String &operator += (const StringView<char> other);
+	String &operator += (const std::string_view other);
 	///Finds substring
-	std::size_t indexOf(const StringView<char> other, std::size_t start = 0) const;
+	std::size_t indexOf(const std::string_view other, std::size_t start = 0) const;
 	///Finds substring
-	std::size_t lastIndexOf(const StringView<char> other, std::size_t start = 0) const;
+	std::size_t lastIndexOf(const std::string_view other, std::size_t start = 0) const;
 
 	const char *begin() const {return c_str();}
 	const char *end() const {return c_str()+length();}
 
 
 
-	bool operator==(const String &other) const {return StringView<char>(*this) == StringView<char>(other);}
-	bool operator!=(const String &other) const {return StringView<char>(*this) != StringView<char>(other);}
-	bool operator>=(const String &other) const {return StringView<char>(*this) >= StringView<char>(other);}
-	bool operator<=(const String &other) const {return StringView<char>(*this) <= StringView<char>(other);}
-	bool operator>(const String &other) const  {return StringView<char>(*this) > StringView<char>(other);}
-	bool operator<(const String &other) const  {return StringView<char>(*this) < StringView<char>(other);}
-	friend String operator+(StringView<char> str, StringView<char> str2);
+	bool operator==(const std::string_view &other) const {return std::string_view(*this) == other;}
+	bool operator!=(const std::string_view &other) const {return std::string_view(*this) != other;}
+	bool operator>=(const std::string_view &other) const {return std::string_view(*this) >= other;}
+	bool operator<=(const std::string_view &other) const {return std::string_view(*this) <= other;}
+	bool operator>(const std::string_view &other) const  {return std::string_view(*this) > other;}
+	bool operator<(const std::string_view &other) const  {return std::string_view(*this) < other;}
+	friend String operator+(std::string_view str, std::string_view str2);
 
 	///Allows to test whether string created from Value is defined
 	/** The string is defined only when underlying value is type of string
@@ -184,8 +184,22 @@ public:
 
 
 	PValue getHandle() const;
+
+
 protected:
 	PValue impl;
+};
+
+
+class Split{
+public:
+	Split(const std::string_view &string, const std::string_view &sep, std::size_t limit = std::string_view::npos);
+	std::string_view operator()();
+	bool operator!() const;
+protected:
+	std::string_view str;
+	std::string_view sep;
+	std::size_t limit;
 };
 
 std::ostream &operator<<(std::ostream &out, const String &x);

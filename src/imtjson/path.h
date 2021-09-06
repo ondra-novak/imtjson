@@ -39,14 +39,14 @@ public:
 	 * @param parent reference to parent path. If you need to construct relative to root, use Path::root as reference
 	 * @param key name of key
 	 */
-	Path(const Path &parent, const StringView<char> &key):keyName(key),index(-1),parent(parent) {}
+	Path(const Path &parent, const std::string_view &key):keyName(key),index(-1),parent(parent) {}
 
 	///Construct path relative to other element in an array
 	/**
 	 * @param parent reference to parent path. If you need to construct relative to root, use Path::root as reference
 	 * @param index index of item in array
 	 */
-	Path(const Path &parent, UInt index):keyName(0), index(index),parent(parent) {}
+	Path(const Path &parent, UInt index): index(index),parent(parent) {}
 
 
 
@@ -54,7 +54,7 @@ public:
 	/**
 	 * @return key value. If element is index, returns empty string
 	 */
-	StringView<char> getKey() const {return keyName;}
+	std::string_view getKey() const {return keyName;}
 	///Retrieves index value
 	/**
 	 * @return index value. if element is key, result is an undetermined number
@@ -127,7 +127,7 @@ public:
 	 * @param key
 	 * @return
 	 */
-	Path operator/(const StringView<char> &key) const {
+	Path operator/(const std::string_view &key) const {
 		return Path(*this,key);
 	}
 	Path operator/(uintptr_t index) const {
@@ -167,7 +167,7 @@ private:
 	friend class Value;
 
 	///name of key;
-	StringView<char> keyName;
+	std::string_view keyName;
 	///index of value (used as keyname when keyName is not null)
 	UInt index;
 	///Reference to parent path
@@ -184,7 +184,7 @@ private:
 ///Object which is allocated on heap to provide sharing of immutable path
 class PathRef: public Path, public RefCntObj {
 private:
-	PathRef(const Path &parent, const StringView<char> &key):Path(parent,key) {}
+	PathRef(const Path &parent, const std::string_view &key):Path(parent,key) {}
 	PathRef(const Path &parent, UInt index):Path(parent,index) {}
 	friend class Path;
 	friend class RootPath;
