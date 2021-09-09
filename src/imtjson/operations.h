@@ -342,11 +342,12 @@ inline Value Value::map(Fn&& mapFn) const {
 template<typename Fn>
 inline Value Value::map(Fn &&mapFn, ValueType target_type)  const {
 	switch (target_type) {
-		case object: return Value(type(),begin(),end(),[&](const Value &c){
+		case object: return Value(target_type,begin(),end(),[&](const Value &c){
 			Value r ( mapFn(c));
-			return r.setKey(c.getKey());
+			if (r.getKey().empty()) r = r.setKey(c.getKey());
+			return r;
 		});
-		case array:return Value(type(),begin(),end(),[&](const Value &c){
+		case array:return Value(target_type,begin(),end(),[&](const Value &c){
 			Value r ( mapFn(c));
 			return r;
 		});
