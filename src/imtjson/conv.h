@@ -128,12 +128,11 @@ public:
 template<typename T> class ConvValueFrom<std::vector<T> > {
 public:
 	static Value convert(const std::vector<T> &v) {
-		std::vector<Value> x;
-		x.reserve(v.size());
+		ValueBuilder bld(v.size());
 		for (auto &&k : v) {
-			x.push_back(Value::from<T>(k));
+			bld.push_back(Value::from<T>(k));
 		}
-		return Value(std::move(x));
+		return bld.commit();
 	}
 };
 

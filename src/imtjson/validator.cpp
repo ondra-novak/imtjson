@@ -6,6 +6,7 @@
  */
 
 #include <cstdarg>
+#include <stdexcept>
 #include "validator.h"
 #include "array.h"
 #include "string.h"

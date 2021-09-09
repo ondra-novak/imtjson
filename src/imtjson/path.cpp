@@ -9,6 +9,7 @@
 #include "path.h"
 #include "array.h"
 #include "allocator.h"
+#include <stdexcept>
 
 namespace json {
 

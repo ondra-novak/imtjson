@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string_view>
+#include <string>
 #include <algorithm>
 
 
@@ -135,7 +136,7 @@ template<typename EnumType>
 inline std::string json::NamedEnum<EnumType>::allEnums(std::string_view separator) const {
 	std::size_t needsz=0;
 	for (auto &x : byName) needsz+=x.name.length;
-	needsz += separator.length*byName.size();
+	needsz += separator.size()*byName.size();
 	std::string res;
 	res.reserve(needsz);
 	std::string_view cursep;
