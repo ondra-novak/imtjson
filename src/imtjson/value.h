@@ -114,6 +114,12 @@ namespace json {
 		 * member of an object is deleted. Undefined value in an array is skipped.
 		 */
 		Value();
+
+		Value(const Value &v);
+		Value(Value &&v);
+		Value &operator=(const Value &other);
+		Value &operator=(Value &&other);
+
 		///@{
 		///Initialize the variable with pointer to underlying interface
 		/** This constructor is used by internals. However you can declare a new

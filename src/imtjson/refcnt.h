@@ -40,8 +40,6 @@ namespace json {
 	};
 
 
-
-
 	///Simple refcounting smart pointer
 	/** Because std::shared_ptr is too heavy a bloated and slow and wastes a lot memory */
 	template<typename T>
@@ -50,7 +48,9 @@ namespace json {
 
 		RefCntPtr() :ptr(0)  {}
 		RefCntPtr(T *ptr) :ptr(ptr)  { addRefPtr(); }
-		RefCntPtr(const RefCntPtr &other)  :ptr(other.ptr) { addRefPtr(); }
+		RefCntPtr(const RefCntPtr &other)  :ptr(other.ptr) {
+			addRefPtr();
+		}
 		~RefCntPtr()  {
 			releaseRefPtr();
 		}

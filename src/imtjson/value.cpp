@@ -949,6 +949,31 @@ namespace json {
 		other.handle = nullptr;
 	}
 
+	Value::Value(const Value &other):v(other.v) {
+		if (this == &other) {
+			//this is bad - so initialize as undefined;
+			v = Value(json::undefined).getHandle();
+		}
+	}
+	Value::Value(Value &&other):v(std::move(other.v)) {
+		if (this == &other) {
+			//this is bad - so initialize as undefined;
+			v = Value(json::undefined).getHandle();
+		}
+	}
+	Value &Value::operator=(const Value &other) {
+		if (this != &other) {
+			v = other.v;
+		}
+		return *this;
+	}
+	Value &Value::operator=(Value &&other) {
+		if (this != &other) {
+			v = std::move(other.v);
+		}
+		return *this;
+	}
+
 
 }
 
