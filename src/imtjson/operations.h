@@ -351,7 +351,7 @@ inline Value Value::map(Fn &&mapFn, ValueType target_type)  const {
 			Value r ( mapFn(c));
 			return r;
 		});
-		default: return map(std::forward<Fn>(mapFn));
+		default: return json::array;
 	}
 }
 
