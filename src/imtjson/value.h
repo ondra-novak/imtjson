@@ -1168,13 +1168,46 @@ protected:
 	};
 
 
+	///ValueBuilder allows to build both kinds of container values
+	/**
+	 * Works similar to Array or Object classes, however it is more effective, when items are only
+	 * added to the container. It also needs to know count of items to be added
+	 *
+	 * The class helps to build container values without extra copying and transfering values from
+	 * the builder to the Value. Once the result is commited, the content is transfered to the
+	 * result making builder no longer usable.
+	 */
 	class ValueBuilder {
 	public:
+		///Create container value
+		/**
+		 * @param t type of value, can be array, object or string.
+		 * @param count count of items to be added. You can specify more then count of items really added, but
+		 * not less. Specifying more items allocates extra space. When string is built, you need to specify
+		 * count of items will be used to build the string (not count of characters)
+		 */
 		ValueBuilder(ValueType t, std::size_t count);
+		///Push new item.
+		/**
+		 * @param v item to push
+		 * Pushing more then reserved items causes that extra items will be discarded
+		 */
 		void push_back(Value v);
+		///Allows to move builder with its content
 		ValueBuilder(ValueBuilder &&other);
-		ValueBuilder(const ValueBuilder &&other) = delete;
-		ValueBuilder &operator=(const ValueBuilder &&other) = delete;
+
+		///Disable copying
+		ValueBuilder(const ValueBuilder &other) = delete;
+		///Disable copying
+		ValueBuilder &operator=(const ValueBuilder &other) = delete;
+
+		///Commits changes and returns the Value
+		/**
+		 * @return Function returns PValue, which can be used to easily create a instance of the Value class. However
+		 * some internal functions need to work with PValue, this is the reason why PValue is returned
+		 *
+		 * @note once the value is commited, the builder cannot be used any more. You need to destroy the builder
+		 */
 		PValue commit();
 
 	protected:
@@ -1240,17 +1273,6 @@ protected:
 	    typedef Value &        reference;
 	    typedef Int  difference_type;
 
-	};
-
-
-	class InvalidNumericFormat: public std::exception {
-	public:
-		InvalidNumericFormat(std::string &&val);
-		const std::string &getValue() const;
-		const char *what() const noexcept override;
-	protected:
-		std::string val;
-		mutable std::string msg;
 	};
 
 

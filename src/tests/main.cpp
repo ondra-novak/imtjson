@@ -1315,29 +1315,20 @@ tst.test("Object.enumItems", "age:19,data:[90,60,90],frobla:12.3,kabrt:289,name:
 		Value numb = Value::preciseNumber("1215851015232487940323198.00000000000000000000000000123");
 		numb.toStream(out);
 	};
-	tst.test("PreciseNumber.create_serializeError","Invalid numeric format (precise number): -123456789000036798ahoj446785510.1215851015232487940323198E-257") >> [](std::ostream &out) {
-		try {
-			Value numb = Value::preciseNumber("-123456789000036798ahoj446785510.1215851015232487940323198E-257");
-			numb.toStream(out);
-		} catch (const std::exception &e) {
-			out << e.what();
-		}
+	tst.test("PreciseNumber.create_serializeError","nan") >> [](std::ostream &out) {
+		Value numb = Value::preciseNumber("-123456789000036798ahoj446785510.1215851015232487940323198E-257");
+		double b = numb.getNumber();
+		out << b;
 	};
-	tst.test("PreciseNumber.create_serializeError2","Invalid numeric format (precise number): -123456789000036798446785510.121585101523248794032319K+257") >> [](std::ostream &out) {
-		try {
+	tst.test("PreciseNumber.create_serializeError2","nan") >> [](std::ostream &out) {
 		Value numb = Value::preciseNumber("-123456789000036798446785510.121585101523248794032319K+257");
-		numb.toStream(out);
-		} catch (const std::exception &e) {
-			out << e.what();
-		}
+		double b = numb.getNumber();
+		out << b;
 	};
-	tst.test("PreciseNumber.create_serializeError3","Invalid numeric format (precise number): -0.11023k") >> [](std::ostream &out) {
-		try {
+	tst.test("PreciseNumber.create_serializeError3","nan") >> [](std::ostream &out) {
 		Value numb = Value::preciseNumber("-0.11023k");
-		numb.toStream(out);
-		} catch (const std::exception &e) {
-			out << e.what();
-		}
+		double b = numb.getNumber();
+		out << b;
 	};
 	tst.test("PreciseNumber.create_convert","388,424242") >> [](std::ostream &out) {
 		Value numb = Value::preciseNumber("424242");

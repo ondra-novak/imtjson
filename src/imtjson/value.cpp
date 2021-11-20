@@ -692,20 +692,12 @@ namespace json {
 		P parser(std::move(reader), P::allowPreciseNumbers);
 		try {
 			Value v = parser.parseNumber();
-			if (pos <= number.size()) throw InvalidNumericFormat(std::string(number));
+			if (pos <= number.size()) return Value(std::numeric_limits<double>::signaling_NaN());
 			return v;
 		} catch (const ParseError &) {
-			throw InvalidNumericFormat(std::string(number));
+			return Value(std::numeric_limits<double>::signaling_NaN());
 		}
 	}
-
-	InvalidNumericFormat::InvalidNumericFormat(std::string &&val):val(std::move(val)) {}
-	const std::string &InvalidNumericFormat::getValue() const {return val;}
-	const char *InvalidNumericFormat::what() const noexcept  {
-		msg = "Invalid numeric format (precise number): " + val;
-		return msg.c_str();
-	}
-
 
 	Value Value::shift() {
 		Value ret;
