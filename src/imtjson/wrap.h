@@ -35,7 +35,6 @@ namespace _details {
 		virtual std::size_t size() const {return pv->size();}
 		virtual const IValue *itemAtIndex(std::size_t index) const {return pv->itemAtIndex(index);}
 		virtual const IValue *member(const std::string_view &name) const {return pv->member(name);}
-		virtual bool enumItems(const IEnumFn &e) const {return pv->enumItems(e);}
 
 		///some values are proxies with member name - this retrieves name
 		virtual StringView getMemberName() const {return pv->getMemberName();}

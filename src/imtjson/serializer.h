@@ -116,13 +116,14 @@ namespace json {
 	inline void Serializer<Fn>::serializeObject(const IValue * ptr)
 	{
 		target('{');
-		bool comma = false;
-		auto fn = [&](const IValue *v) {
-			if (comma) target(','); else comma = true;
-			serializeKeyValue(v);
-			return true;
-		};
-		ptr->enumItems(EnumFn<decltype(fn)>(fn));
+		auto cnt = ptr->size();
+		if (cnt) {
+			serializeKeyValue(ptr->itemAtIndex(0));
+			for (decltype(cnt) i = 1; i < cnt; i++) {
+				target(',');
+				serializeKeyValue(ptr->itemAtIndex(i));
+			}
+		}
 		target('}');
 	}
 
@@ -130,13 +131,14 @@ namespace json {
 	inline void Serializer<Fn>::serializeArray(const IValue * ptr)
 	{
 		target('[');
-		bool comma = false;
-		auto fn = [&](const IValue *v) {
-			if (comma) target(','); else comma = true;
-			serialize(v);
-			return true;
-		};
-		ptr->enumItems(EnumFn<decltype(fn)>(fn));
+		auto cnt = ptr->size();
+		if (cnt) {
+			serialize(ptr->itemAtIndex(0));
+			for (decltype(cnt) i = 1; i < cnt; i++) {
+				target(',');
+				serialize(ptr->itemAtIndex(i));
+			}
+		}
 		target(']');
 	}
 

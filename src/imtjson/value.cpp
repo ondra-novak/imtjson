@@ -215,12 +215,6 @@ namespace json {
 		virtual const IValue *itemAtIndex(std::size_t index) const override {
 			return parent->itemAtIndex(start + index);
 		}
-		virtual bool enumItems(const IEnumFn &fn) const override {
-			for (std::size_t x = 0; x < len; x++) {
-				if (!fn(itemAtIndex(x))) return false;
-			}
-			return true;
-		}
 
 		virtual bool getBool() const override { return true; }
 	protected:

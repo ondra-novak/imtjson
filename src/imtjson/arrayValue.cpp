@@ -19,13 +19,6 @@ namespace json {
 		return getUndefined();
 	}
 
-	bool ArrayValue::enumItems(const IEnumFn &fn) const
-	{
-		for (auto &&x : *this) {
-			if (!fn(x)) return false;
-		}
-		return true;
-	}
 
 	RefCntPtr<ArrayValue> ArrayValue::create(std::size_t capacity) {
 		AllocInfo req(capacity);

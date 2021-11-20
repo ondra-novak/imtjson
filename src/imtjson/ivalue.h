@@ -209,7 +209,6 @@ namespace json {
 		virtual std::size_t size() const = 0;
 		virtual const IValue *itemAtIndex(std::size_t index) const = 0;
 		virtual const IValue *member(const std::string_view &name) const = 0;
-		virtual bool enumItems(const IEnumFn &) const = 0;
 		
 		///some values are proxies with member name - this retrieves name
 		virtual StringView getMemberName() const = 0;
@@ -227,16 +226,6 @@ namespace json {
 		virtual bool operator()(const IValue *v) const = 0;
 	};
 
-	template<typename Fn>
-	class EnumFn : public IEnumFn {
-	public:
-		EnumFn(const Fn &fn) :fn(fn) {}
-		virtual bool operator()(const IValue *v) const {
-			return fn(v);
-		}
-	protected:
-		mutable Fn fn;
-	};
 
 
 }

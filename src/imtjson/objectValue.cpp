@@ -17,14 +17,6 @@ namespace json {
 		return getUndefined();
 	}
 
-	bool ObjectValue::enumItems(const IEnumFn &fn) const
-	{
-		for (auto &&x : *this) {
-			if (!fn(x)) return false;
-		}
-		return true;
-	}
-
 	const IValue * ObjectValue::member(const std::string_view& name) const {
 		const IValue *r = findSorted(name);
 		if (r == nullptr) return getUndefined();

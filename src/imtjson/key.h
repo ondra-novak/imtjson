@@ -32,7 +32,6 @@ public:
 	virtual std::size_t size() const override { return value->size(); }
 	virtual const IValue *itemAtIndex(std::size_t index) const override { return value->itemAtIndex(index); }
 	virtual const IValue *member(const std::string_view &name) const override { return value->member(name); }
-	virtual bool enumItems(const IEnumFn &fn) const override { return value->enumItems(fn); }
 	virtual StringView getMemberName() const override { return value->getMemberName(); }
 	virtual const IValue *unproxy() const override { return value->unproxy(); }
 	virtual bool equal(const IValue *other) const override {return value->equal(other->unproxy());}

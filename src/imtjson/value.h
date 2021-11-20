@@ -438,20 +438,25 @@ namespace json {
 
 
 		///Performs iteration through all items in the container
-		/**
-		 * @param fn a function which will be called for each item. The function
-		 *  has to accept a single argument - Value. It has to return true to continue
-		 *  iteration or false to stop
-		 * @retval true iteration processed all the items
-		 * @retval false iteration has been stopped
-		 *
-		 * @code
-		 * v.forEach([](Value v) { foo(v) ; return true;});
-		 * @endcode
-		 */
-		template<typename Fn>
-		bool forEach(const Fn &fn) const  {
-			return v->enumItems(EnumFn<Fn>(fn));
+		template<typename Fn, typename = decltype(std::declval<Fn>()(std::declval<Value>()))>
+		void forEach(Fn &&fn) const  {
+			for (Value v: *this) fn(v);
+		}
+		template<typename Fn, typename = decltype(std::declval<Fn>()(std::declval<Value>(),std::declval<unsigned int>())), int>
+		void forEach(Fn &&fn) const  {
+			unsigned int idx = 0;
+			for (Value v: *this) {
+				fn(v, idx);
+				++idx;
+			}
+		}
+		template<typename Fn, typename = decltype(std::declval<Fn>()(std::declval<Value>(),std::declval<unsigned int>(),std::declval<Value>())), unsigned int>
+		void forEach(Fn &&fn) const  {
+			unsigned int idx = 0;
+			for (Value v: *this) {
+				fn(v, idx, *this);
+				++idx;
+			}
 		}
 
 		///Function parses JSON and returns it as Value
