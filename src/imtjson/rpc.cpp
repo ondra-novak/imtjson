@@ -775,11 +775,11 @@ bool RpcRequest::isSendNotifyEnabled() const {
 
 void AbstractRpcClient::notify(String notifyName, Value args) {
 	Sync _(lock);
-	sendRequest(formatNotify(ver, notifyName, args, Value()));
+	sendRequest(Value(), formatNotify(ver, notifyName, args, Value()));
 }
 void AbstractRpcClient::notify(String notifyName, Value args, Value context) {
 	Sync _(lock);
-	sendRequest(formatNotify(ver, notifyName, args, context));
+	sendRequest(Value(), formatNotify(ver, notifyName, args, context));
 }
 
 AbstractRpcClient::AbstractRpcClient(RpcVersion version)
@@ -907,8 +907,5 @@ RpcResult RpcResult::makeError(int error, const std::string_view &message, Value
 		{"data", data}}), true, json::undefined);
 }
 
-void AbstractRpcClient::sendRequest(const Value &, const Value &request) {
-	sendRequest(request);
-}
 
 }

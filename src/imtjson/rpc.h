@@ -996,18 +996,6 @@ protected:
 
 	class LocalPendingCall;
 
-	///Implements serializing and sending the request to the output channel.
-	/**
-	 * @param request request which must be serialized to the output stream
-	 *
-	 * @note It is possible to use the client during sendRequest as the function
-	 * can be recursive. You can for example connect the target server, and call several
-	 * methods before the requested method is called. However during this phase, you need
-	 * to avoid using synchronous calls.
-	 */
-	virtual void sendRequest(Value request) = 0;
-
-
 	///Implements serializing and sending the request to the output channel
 	/**
 	 * New version. This version also reports ID of the request. This allows perform
@@ -1015,10 +1003,10 @@ protected:
 	 * messages are already send and some not. In the event of break of the connection,
 	 * only pending messages can be canceled. See cancelPendingCallsFiltered
 	 *
-	 * @param id message request
+	 * @param id message request. Note for notification, id is undefined
 	 * @param request request
 	 */
-	virtual void sendRequest(const Value &id, const Value &request);
+	virtual void sendRequest(const Value &id, const Value &request) = 0;
 
 	class PendingCall {
 	public:
