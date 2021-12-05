@@ -571,6 +571,7 @@ AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName
 AbstractRpcClient::PreparedCall AbstractRpcClient::operator ()(String methodName, Value args, Value context) {
 	Sync _(lock);
 	Value id = genRequestID();
+	if (!args.isContainer()) args = Value(array, {args});
 	switch (ver) {
 	case RpcVersion::ver1:
 		return PreparedCall(*this, id, Object({{"method", methodName},
