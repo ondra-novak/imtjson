@@ -438,25 +438,9 @@ namespace json {
 
 
 		///Performs iteration through all items in the container
-		template<typename Fn, typename = decltype(std::declval<Fn>()(std::declval<Value>()))>
-		void forEach(Fn &&fn) const  {
-			for (Value v: *this) fn(v);
-		}
-		template<typename Fn, typename = decltype(std::declval<Fn>()(std::declval<Value>(),std::declval<unsigned int>())), int>
-		void forEach(Fn &&fn) const  {
-			unsigned int idx = 0;
-			for (Value v: *this) {
-				fn(v, idx);
-				++idx;
-			}
-		}
-		template<typename Fn, typename = decltype(std::declval<Fn>()(std::declval<Value>(),std::declval<unsigned int>(),std::declval<Value>())), unsigned int>
-		void forEach(Fn &&fn) const  {
-			unsigned int idx = 0;
-			for (Value v: *this) {
-				fn(v, idx, *this);
-				++idx;
-			}
+		template<typename Fn>
+		void forEach(Fn &&fn) const {
+			forEachImpl(fn);
 		}
 
 		///Function parses JSON and returns it as Value
@@ -1164,6 +1148,14 @@ protected:
 
 		static Value numberFromStringRaw(std::string_view str, bool force_double);
 
+		template<typename Fn>
+		auto forEachImpl(Fn &fn) const -> decltype(std::declval<Fn>()(std::declval<json::Value>()),false);
+		template<typename Fn>
+		auto forEachImpl(Fn &fn) const -> decltype(std::declval<Fn>()(std::declval<json::Value>(),std::declval<std::size_t>()),false);
+		template<typename Fn>
+		auto forEachImpl(Fn &fn) const -> decltype(std::declval<Fn>()(std::declval<json::Value>(),std::declval<std::size_t>(), std::declval<json::Value>()),false);
+
+
 		//std::vector<PValue> prepareValues(const std::initializer_list<Value>& data);
 	};
 
@@ -1350,6 +1342,30 @@ protected:
 			}
 		}
 		(*this) = bld.commit();
+	}
+
+	template<typename Fn>
+	auto Value::forEachImpl(Fn &fn) const -> decltype(std::declval<Fn>()(std::declval<json::Value>()),false) {
+		for (Value v: *this) fn(v);
+		return true;
+	}
+	template<typename Fn>
+	auto Value::forEachImpl(Fn &fn) const -> decltype(std::declval<Fn>()(std::declval<json::Value>(),std::declval<std::size_t>()),false) {
+		unsigned int idx = 0;
+		for (Value v: *this) {
+			fn(v, idx);
+			++idx;
+		}
+		return true;
+	}
+	template<typename Fn>
+	auto Value::forEachImpl(Fn &fn) const -> decltype(std::declval<Fn>()(std::declval<json::Value>(),std::declval<std::size_t>(), std::declval<json::Value>()),false) {
+		unsigned int idx = 0;
+		for (Value v: *this) {
+			fn(v, idx, *this);
+			++idx;
+		}
+		return true;
 	}
 
 }
