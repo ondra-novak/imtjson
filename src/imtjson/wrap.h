@@ -16,6 +16,16 @@ namespace _details {
 	};
 
 	template<typename Object>
+	auto wrap_equal(const Object &a, const Object &b) -> decltype(std::declval<const Object &>() == std::declval<const Object &>()) {
+		return a == b;
+	}
+	template<typename Object>
+	auto wrap_equal(...) {
+		return false;
+	}
+
+
+	template<typename Object>
 	class ObjWrap: public IWrap {
 	public:
 
@@ -41,9 +51,25 @@ namespace _details {
 		///Returns pointer to first no-proxy object
 		virtual const IValue *unproxy() const {return this;}
 
-		virtual bool equal(const IValue *other) const {return pv->equal(other);}
+		virtual bool equal(const IValue *other) const {
+			if (other == this) return true;
 
-		virtual int compare(const IValue *other) const {return pv->compare(other);}
+			const IWrap *wp = dynamic_cast<const IWrap *>(other);
+			if (wp == nullptr) return false;
+			const void *ptr = cast(typeid(obj));
+			if (ptr == nullptr) return false;
+
+			if (wrap_equal<Object>(obj, *reinterpret_cast<const Object *>(ptr))) {
+				return pv->equal(other);
+			} else {
+				return false;
+			}
+		}
+
+		virtual int compare(const IValue *other) const {
+			if (equal(other)) return 0;
+			else return pv->compare(other);
+		}
 
 		virtual const void *cast(const std::type_info &type) const override {
 			const std::type_info &myti = typeid(obj);
