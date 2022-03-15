@@ -207,8 +207,8 @@ namespace json {
 		virtual bool getBool() const = 0;
 		virtual StringView getString() const = 0;
 		virtual std::size_t size() const = 0;
-		virtual const IValue *itemAtIndex(std::size_t index) const = 0;
-		virtual const IValue *member(const std::string_view &name) const = 0;
+		virtual RefCntPtr<const IValue > itemAtIndex(std::size_t index) const = 0;
+		virtual RefCntPtr<const IValue > member(const std::string_view &name) const = 0;
 		
 		///some values are proxies with member name - this retrieves name
 		virtual StringView getMemberName() const = 0;
@@ -217,7 +217,7 @@ namespace json {
 
 		virtual bool equal(const IValue *other) const = 0;
 
-		virtual int compare(const IValue *other) const = 0;
+		virtual int compare(const IValue * other) const = 0;
 	};
 
 	class IEnumFn {

@@ -13,9 +13,9 @@ namespace json {
 		return curSize;
 	}
 
-	const IValue * ArrayValue::itemAtIndex(std::size_t index) const
+	RefCntPtr<const IValue> ArrayValue::itemAtIndex(std::size_t index) const
 	{
-		if (index < curSize) return (const IValue *)((*this)[index]);
+		if (index < curSize) return (*this)[index];
 		return getUndefined();
 	}
 

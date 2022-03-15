@@ -35,14 +35,14 @@ public:
 	class StaticEmptyArrayValue : public AbstractArrayValue {
 	public:
 		virtual std::size_t size() const override { return 0; }
-		virtual const IValue *itemAtIndex(std::size_t ) const override { return AbstractValue::getUndefined(); }
+		virtual RefCntPtr<const IValue> itemAtIndex(std::size_t ) const override { return AbstractValue::getUndefined(); }
 	};
 
 	class StaticEmptyObjectValue : public AbstractObjectValue {
 	public:
 		virtual std::size_t size() const override { return 0; }
-		virtual const IValue *itemAtIndex(std::size_t ) const override { return getUndefined(); }
-		virtual const IValue *member(const std::string_view &) const override { return getUndefined(); }
+		virtual RefCntPtr<const IValue> itemAtIndex(std::size_t ) const override { return getUndefined(); }
+		virtual RefCntPtr<const IValue> member(const std::string_view &) const override { return getUndefined(); }
 	};
 
 

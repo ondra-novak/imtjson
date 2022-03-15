@@ -11,13 +11,13 @@ namespace json {
 		return curSize;
 	}
 
-	const IValue * ObjectValue::itemAtIndex(std::size_t index) const
+	RefCntPtr<const IValue>  ObjectValue::itemAtIndex(std::size_t index) const
 	{
 		if (index < curSize) return (const IValue *)((*this)[index]);
 		return getUndefined();
 	}
 
-	const IValue * ObjectValue::member(const std::string_view& name) const {
+	RefCntPtr<const IValue>  ObjectValue::member(const std::string_view& name) const {
 		const IValue *r = findSorted(name);
 		if (r == nullptr) return getUndefined();
 		else return r;

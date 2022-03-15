@@ -43,8 +43,8 @@ namespace _details {
 		virtual bool getBool() const {return pv->getBool();}
 		virtual StringView getString() const {return pv->getString();}
 		virtual std::size_t size() const {return pv->size();}
-		virtual const IValue *itemAtIndex(std::size_t index) const {return pv->itemAtIndex(index);}
-		virtual const IValue *member(const std::string_view &name) const {return pv->member(name);}
+		virtual RefCntPtr<const IValue> itemAtIndex(std::size_t index) const {return pv->itemAtIndex(index);}
+		virtual RefCntPtr<const IValue> member(const std::string_view &name) const {return pv->member(name);}
 
 		///some values are proxies with member name - this retrieves name
 		virtual StringView getMemberName() const {return pv->getMemberName();}

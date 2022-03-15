@@ -19,8 +19,8 @@ namespace json {
 		virtual bool getBool() const override { return false; }
 		virtual StringView getString() const override { return StringView(); }
 		virtual std::size_t size() const override { return 0; }
-		virtual const IValue *itemAtIndex(std::size_t ) const override { return getUndefined(); }
-		virtual const IValue *member(const std::string_view &) const override { return getUndefined(); }
+		virtual RefCntPtr<const IValue> itemAtIndex(std::size_t ) const override { return getUndefined(); }
+		virtual RefCntPtr<const IValue> member(const std::string_view &) const override { return getUndefined(); }
 
 		///some values are proxies with member name - this retrieves name
 		virtual StringView getMemberName() const override { return StringView(); }
@@ -37,7 +37,7 @@ namespace json {
 		 */
 		virtual int compare(const IValue *other) const override;
 
-		static const IValue *getUndefined();
+		static const IValue * getUndefined();
 	};
 
 }

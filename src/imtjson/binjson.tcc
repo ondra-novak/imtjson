@@ -107,7 +107,7 @@ void BinarySerializer<Fn>::serializeContainer(const IValue *v, unsigned char typ
 	std::size_t cnt = v->size();
 	serializeInteger(cnt, type);
 	for (std::size_t i = 0; i < cnt; i++) {
-		serialize(v->itemAtIndex(i));
+		serialize((const IValue *)v->itemAtIndex(i));
 	}
 }
 

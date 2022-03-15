@@ -71,7 +71,7 @@ namespace json {
 	public:
 		virtual ValueType type() const override { return array; }
 		virtual std::size_t size() const override = 0;
-		virtual const IValue *itemAtIndex(std::size_t index) const override = 0;
+		virtual RefCntPtr<const IValue> itemAtIndex(std::size_t index) const override = 0;
 
 		static const IValue *getEmptyArray();
 		virtual bool equal(const IValue *other) const override;
@@ -81,8 +81,8 @@ namespace json {
 	public:
 		virtual ValueType type() const override { return object; }
 		virtual std::size_t size() const override = 0;
-		virtual const IValue *itemAtIndex(std::size_t index) const override = 0;
-		virtual const IValue *member(const std::string_view &name) const override = 0;
+		virtual RefCntPtr<const IValue> itemAtIndex(std::size_t index) const override = 0;
+		virtual RefCntPtr<const IValue> member(const std::string_view &name) const override = 0;
 		virtual bool equal(const IValue *other) const override;
 
 		static const IValue *getEmptyObject();

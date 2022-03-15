@@ -78,7 +78,7 @@ namespace json {
 	inline void Value::serialize(UnicodeFormat format, Fn && target) const
 	{
 		Serializer<Fn> serializer(std::forward<Fn>(target), format == emitUtf8);
-		return serializer.serialize(*this);
+		serializer.serialize(*this);
 	}
 
 	template<typename Fn>
@@ -133,10 +133,10 @@ namespace json {
 		target('[');
 		auto cnt = ptr->size();
 		if (cnt) {
-			serialize(ptr->itemAtIndex(0));
+			serialize((const IValue *)ptr->itemAtIndex(0));
 			for (decltype(cnt) i = 1; i < cnt; i++) {
 				target(',');
-				serialize(ptr->itemAtIndex(i));
+				serialize((const IValue *)ptr->itemAtIndex(i));
 			}
 		}
 		target(']');

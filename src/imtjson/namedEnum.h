@@ -135,7 +135,7 @@ inline std::string_view NamedEnum<EnumType>::operator [](EnumType val) const {
 template<typename EnumType>
 inline std::string json::NamedEnum<EnumType>::allEnums(std::string_view separator) const {
 	std::size_t needsz=0;
-	for (auto &x : byName) needsz+=x.name.length;
+	for (auto &x : byName) needsz+=x.name.length();
 	needsz += separator.size()*byName.size();
 	std::string res;
 	res.reserve(needsz);

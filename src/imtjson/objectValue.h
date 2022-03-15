@@ -14,8 +14,8 @@ namespace json {
 		using Container<PValue>::Container;
 
 		virtual std::size_t size() const override;
-		virtual const IValue *itemAtIndex(std::size_t index) const override;
-		virtual const IValue *member(const std::string_view &name) const override;
+		virtual RefCntPtr<const IValue> itemAtIndex(std::size_t index) const override;
+		virtual RefCntPtr<const IValue> member(const std::string_view &name) const override;
 
 		virtual bool getBool() const override {return true;}
 
