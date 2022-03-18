@@ -53,7 +53,7 @@ public:
 	Container &operator=(const Container &other);
 
 	T &operator[](unsigned int pos);
-	const PValue &operator[](unsigned int pos) const;
+	const T &operator[](unsigned int pos) const;
 	T *begin() const;
 	T *end() const;
 
@@ -95,9 +95,11 @@ inline Container<T>::~Container() {
 
 template<typename T>
 inline Container<T>& Container<T>::operator =(const Container& other) {
-	clear();
-	for ( const T &v : other )
-		push_back(v);
+	if (this != &other) {
+		clear();
+		for ( const T &v : other )
+			push_back(v);
+	}
 	return *this;
 }
 
@@ -107,7 +109,7 @@ inline T& Container<T>::operator [](unsigned int pos) {
 }
 
 template<typename T>
-inline const PValue& Container<T>::operator [](unsigned int pos) const {
+inline const T& Container<T>::operator [](unsigned int pos) const {
 	return items[pos];
 }
 
