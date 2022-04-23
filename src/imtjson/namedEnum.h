@@ -50,6 +50,15 @@ public:
 	std::size_t size() const {return byName.size();}
 	std::string allEnums(std::string_view separator=", ") const;
 
+	struct EnumHlp {
+		typename std::vector<Def>::const_iterator b,e;
+		typename std::vector<Def>::const_iterator begin() const {return b;}
+		typename std::vector<Def>::const_iterator end() const {return e;}
+	};
+
+	EnumHlp sorted_by_name() const {return EnumHlp{byName.begin(),byName.end()};}
+	EnumHlp sorted_by_value() const {return EnumHlp{byVal.begin(),byVal.end()};}
+
 protected:
 	std::vector<Def> byVal;
 	std::vector<Def> byName;
