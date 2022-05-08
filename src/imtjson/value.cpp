@@ -62,7 +62,7 @@ namespace json {
 		case null:
 		case boolean:
 		case number: if (flags() & json::preciseNumber)
-						return String(*this);
+						return String(this->getString());
 					else
 						return stringify();
 
