@@ -4,6 +4,7 @@
  *  Created on: 27. 10. 2016
  *      Author: ondra
  */
+#include <cstdint>
 
 
 template<int bytes>
