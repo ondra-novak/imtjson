@@ -5,6 +5,7 @@
  *      Author: ondra
  */
 
+#include <algorithm>
 #include <string_view>
 #include "jwt.h"
 

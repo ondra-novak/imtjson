@@ -5,6 +5,7 @@
  *      Author: ondra
  */
 
+#include <cstdint>
 
 template<int bytes>
 class FNV1a;

@@ -13,6 +13,7 @@
 #include "array.h"
 #include "value.h"
 #include "range.h"
+#include <algorithm>
 namespace json {
 
 

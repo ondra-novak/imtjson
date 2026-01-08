@@ -14,6 +14,8 @@
 #include "operations.h"
 #include "validator.h"
 #include "fnv.h"
+
+#include <stdexcept>
 namespace json {
 
 
